@@ -1,0 +1,376 @@
+---
+title: "MSCI"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+<style>
+.main-container {
+  max-width: 1500px !important;
+}
+</style>
+
+```{r}
+library(SDAtools)
+library(data.table)
+library(ggplot2)
+library(cowplot)
+library(viridis)
+library(gridExtra)
+library(scales)
+library(RColorBrewer)
+library(NMF) # devtools::install_github("renozao/NMF", "devel")
+nmf.options(grid.patch=TRUE) # stop blank pages appearing
+
+library(testisAtlas)
+load("../data/tmp_cache/SDA_objects.rds")
+load_component_orderings()
+```
+
+
+# MSCI through Pseudotime
+
+[Meiotic sex chromosome inactivation](https://doi.org/10.1242/dev.000018), is a transcriptional silencing during pachytene. We can see this effect in the component gene loadings as previously discussed (Leptotene/Zygotene component section 5.2). Here we show it is also visible directly in the gene expression by using the pseudotime ordering.
+
+```{r, fig.width=10}
+# ouch 
+rna_locations2 <- load_gene_locations(name="merge_mouse_V3_old", path = "../data/")
+
+# Plot gene expression X&Y
+sex_genes <- rna_locations2[chromosome_name %in% c("X","Y")]
+sex_genes <- sex_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+
+X_genes <- rna_locations2[chromosome_name %in% c("X")]
+X_genes <- X_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+
+Y_genes <- rna_locations2[chromosome_name %in% c("Y")]
+Y_genes <- Y_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+
+autosomal_genes <- rna_locations2[!chromosome_name %in% c("X","Y","Un")]
+autosomal_genes <- autosomal_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+
+sex_autosome <- data.table(autosomal = Matrix::rowSums(data[,autosomal_genes]),
+                            sex = Matrix::rowSums(data[,sex_genes]),
+                            cell = rownames(data))
+
+# autosomal_sum <- datat[, .(autosomal = Reduce(`+`, .SD), cell, PseudoTime, somatic4,  V5,  Tsne1_QC1, Tsne2_QC1, library_size), .SDcols = autosomal_genes ] # somatic
+# sex_sum <- datat[, .(sex = Reduce(`+`, .SD), cell), .SDcols = sex_genes ] 
+# setkey(autosomal_sum, cell)
+# setkey(sex_sum, cell)
+# sex_autosome <- merge(sex_sum, autosomal_sum)
+# sex_autosome[order(PseudoTime), PseudoTime_rank:=1:nrow(datat)]
+
+#datat[somatic4==FALSE][order(-PseudoTime),(sex_predictions / autosomal_predictions)<0.01]
+msci_cells <- sex_autosome[(sex + 1) / (autosomal + 1) <0.001]$cell
+
+stopifnot(is.null(datat$sex)) # already merged
+datat[,sex:= NULL]
+datat[,autosomal:= NULL]
+datat <- merge(datat, sex_autosome[,.(cell, sex, autosomal)])
+datat[,msci_ratio:=(sex + 1) / (autosomal + 1)]
+# plot heatmap of genes with at least 200 cells expression >2
+#[names(which(rowSums(abs(sex_expression_matrix)>2)>100)), ] Rowv=NA,
+
+library(bigmemory)
+options(bigmemory.allow.dimnames=TRUE)
+#predicted_expression <- as.big.matrix(results$scores %*% results$loadings[[1]], backingpath="../data/count_matrices/", backingfile = "predicted_expression.big")
+predicted_expression <- attach.big.matrix("../data/count_matrices/predicted_expression.big.desc")
+
+autosomal_predictions <- rowSums(predicted_expression[,autosomal_genes])
+sex_predictions <- rowSums(predicted_expression[,sex_genes])
+X_predictions <- rowSums(predicted_expression[,X_genes])
+Y_predictions <- rowSums(predicted_expression[,Y_genes])
+
+msci_predictions <- data.table(sex_predictions, autosomal_predictions, Y_predictions, X_predictions, cell=names(autosomal_predictions))
+setkey(msci_predictions, cell)
+datat <- merge(msci_predictions, datat, by="cell")
+```
+
+# Normalised Expresion Heatmap
+
+```{r, fig.width=10}
+#datat$library.size <- log(datat$library_size,100)
+
+sex_expression_matrix <- t(scale(as.matrix(datat[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
+#sex_expression_matrix <- t(scale(as.matrix(datat[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
+#sex_expression_matrix[sex_expression_matrix > 2.5] <- 2.5
+#sex_expression_matrix[sex_expression_matrix < (-2.5)] <- (-2.5)
+
+sex_expression_matrix <- asinh(sex_expression_matrix)
+
+#[,order(-datat[somatic4==FALSE]$PseudoTime)]
+aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)), ],
+         breaks=0,
+         hclustfun = "ward.D",
+         Colv=NA,
+         labCol = NA,
+         annCol = datat[somatic4==FALSE][order(-PseudoTime), .(msci_cell = msci_ratio<0.005)],
+         main="Sex chromosome gene expression over pseudotime",
+         color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)))
+
+#annColors = list(msci_ratio = rev(colorRampPalette(brewer.pal(9, "YlOrRd"))(100))),
+```
+
+# Predicted Expresion Heatmap
+
+```{r, fig.width=6}
+tmp <- data.table(predicted_expression[,sex_genes], keep.rownames = T)
+setnames(tmp, "rn", "cell")
+setkey(tmp, "cell")
+tmp <- merge(tmp, datat[, .(cell, PseudoTime, V38, somatic4,  Tsne1_QC1, Tsne2_QC1)], by="cell")
+
+sex_expression_matrix <- t(scale(as.matrix(tmp[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
+
+sex_expression_matrix <- asinh(sex_expression_matrix)
+
+#sex_expression_matrix[sex_expression_matrix > 2.5] <- 2.5
+#sex_expression_matrix[sex_expression_matrix < (-2.5)] <- (-2.5)
+
+test <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
+
+aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)), ],
+         hclustfun = "ward.D",
+         Colv=NA,
+         labCol = NA, labRow = NA, legend = NA, annLegend = FALSE,
+         annCol = datat[somatic4==FALSE][order(-PseudoTime),(sex_predictions / autosomal_predictions)<0.01],
+         color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
+         file="../results/MSCI_heatmap.png", width = 9, height = 6)
+
+
+```
+
+Alternative Colour Scheme:
+
+```{r, fig.width=6}
+aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)), ],
+         hclustfun = "ward.D",
+         Colv=NA,
+         labCol = NA, labRow = NA, legend = NA, annLegend = FALSE,
+         annCol = datat[somatic4==FALSE][order(-PseudoTime), .(msci_cell = msci_ratio<0.005)],
+         main="Sex chromosome gene expression over pseudotime",
+         color=test(100))
+```
+
+
+
+# Sex-Autosome Ratio
+
+```{r, fig.width=6}
+# ggplot(datat[somatic4==FALSE], aes(-PseudoTime, (sex + 1) / (autosomal + 1), colour = sex==0, group=NA)) +
+#   geom_point(size=0.5,alpha=0.5) +
+#   geom_smooth() +
+#   ggtitle("Ratio of Sex to Autosomal chromosome expression through pseudotime") +
+#   geom_hline(yintercept = 0.05, linetype="dashed") +
+#   theme(legend.position = "bottom")
+
+msci_pseudotime <- ggplot(datat[somatic4==FALSE], aes(-PseudoTime, sex_predictions / autosomal_predictions, colour = V38)) +
+  geom_point(size=0.25,alpha=0.5) +
+  scale_color_viridis(direction=-1) +
+  labs(color = "Component 38 (Hormad1 KO) Cell Scores", y="Ratio of total sex to autosomal expression") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+msci_pseudotime
+
+msci_pseudotime_sans38 <- ggplot(datat[somatic4==FALSE & V38<1], aes(-PseudoTime, sex_predictions / autosomal_predictions)) +
+    geom_point(size=0.25,alpha=0.5) +
+    labs(y="Sex to Autosomal Expression Ratio", x="Pseudotime") +
+    theme_minimal()
+
+msci_pseudotime_sans38
+
+saveRDS(msci_pseudotime_sans38, "../data/tmp_cache/msci_pseudotime_sans38.rds")
+```
+
+# Sex-Autosome Ratio on tSNE
+
+```{r, fig.width=6}
+
+
+msci_tsne <- ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=sex_predictions / autosomal_predictions)) +
+  geom_point(size=0.25) +
+  scale_color_viridis(direction=-1) +
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.key.width=unit(1,"cm")) +
+  labs(x="t-SNE 1", y="t-SNE 2",color = "Ratio of total sex to autosomal expression")
+
+msci_tsne
+
+saveRDS(msci_tsne,"../data/tmp_cache/msci_tsne.rds")
+
+# ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=log((sex + 1) / (autosomal + 1)))) +
+#   geom_point(size=0.5) +
+#   scale_color_viridis(direction=-1) +
+#   theme(legend.position = "bottom") +
+#   ggtitle("t-SNE - MSCI")
+```
+
+```{r, fig.width=6}
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=(sex_predictions / autosomal_predictions)<0.01)) +
+    geom_point(size=0.25) +
+    theme_minimal() +
+    theme(legend.position = "bottom", legend.key.width=unit(1,"cm")) +
+    labs(x="t-SNE 1", y="t-SNE 2",color = "Ratio of total sex to autosomal expression < 0.01") +
+  scale_color_brewer(palette = "Set1")
+```
+
+
+# X VS Y
+
+```{r, fig.width=6}
+
+str(Y_genes)
+str(X_genes)
+
+ggplot(datat[somatic4==FALSE], aes(-PseudoTime, asinh(Y_predictions / X_predictions), colour = V38)) +
+  geom_point(alpha=0.5, size=0.5) +
+  ylim(-0.25,0.25) +
+  ggtitle("Ratio of Y to X chromosome expression through pseudotime") +
+  scale_color_viridis(direction=-1) +
+  theme_minimal()
+
+ggplot(datat[somatic4==FALSE], aes(-PseudoTime, Y_predictions, colour = V38)) +
+  geom_point(alpha=0.5, size=0.5) +
+  scale_color_viridis(direction=-1) +
+  scale_y_sqrt(limits=c(0,40)) +
+  ggtitle("Y chromosome expression through pseudotime") +
+  theme_minimal()
+
+ggplot(datat[somatic4==FALSE], aes(-PseudoTime, X_predictions, colour = V38)) +
+  geom_point(alpha=0.5, size=0.5) +
+  scale_color_viridis(direction=-1) +
+  scale_y_sqrt() +
+  ggtitle("X chromosome expression through pseudotime") +
+  theme_minimal()
+
+``` 
+
+# Expression of X escapees
+
+de Cruz et al. detected a switch off between LZ and PS. They also found some genes upregulated between LZ and PS, which they say 'escaped MSCI' however we find no mRNA genes escape MSCI and the genes they identified are just the ones reactivated post MSCI. This highlights the limitations of the low resolution bulk profiling - using just 4 fractions.
+
+We find that the previsouly proposed MSCI escapees are expressed strongly but not during MSCI (shown as a shaded reigon)
+
+```{r, fig.width=6}
+x_escapees <- readxl::read_excel("../data/previous_studies/Cruz/12864_2016_2618_MOESM4_ESM.xlsx")
+
+genes <- x_escapees$`Gene Symbol`[x_escapees$`Gene Symbol` %in% colnames(data)]
+
+plot_pseudotime_expression_panel(genes, ncol = 5, title = "Smoothed gene expression over pseudotime - MSCI 'X-escapees'", highlight_reigon = c(-15500,-12500), point_size = 0.1)
+
+```
+
+```{r, fig.width=6}
+X_escapees_plot <- ggplot(melt_genes(x_escapees$`Gene Symbol`), aes(-PseudoTime, value, group=variable)) +
+  geom_smooth(method = "gam",formula = y ~ s(x, k = 25),  se=FALSE, colour="black") +
+  ylab("Gene Expression") + xlab("Pseudotime") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  geom_rect(data=data.frame(xmin=-15000, xmax=-12500, ymin=-Inf, ymax=Inf),
+            aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax),
+              fill="grey20",
+              colour=NA,
+              alpha=0.2,
+              inherit.aes = FALSE)
+
+X_escapees_plot
+```
+
+# X escapees In Context
+
+Adding all X&Y genes those previously predicted to escape look just like the rest of the post-MSCI expressed genes
+
+```{r, fig.width=6}
+#plot(sex_autosome$PseudoTime, sex_autosome$PseudoTime_rank)
+#merge_sda3_melt2[variable %in% sex_genes]
+ggplot(melt_genes(sex_genes), aes(-PseudoTime, abs(value), group=variable, colour=variable %in% x_escapees$`Gene Symbol`)) +
+  geom_line(stat="smooth", method = "gam", formula = y ~ s(x, k = 20),alpha=0.5) +
+  scale_color_manual(values=c("black","red")) +
+  ylab("Gene Expression") + xlab("Pseudotime") +
+  ylim(0,NA) +
+  ggtitle("Expression over pseudotime for all Sex chromosome genes ('escapees' in red)") +
+  theme(legend.position = "none") +
+  geom_rect(data=data.frame(xmin=-15500, xmax=-12500, ymin=-Inf, ymax=Inf),
+            aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax),
+              fill="grey20",
+              colour=NA,
+              alpha=0.2,
+              inherit.aes = FALSE)
+```
+
+Let's look a bit closer are those little bumps during MSCI:
+
+It seems that some genes have expression during MSCI e.g. Tsx, Cited1, Etd etc.
+
+```{r, fig.width=6}
+
+MSCI_cells <- datat[-PseudoTime>(-15000) & -PseudoTime<(-12500)]$cell
+
+mean_msci <- Matrix::colMeans(data[MSCI_cells,sex_genes])
+
+top_msci <- names(head(sort(mean_msci,T),20))
+
+plot_pseudotime_expression_panel(top_msci, ncol = 5, title = "Smoothed gene expression over pseudotime - MSCI 'X-escapees'", highlight_reigon = c(-15500,-12500), point_size = 0.1)
+
+ggplot(melt_genes(top_msci), aes(-PseudoTime, value, group=variable)) +
+  ylab("Gene Expression") + xlab("Pseudotime") +
+  ggtitle("Expression over pseudotime for 'X-escapee' genes") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  geom_rect(data=data.frame(xmin=-15500, xmax=-12500, ymin=-Inf, ymax=Inf),
+            aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax),
+              fill="grey20",
+              colour=NA,
+              alpha=0.2,
+              inherit.aes = FALSE) +
+  facet_wrap(~variable, scales="free_y") +
+  geom_smooth(method = "gam",formula = y ~ s(x, k = 50),  se=FALSE, colour="black")
+                      
+```
+
+This is less of a problem with the new somatic cell definition
+
+However, on tSNE these genes don't look active during MSCI, but highly expressed in neighbouring sertoli cells. So it seems the sertoli contaminated our pseudotime slightly. The only genes here that look like they could be legitamately escaping MSCI are those with low disperse expression like Gm6472, Gm14586, Gm5644, Gm8692, Rps24-ps3 - ALL of which are pseudogenes.
+
+```{r, fig.width=10}
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1)}, input = top_msci), nrow=4, heights = c(1,1,1,1))
+```
+
+A reminder of which cells are masked as somatic in pseudotime assignment. You can see the problem cells, but it's hard to remove these cells without manually defining a reigon.
+
+```{r, fig.width=6}
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=somatic4)) +
+  geom_point(size=0.25) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+```
+
+Just in case all genes are underexpressed during pachytene, here's a null sample - genes from the autosome.
+
+```{r, fig.width=6}
+ggplot(melt_genes(sample(autosomal_genes, length(sex_genes))), aes(-PseudoTime, abs(value), group=variable)) +
+  geom_line(stat="smooth", method = "gam", formula = y ~ s(x, k = 20),alpha=0.5) +
+  ylab("Gene Expression") + xlab("Pseudotime") +
+  ylim(0,NA) +
+  ggtitle("Expression over pseudotime for (equal size sample of) Autosomal chromosome genes") +
+  theme(legend.position = "none")
+
+# attempt both on same plot with different colours
+# ggplot(merge_sda3_melt[variable %in% sample(autosomal_genes, length(sex_genes))], aes(-PseudoTime, abs(value), group=variable)) +
+#     stat_smooth(geom='line', alpha=0.3, se=FALSE) +
+#   stat_smooth(data=merge_sda3_melt[variable %in% sex_genes], geom='line', alpha=0.3, se=FALSE, colour="red") +
+#   ylab("Gene Expression") + xlab("Pseudotime") +
+#   ylim(0,NA) +
+#   ggtitle("Expression over pseudotime for (equal size sample of) Autosomal chromosome genes") +
+#   theme(legend.position = "none")
+```
+

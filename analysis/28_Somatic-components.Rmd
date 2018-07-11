@@ -1,0 +1,445 @@
+---
+title: "Somatic Components"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+```{r}
+library(DT)
+motifEnrichment_wLogo <- readRDS("../data/motifs/TFenrichment_V2.rds")
+GO_data <- readRDS("../data/GO_enrichment.rds")
+
+library(testisAtlas)
+load("../data/tmp_cache/SDA_objects.rds")
+load_component_orderings()
+```
+
+## 3 - Lymphocytes
+
+```{r, fig.width=6}
+print_tsne(3, point_size = 0.5)
+print_loadings_scores(3)
+print_gene_list(3)
+
+go_volcano_plot(component = "V3P")
+head(GO_data[["V3P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V3P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+- Ptprc aka CD52/CLA (Common Lymphocyte Antigen) "is a glycoprotein expressed on the surface of more than 95% of peripheral blood lymphocytes and is found at higher density on T lymphocytes than B lymphocytes." From: Transplantation of the Liver (Third Edition), 2015
+- Lcp1 aka Lymphocyte Cytosolic Protein 1
+- Cd3g - T-cell surface glycoprotein CD3 (also in component, Cd3d & Cd3e)
+- Cd2 aka T-Cell Surface Antigen
+- Cd48 aka B-lymphocyte activation marker
+
+Rel1/NFKB is a transcription regulator that is activated by various intra- and extra-cellular stimuli such as cytokines, oxidant-free radicals, ultraviolet irradiation, and bacterial or viral products.
+
+## 11 Macrophages
+
+```{r, fig.width=6}
+print_tsne(11, point_size = 0.5)
+print_loadings_scores(11)
+print_gene_list(11)
+
+go_volcano_plot(component = "V11P")
+head(GO_data[["V11P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V11P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+- Mrc1 aka Macrophage Mannose Receptor 1-Like Protein 1
+- Ctss "Cathepsin S is expressed by antigen presenting cells including macrophages, B- lymphocytes, dendritic cells and microglia" - wikipedia
+(also in this component Ctsb, Ctsc, Ctsa)
+- Csf1r aka Macrophage Colony-Stimulating Factor 1 Receptor
+
+- Spib "Promotes development of plasmacytoid dendritic cells (pDCs)" & "acts as a lymphoid-specific enhancer" [The ETS transcription factor Spi-B is required for human plasmacytoid dendritic cell development.](https://doi.org/10.1084/jem.20041231)
+- Spic "regulates the development of red pulp macrophages"
+
+```{r}
+#from https://www.nature.com/articles/nri3073/tables/1 "Table 1: Cell surface markers commonly used in macrophage research"
+macrophage_genes <- c("Itgam","Adgre1","Cd68","Csf1r","Lgals3","Ly6c1","Il4ra","Cd163")
+
+aheatmap(t(results$loadings[[1]][,macrophage_genes]), breaks=0, Colv = NA, cexRow = 0.3, layout = "_*", main="(row scaled) Gene loadings of macrophage genes for each component", scale="row")
+```
+
+
+## 32 Peritubular Myoid
+
+GO hits for extracellular matrix and blood, muscle, vascular development.
+
+- Dcn - Decorin (ECM component) [doi.org/10.1093/humrep/der245](https://doi.org/10.1093/humrep/der245)
+- Col1a2 (Collagen)
+- Col3a1
+- Ecm2 (Extracellular Matrix Protein 2)
+- Lamb2 (Laminin)
+- Lama2
+- Cd34 - see image below
+- Col6a1
+- Col4a4
+
+```{r, fig.width=6}
+print_tsne(32, point_size = 0.5)
+print_loadings_scores(32)
+print_gene_list(32)
+
+go_volcano_plot(component = "V32N")
+head(GO_data[["V32N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V32N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+CD34:
+![](../figures/HPA Immunohistochemistry/CD34.jpg)
+
+
+
+## 40 Leydig
+
+```{r, fig.width=6}
+print_tsne(40, point_size = 0.5)
+print_loadings_scores(40)
+print_gene_list(40)
+
+go_volcano_plot(component = "V40P")
+head(GO_data[["V40P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V40P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+"Peroxisome proliferator-activated receptor alpha (PPARalpha) is a member of the nuclear receptor family of ligand-activated transcription factors that heterodimerize with the retinoic X receptor (RXR) to regulate gene expression. Peroxisome proliferators [...] induce an increase in the size and number of peroxisomes. Peroxisomes are subcellular organelles found in plants and animals that contain enzymes for respiration and for cholesterol and lipid metabolism."
+
+Testosterone production:
+
+A. Import of cholesterol into mitochondria by **StAR**
+
+B. Conversion to pregnenolone by **Cyp11a1**
+
+C. Conversion to progesterone by **Hsd3b1**
+
+D. Conversion to androstenedione by **Cyp17a1**
+
+E. Conversion to testosterone by **Hsd17b1,2,3..**
+
+[Effects of Nandrolone Stimulation on Testosterone Biosynthesis in Leydig Cells](https://doi.org/10.1002/jcp.25272)
+
+![](../figures/leydig_markers.png)
+
+
+from [... cAMP/cGMP signalling and adrenergic receptors in Leydig cells of adult rats](https://doi.org/10.1111/j.2047-2927.2012.00035.x), [see also](https://doi.org/10.1152/ajpendo.00100.2013)
+
+- Gstm1 (Glutathione S-Transferase Mu 1) detoxification activities - Candidate gene study: [Association of GSTM1 and GSTT1 Genes with the Susceptibility to Male Infertility: Result from a Meta-Analysis](https://doi.org/10.1089/gtmb.2012.0409)
+  Also Gstm2
+
+- Ptgds (Prostaglandin D2 Synthase) "mRNA is localized to the Sertoli cells in bulls and rats, and to Leydig cells in mice" [Expression of prostaglandin D synthetase during development in the mouse testis](https://doi.org/10.1530/rep.0.1220553)
+"PGD-synthetase ... are expressed only in the adult Leydig cell population" [Failure of normal adult Leydig cell development in androgen-receptor-deficient mice](https://www.ncbi.nlm.nih.gov/pubmed/12154079)
+
+- **Hsd3b3**
+
+- Mgst1 (Microsomal glutathione S-transferase 1) "An important paralog of this gene is PTGES" - see above
+
+- **Star** - rate-limiting step in steroid hormone production in the adrenal cortex and gonads, the translocation of cholesterol from the outer to the inner mitochondrial membranes - "Testicular Leydig cells stained"  [Localization of the Steroidogenic Acute Regulatory Protein in Human Tissues](https://doi.org/10.1210/jcem.82.12.4445)
+
+- Akr1cl - Aldo-Keto Reductase Family 1 Member C1 (progesterone metabolism)
+
+- **Cyp11a1**
+
+- Agt - expressed in interstitial space
+
+- Insl3 (aka RLF, Ley-I-L)- Known marker gene of Leydig "high expression of RLF in the Leydig cells of the adult testis" [Relaxin-Like Factor Expression as a Marker of Differentiation in the Mouse Testis and Ovary](https://doi.org/10.1210/endo.139.6.6046)
+
+- **Cyp17a1**
+
+- **Hsd3b1**
+
+- **Hsd17b3**
+
+- Aldh1a1 - ALDH enzymes catalyze the final step of retinoic acid biosynthesis, from retinaldehyde to retinoic acid. Retinoic acid then induces the expression of Stra8 is essential for the differentiation of A spermatogonia. Known to be expressed in leydig cells in the adult mouse [Retinoic Acid Metabolism and Signaling Pathways in the Adult and Developing Mouse Testis](https://doi.org/10.1210/en.2005-0953) & [Levels of the Retinoic Acid Synthesizing Enzyme ALDH1A2 are Lower in Testicular Tissue from Men with Infertility](https://dx.doi.org/10.1016%2Fj.fertnstert.2013.12.053)
+
+```{r}
+leydig_genes <- c("Star","Cyp11a1","Hsd3b1","Cyp17a1","Hsd17b1","Hsd17b2","Hsd17b3")
+
+aheatmap(t(results$loadings[[1]][,leydig_genes]), breaks=0, Colv = NA, cexRow = 0.2, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
+```
+
+
+## 19 kallikreins - Leydig Subset
+
+Klk1 cluster of genes with high loadings. Near Leydig cells in tsne, with ledgid like genes in loadings (Cyp11a1, Agt, Gstm1, Star, Hsd3b6, Ptgds, Gstm2, Cyp17a1, Hsd17b7 as in C40). Klk genes possibly regulated by Zfp444 aka EZF2, ZSCAN17 (although expression of Zfp444 itself is inconclusive)
+
+```{r, fig.width=6}
+print_tsne(19, point_size = 0.5)
+print_loadings_scores(19)
+print_gene_list(19)
+
+go_volcano_plot(component = "V19N")
+head(GO_data[["V19N"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V19P")
+head(GO_data[["V19P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V19N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+motifEnrichment_wLogo[geneSet=="V19N",-c("logo")][2]
+          
+```
+
+## 26 Leydig
+
+```{r, fig.width=6}
+print_tsne(26, point_size = 0.5)
+print_loadings_scores(26)
+print_gene_list(26)
+
+go_volcano_plot(component = "V26N")
+head(GO_data[["V26N"]][c(2,7,8,10)], 20)
+
+head(GO_data[["V26P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V26N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 37 Sertoli (lower cluster)
+
+```{r, fig.width=6}
+print_tsne(37, point_size = 0.5)
+print_loadings_scores(37)
+print_gene_list(37)
+
+go_volcano_plot(component = "V37P")
+head(GO_data[["V37P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V37P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+Wipf3 aka CR16 "highly expressed in the testes, particularly in the Sertoli cells" [Male-specific sterility caused by the loss of CR16.](https://doi.org/10.1111/j.1365-2443.2007.01088.x)
+Ncoa2 aka TIF2 "appears to be essential for adhesion of Sertoli cells to germ cells" [The Function of TIF2/GRIP1 in Mouse Reproduction Is Distinct from Those of SRC-1 and p/CIP](http://mcb.asm.org/content/22/16/5923)
+
+
+## 45 Sertoli (upper cluster)
+Similar genes to Min's Cluster20 (Defb19, Clu, Aard). 
+
+```{r, fig.width=6}
+print_tsne(45, point_size = 0.5)
+print_loadings_scores(45)
+print_gene_list(45)
+
+go_volcano_plot(component = "V45P")
+head(GO_data[["V45P"]][c(2,7,8,10)], 30)
+
+datatable(motifEnrichment_wLogo[geneSet=="V45P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+```
+
+[Androgen receptor function is required in Sertoli cells for the terminal differentiation of haploid spermatids.](https://doi.org/10.1242/dev.00957)
+
+(GR, or GCR) also known as NR3C1: [In vivo actions of the Sertoli cell glucocorticoid receptor.](https://doi.org/10.1210/en.2013-1940)
+
+```{r, fig.width=6}
+sc_genes <- data.table(readxl::read_excel("../data/previous_studies/Gendt/me-13-1391-1.xlsx"))
+
+names(sc_genes) <- make.names(names(sc_genes))
+
+#setnames(sc_genes,"log2(EFadult)", "L2EFadult")
+# sc_genes$L2EFadult <- as.numeric(sc_genes$L2EFadult)
+# hist(sc_genes[1:237]$L2EFadult) values too high
+
+# correct gene names for highest FC where possible
+# sc_genes[grepl(",",gene)][order(-FC)]
+sc_genes[gene=="8030411F24Rik,Cst12", gene:="Cst12"]
+sc_genes[gene=="6030429G01Rik,Tnni3", gene:="Tnni3"]
+sc_genes[gene=="Amhr2,Sp1", gene:="Amhr2"]
+sc_genes[gene=="Aldh1a1,E030003E18Rik", gene:="Aldh1a1"]
+sc_genes[gene=="Gramd2,Pkm2", gene:="Gramd2"]
+sc_genes[gene=="Clic1,Ddah2", gene:="Clic1"]
+sc_genes[gene=="Leng8,Ttyh1", gene:="Ttyh1"]
+sc_genes[gene=="Mir5114,Scd2", gene:="Scd2"]
+sc_genes[gene=="Alad,Pole3", gene:="Alad"]
+sc_genes[gene=="5730412P04Rik,Bex4", gene:="Bex4"]
+
+sc_genes[gene %in% colnames(data),indata:=TRUE]
+
+sc_genes[, FC := (value_2..fpkm. + 200) / (value_1..fpkm. + 200)]
+
+sum(sc_genes[indata==TRUE][order(-FC)][1:25]$gene %in% get_top_genes(45, n = 200))
+plot(sapply(1:1000,function(x) sum(sc_genes[indata==TRUE][order(-FC)][1:x]$gene %in% get_top_genes(45, n = 200))/x))
+
+sc_genes[indata==TRUE][order(-FC)][1:30]$gene[which(!sc_genes[indata==TRUE][order(-FC)][1:30]$gene %in% get_top_genes(45, n = 200))]
+
+get_top_genes(45, n = 200)[which(get_top_genes(45, n = 200) %in% sc_genes[indata==TRUE][order(-FC)][1:30]$gene)]
+
+# sc_genes2 <- data.table(readxl::read_excel("../data/previous_studies/Dataset_S1.xlsx", skip = 4))
+# names(sc_genes2) <- make.names(names(sc_genes2))
+# str(sc_genes2)
+# 
+# sc_genes2[, inputMean := mean(c(Input_1,Input_2,Input_3,Input_4,Input_5), na.rm=T) , by=Probe]
+# sc_genes2[, IPMean := mean(c(IP_1,IP_2,IP_3,IP_4,IP_5), na.rm=T) , by=Probe]
+# 
+# sc_genes2[, inputMean2 := mean(2^c(Input_1,Input_2,Input_3,Input_4,Input_5), na.rm=T) , by=Probe]
+# sc_genes2[, IPMean2 := mean(2^c(IP_1,IP_2,IP_3,IP_4,IP_5), na.rm=T) , by=Probe]
+# 
+# 
+# # sc_genes2$inputMean <- rowMeans(sc_genes2[, c("Input_1","Input_2","Input_3","Input_4","Input_5"), with=FALSE], na.rm=T)
+# # sc_genes2$IPMean <- rowMeans(sc_genes2[, c("IP_1","IP_2","IP_3","IP_4","IP_5"), with=FALSE], na.rm=T)
+# 
+# sc_genes2[,X__1 := IPMean/inputMean]
+# sc_genes2[,X__2 := IPMean2/inputMean2]
+# sc_genes2[order(-X__1)]
+# 
+# plot(sc_genes2$X__2,sc_genes2$Linear.Fold.Change)
+# 
+# sc_genes2[order(-Linear.Fold.Change)]
+
+sertoli_markers <- get_top_genes(45, n = 25)[which(get_top_genes(45, n = 25) %in% sc_genes[indata==TRUE][order(-FC)][1:30]$gene)]
+sertoli_markers <- get_top_genes(45, n = 50)[which(get_top_genes(45, n = 50) %in% sc_genes[indata==TRUE][order(-FC)][1:50]$gene)]
+
+cat(sertoli_markers,sep=", ")
+
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1)}, input = sertoli_markers), nrow=5, heights = c(1,1,1,1,1))
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)}, input = sertoli_markers), nrow=5, heights = c(1,1,1,1,1))
+
+```
+
+
+## 16 Sertoli (rare)
+
+Has sertoli like genes in  positive loadings: Clu, Ctsl, Amhr2
+(Amh2r potentially localises to sertoli [Identification, expression, and regulation of anti-Müllerian hormone type-II receptor in the embryonic chicken gonad.](https://doi.org/10.1095/biolreprod.113.116491)).
+
+But negative loadings are the markers:
+
+```{r, fig.width=6}
+print_tsne(16, point_size = 0.5)
+print_loadings_scores(16)
+print_gene_list(16)
+
+head(GO_data[["V16P"]][c(2,7,8,10)], 20)
+
+head(GO_data[["V16N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V16N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+```{r, fig.width=6}
+
+grid.arrange(grobs=list(print_marker("Mcf2") + simplify,
+                        print_marker("Arhgef1") + simplify,
+                        print_marker("Pard3b") + simplify,
+                        print_marker("Slc4a3") + simplify,
+                        print_marker("Espn") + simplify,
+                        print_marker("Gm26814") + simplify),
+			nrow=2, heights = c(1,1))
+
+tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- merge(tmp, sda_predict(c("Mcf2","Arhgef1","Pard3b","Slc4a3","Espn","Gm26814")))
+
+grid.arrange(grobs=list(print_marker2("Mcf2") + simplify,
+                        print_marker2("Arhgef1") + simplify,
+                        print_marker2("Pard3b") + simplify,
+                        print_marker2("Slc4a3") + simplify,
+                        print_marker2("Espn") + simplify,
+                        print_marker2("Gm26814") + simplify),
+			nrow=2, heights = c(1,1))
+
+print_marker3 <- function(gene){
+  gene <- paste0(gene,"_predict")
+ggplot(tmp[order(get(gene))][Tsne1_QC1<(-5) & Tsne1_QC1>(-10) & Tsne2_QC1>0 & Tsne2_QC1<10], aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
+    geom_point(size=0.5) +
+    scale_color_viridis(direction=-1) +
+    ggtitle(gene)
+}
+
+
+```
+
+
+## 21 Sertoli (rare)
+
+Some similar to C10 (Edn1, Cyr61) and has GO for cell-cell junction/adhesion
+
+```{r, fig.width=6}
+print_tsne(21, point_size = 0.5)
+print_loadings_scores(21)
+print_gene_list(21)
+
+go_volcano_plot(component = "V21P")
+head(GO_data[["V21P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V21P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 10 Sertoli / Muscle??
+
+A few cells in SPG FACS batch. GO enrichment suggests muscle maybe Pertitubular Myoid but some genes known in Sertoli see below.
+High Jun JunB Fos and FosB in this component (dimerise to form AP-1 transcription factor).
+
+```{r, fig.width=6}
+print_tsne(10, point_size = 0.5)
+print_loadings_scores(10)
+print_gene_list(10)
+
+go_volcano_plot(component = "V10P")
+head(GO_data[["V10P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V10P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+- Kazald1 - enriched in testosterone treated sertoli [RiboTag Analysis of Actively Translated mRNAs in Sertoli and Leydig Cells In Vivo](https://doi.org/10.1371/journal.pone.0066179)
+- Edn1 - endothelin 1 "The potent smooth muscle agonist endothelin-1 (ET-1) is involved in the local control of seminiferous tubule contractility, which results in the forward propulsion of tubular fluid and spermatozoa, through its action on peritubular myoid cells. ET-1, known to be produced in the seminiferous epithelium by Sertoli cells" [Cyclic expression of endothelin-converting enzyme-1 mediates the functional regulation of seminiferous tubule contraction.](https://www.ncbi.nlm.nih.gov/pubmed/10352019?dopt=Abstract)
+- Cdo1 (Cysteine Dioxygenase) - highly downregulated in Sertoli Cell Androgen Receptor KO [Gene Expression Alterations by Conditional Knockout of Androgen Receptor in Adult Sertoli Cells of Utp14bjsd/jsd (jsd) Mice](https://doi.org/10.1095/biolreprod.110.085472)
+- Plac1 - Placenta Specific 1 - Gtex RNAseq enriched in testis, highest in this component & a far second place C45 (other sertoli)
+
+In the Tsne it's a bit hard to see as all the cells are almost on top of each other so here are some zoomed in plots:
+
+```{r, fig.width=6}
+ggplot(datat, aes(Tsne1, Tsne2, color=V10)) +
+  geom_point(size=1) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime") +
+  facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
+
+ggplot(datat, aes(Tsne1, Tsne2, color=Edn1)) +
+  geom_point(size=1) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime") +
+  facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
+
+ggplot(datat, aes(Tsne1, Tsne2, color=Kazald1)) +
+  geom_point(size=1) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime") +
+  facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
+
+ggplot(datat, aes(Tsne1, Tsne2, color=Cdo1)) +
+  geom_point(size=1) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime") +
+  facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
+
+ggplot(datat, aes(Tsne1, Tsne2, color=Plac1)) +
+  geom_point(size=1) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime") +
+  facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
+```

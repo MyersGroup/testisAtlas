@@ -1,0 +1,459 @@
+---
+title: "Matched Differential Expression"
+output: html_notebook
+---
+
+Differential expression analysis in mutant mice is confounded by differing abundances of different cell populations.
+
+To do a fair DE analysis, here we match each mutant cell, to it's nearest WT cell in tSNE space. Each WT cell can only be matched to one mutant cell, and the distance between the cells must be less than 3 tSNE units.
+
+# CNP
+
+```{r, fig.width=10}
+
+library(data.table)
+library(ggplot2)
+
+library(testisAtlas)
+load("../data/tmp_cache/SDA_objects.rds")
+load_component_orderings()
+
+matched_cells_CNP <- match_cells2(test_group = "CNP")
+
+# remove cells with no WT match
+matched_cells_CNP <- matched_cells_CNP[!is.na(matched_cells_CNP[,2]),]
+
+str(matched_cells_CNP)
+
+head(matched_cells_CNP)
+
+hist(as.numeric(matched_cells_CNP[,3]), breaks=50)
+```
+
+
+For example:
+
+```{r, fig.width=6}
+
+ggplot(datat[order(cell == matched_cells_CNP[500,2])], aes(Tsne1_QC1, Tsne2_QC1, color=cell == matched_cells_CNP[500,2])) +
+  geom_point(size=0.5) +
+  scale_color_manual(values=c("grey","red")) +
+  theme(legend.position = "bottom") +
+  ggtitle("Mutant Cell")
+
+ggplot(datat[order(cell == matched_cells_CNP[500,1])], aes(Tsne1_QC1, Tsne2_QC1, color=cell == matched_cells_CNP[500,1])) +
+  geom_point(size=0.5) +
+  scale_color_manual(values=c("grey","red")) +
+  theme(legend.position = "bottom") +
+  ggtitle("Nearest WT Cell")
+
+```
+
+
+We can then do a DE analysis:
+
+```{r, fig.width=6}
+
+cnp_vs_wt <- data.table(cnp_mean = Matrix::colMeans(data[matched_cells_CNP[,1],]),
+                        wt_mean = Matrix::colMeans(data[matched_cells_CNP[,2],]),
+                        gene=colnames(data),
+                        pval=pVals)
+
+cnp_vs_wt2 <- data.table(cnp_mean = colMeans(results$scores[matched_cells_CNP[,1],] %*% results$loadings[[1]]),
+                        wt_mean = colMeans(results$scores[matched_cells_CNP[,2],] %*% results$loadings[[1]]),
+                        gene=colnames(results$loadings[[1]]))
+
+hist(cnp_vs_wt$cnp_mean, breaks=100)
+
+cnp_vs_wt[,FC := (cnp_mean+0.1)/(wt_mean+0.1)]
+cnp_vs_wt[,FC2 := (cnp_mean+0.5)/(wt_mean+0.5)]
+cnp_vs_wt2[,FC2 := (cnp_mean+0.5)/(wt_mean+0.5)]
+
+hist(log(cnp_vs_wt$FC2), breaks=100)
+
+cnp_vs_wt[order(-FC2)][1:50]
+cnp_vs_wt[order(FC2)][1:50]
+```
+
+```{r, fig.width=6}
+ggplot(cnp_vs_wt, aes(wt_mean, cnp_mean, label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=cnp_vs_wt[abs(log(FC2))>0.4 | gene=="Ubb"])
+
+ggplot(cnp_vs_wt, aes(log(wt_mean*cnp_mean), log(wt_mean/cnp_mean), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=cnp_vs_wt[abs(log(FC2))>0.4 | gene=="Ubb"])
+```
+
+```{r}
+ggplot(cnp_vs_wt, aes(wt_mean, cnp_mean, label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=cnp_vs_wt[pval<1e-20])
+
+ggplot(cnp_vs_wt, aes(FC2, -log(pval), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=cnp_vs_wt[pval<1e-50])
+
+```
+
+
+Do any of the components correlate with these results?
+
+Which components have the highest ranked loadings for these genes?
+
+```{r, fig.width=4}
+barplot(table(factor(sapply(cnp_vs_wt[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+
+barplot(table(factor(sapply(cnp_vs_wt[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+
+barplot(table(factor(sapply(cnp_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes (Imputed)")
+
+barplot(table(factor(sapply(cnp_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes (Imputed)")
+
+```
+
+Both the over and underexpressed genes many of them are ranked highest in component 22 positive and negative respectively. So it appears component 22 represents CNP differential expression!
+
+```{r, fig.width=6}
+# do any components correlate
+qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(cnp_vs_wt$FC2))), paste0("C",1:50))
+```
+
+There is a pretty good overlap with the loadings in this component, and the results from this analysis. This component was previsouly assigned "odd" given the funky cell scores - I'm still not sure what to make of the low WT group or why the FACS groups are lower - but the CNP cells are indeed higher than the rest.
+
+```{r, fig.width=6}
+print_loadings_scores(22)
+```
+
+```{r, fig.width=6}
+ggplot(gene_expression_pseudotime(c("Rps7","Tpt1","Fau","Eif1"))[group %in% c("WT","CNP")], aes(-PseudoTime, value, colour=group)) +
+      geom_point(alpha=0.5, size=0.25) +
+      geom_smooth(method = "gam", formula = y ~ s(x, k = 50), se=FALSE) +
+      ylab("Predicted Gene Expression") + xlab("Pseudotime") +
+  facet_wrap(~Gene)
+```
+
+
+# Cul4a
+
+```{r}
+matched_cells_Cul4a <- match_cells2(test_group = "Cul4a")
+
+#matched_cells_Cul4a[,1] <- datat[group=="Cul4a"]$cell
+
+str(matched_cells_Cul4a)
+sum(is.na(matched_cells_Cul4a[,2]))
+
+# remove cells with no WT match
+matched_cells_Cul4a <- matched_cells_Cul4a[!is.na(matched_cells_Cul4a[,2]),]
+
+str(matched_cells_Cul4a)
+
+head(matched_cells_Cul4a)
+
+```
+
+```{r}
+Cul4a_vs_wt <- data.table(Cul4a_mean = Matrix::colMeans(data[matched_cells_Cul4a[,1],]),
+                          wt_mean = Matrix::colMeans(data[matched_cells_Cul4a[,2],]),
+                          gene=colnames(data))
+
+Cul4a_vs_wt2 <- data.table(Cul4a_mean = colMeans(results$scores[matched_cells_Cul4a[,1],] %*% results$loadings[[1]]),
+                        wt_mean = colMeans(results$scores[matched_cells_Cul4a[,2],] %*% results$loadings[[1]]),
+                        gene=colnames(results$loadings[[1]]))
+
+
+hist(Cul4a_vs_wt$Cul4a_mean, breaks=100)
+
+Cul4a_vs_wt[,FC := (Cul4a_mean+0.1)/(wt_mean+0.1)]
+Cul4a_vs_wt[,FC2 := (Cul4a_mean+0.5)/(wt_mean+0.5)]
+Cul4a_vs_wt2[,FC2 := (Cul4a_mean+0.5)/(wt_mean+0.5)]
+
+hist(log(Cul4a_vs_wt$FC2), breaks=100)
+
+Cul4a_vs_wt[order(-FC2)][1:50]
+Cul4a_vs_wt[order(FC2)][1:50]
+```
+
+```{r, fig.width=6}
+ggplot(Cul4a_vs_wt, aes(wt_mean, Cul4a_mean, label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Cul4a_vs_wt[abs(log(FC2))>0.45 | gene=="Ubb"])
+
+ggplot(Cul4a_vs_wt, aes(log(wt_mean*Cul4a_mean), log(wt_mean/Cul4a_mean), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Cul4a_vs_wt[abs(log(FC2))>0.45 | gene=="Ubb"])
+```
+
+```{r, fig.width=6}
+barplot(table(factor(sapply(Cul4a_vs_wt[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+
+barplot(table(factor(sapply(Cul4a_vs_wt[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+
+barplot(table(factor(sapply(Cul4a_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes (Imputed)")
+
+barplot(table(factor(sapply(Cul4a_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes (Imputed)")
+
+```
+
+Confirmation that C25 represents Cul4a KO diff expression (& a bit of 9 perhaps)
+
+```{r, fig.width=6}
+# do any components correlate
+qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(Cul4a_vs_wt$FC2))), paste0("C",1:50))
+```
+
+# Mlh3
+
+
+```{r}
+matched_cells_Mlh3 <- match_cells2(test_group = "Mlh3")
+
+str(matched_cells_Mlh3)
+sum(is.na(matched_cells_Mlh3[,2]))
+
+# remove cells with no WT match
+matched_cells_Mlh3 <- matched_cells_Mlh3[!is.na(matched_cells_Mlh3[,2]),]
+
+str(matched_cells_Mlh3)
+```
+
+```{r}
+group_a = matched_cells_Mlh3[,1]
+group_b = matched_cells_Mlh3[,2]
+pVals <- apply(
+    data, 2, function(x) {
+        wilcox.test(
+            x[group_a], 
+            x[group_b]
+        )$p.value
+    }
+)
+# multiple testing correction
+pVals <- p.adjust(pVals, method = "fdr")
+```
+
+```{r}
+Mlh3_vs_wt <- data.table(Mlh3_mean = Matrix::colMeans(data[matched_cells_Mlh3[,1],]),
+                        wt_mean = Matrix::colMeans(data[matched_cells_Mlh3[,2],]),
+                        gene=colnames(data),
+                        pval=pVals)
+
+hist(Mlh3_vs_wt$Mlh3_mean, breaks=100)
+
+Mlh3_vs_wt[,FC2 := (Mlh3_mean+0.5)/(wt_mean+0.5)]
+
+hist(log(Mlh3_vs_wt$FC2), breaks=100)
+
+Mlh3_vs_wt[order(-FC2)][1:50]
+Mlh3_vs_wt[order(FC2)][1:50]
+```
+
+```{r, fig.width=6}
+ggplot(Mlh3_vs_wt, aes(wt_mean, Mlh3_mean, label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Mlh3_vs_wt[abs(log(FC2))>0.35 | gene=="Ubb"])
+
+ggplot(Mlh3_vs_wt, aes(log(wt_mean * Mlh3_mean), log(Mlh3_mean / wt_mean), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Mlh3_vs_wt[abs(log(FC2))>0.35 | gene=="Ubb"])
+```
+
+```{r, fig.width=10}
+
+ggplot(Mlh3_vs_wt, aes(FC2, -log(pval), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Mlh3_vs_wt[order(pval)][1:100])
+
+```
+
+```{r, fig.width=6}
+
+barplot(table(factor(sapply(Mlh3_vs_wt[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+
+barplot(table(factor(sapply(Mlh3_vs_wt[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+```
+
+```{r, fig.width=6}
+# do any components correlate
+qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(Mlh3_vs_wt$FC2))), paste0("C",1:50))
+```
+
+Verify results with expression over pseudotime
+
+```{r, fig.width=6}
+ggplot(gene_expression_pseudotime("Prm1"), aes(-PseudoTime, value, colour=group)) +
+      geom_point(alpha=0.2, size=0.25) +
+      geom_smooth(method = "gam", formula = y ~ s(x, k = 50), se=FALSE, colour="black") +
+      ylab("Predicted Gene Expression") + xlab("Pseudotime") +
+      facet_wrap(~group) +
+      theme(legend.position = "none")
+
+ggplot(gene_expression_pseudotime("Prm1")[group %in% c("Mlh3","WT")], aes(-PseudoTime, value, colour=group, group=group)) +
+      geom_point(alpha=0.5, size=0.25) +
+      geom_smooth(method = "gam", formula = y ~ s(x, k = 50), se=FALSE) +
+      ylab("Predicted Gene Expression") + xlab("Pseudotime")
+
+ggplot(gene_expression_pseudotime("mt-Rnr2"), aes(-PseudoTime, value, colour=group)) +
+      geom_point(alpha=0.2, size=0.25) +
+      geom_smooth(method = "gam", formula = y ~ s(x, k = 50), se=FALSE, colour="black") +
+      ylab("Predicted Gene Expression") + xlab("Pseudotime") +
+      facet_wrap(~group) +
+      theme(legend.position = "none")
+
+ggplot(gene_expression_pseudotime("mt-Rnr2")[group %in% c("Mlh3","WT")], aes(-PseudoTime, value, colour=group, group=group)) +
+      geom_point(alpha=0.5, size=0.25) +
+      geom_smooth(method = "gam", formula = y ~ s(x, k = 50), se=FALSE) +
+      ylab("Predicted Gene Expression") + xlab("Pseudotime")
+```
+
+
+# Hormad1
+
+```{r}
+matched_cells_Hormad1 <- match_cells2(test_group = "Hormad1")
+
+str(matched_cells_Hormad1)
+head(matched_cells_Hormad1)
+sum(is.na(matched_cells_Hormad1[,2]))
+
+# remove cells with no WT match
+matched_cells_Hormad1 <- matched_cells_Hormad1[!is.na(matched_cells_Hormad1[,2]),]
+
+str(matched_cells_Hormad1)
+
+```
+
+```{r}
+group_a = matched_cells_Hormad1[,1]
+group_b = matched_cells_Hormad1[,2]
+pVals <- apply(
+    data, 2, function(x) {
+        wilcox.test(
+            x[group_a], 
+            x[group_b]
+        )$p.value
+    }
+)
+# multiple testing correction
+pVals <- p.adjust(pVals, method = "fdr")
+```
+
+```{r}
+Hormad1_vs_wt2 <- data.table(Hormad1_mean = colMeans(results$scores[matched_cells_Hormad1[,1],] %*% results$loadings[[1]]),
+                        wt_mean = colMeans(results$scores[matched_cells_Hormad1[,2],] %*% results$loadings[[1]]),
+                        gene=colnames(results$loadings[[1]]))
+
+Hormad1_vs_wt <- data.table(Hormad1_mean = Matrix::colMeans(data[matched_cells_Hormad1[,1],]),
+                        wt_mean = Matrix::colMeans(data[matched_cells_Hormad1[,2],]),
+                        gene=colnames(data),
+                        pval=pVals)
+
+hist(Hormad1_vs_wt$Hormad1_mean, breaks=100)
+
+Hormad1_vs_wt[,FC := (Hormad1_mean+0.1)/(wt_mean+0.1)]
+Hormad1_vs_wt[,FC2 := (Hormad1_mean+0.5)/(wt_mean+0.5)]
+Hormad1_vs_wt2[,FC2 := (Hormad1_mean+0.5)/(wt_mean+0.5)]
+
+hist(log(Hormad1_vs_wt$FC2), breaks=100)
+
+Hormad1_vs_wt[order(FC2)][1:50]
+Hormad1_vs_wt[order(-FC2)][1:50]
+
+```
+
+```{r, fig.width=6}
+ggplot(Hormad1_vs_wt, aes(wt_mean, Hormad1_mean, label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Hormad1_vs_wt[abs(log(FC2))>0.7 | gene %in% c("Hormad1","Ubb")])
+
+ggplot(Hormad1_vs_wt, aes(log(wt_mean*Hormad1_mean), log(wt_mean/Hormad1_mean), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Hormad1_vs_wt[abs(log(FC2))>0.7 | gene %in% c("Hormad1","Ubb")])
+```
+
+```{r, fig.width=6}
+ggplot(Hormad1_vs_wt2, aes(wt_mean, Hormad1_mean, label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Hormad1_vs_wt2[abs(log(FC2))>0.7 | gene %in% c("Hormad1","Ubb")]) + ggtitle("Imputed scatter plot")
+
+ggplot(Hormad1_vs_wt2, aes(log(wt_mean*Hormad1_mean), log(wt_mean/Hormad1_mean), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Hormad1_vs_wt2[abs(log(FC2))>0.7 | gene %in% c("Hormad1","Ubb")]) + ggtitle("Imputed MA plot")
+```
+
+
+```{r, fig.width=10}
+
+AD_genes <- c("Apoe","Trem2","Bin1","Ms4a6d","Tyrobp","Cd33","Mef2c","Spi1","H2-Eb1","Clu","Picalm","Abca7","Cd2ap","Zcwpw1","Nme8","Inpp5d","Sorl1","Rin3","Ptk2b")
+
+others <- c("Akap9","Celf1","App")
+
+ggplot(Hormad1_vs_wt, aes(FC2, -log(pval), label=gene)) + geom_point(alpha=0.5, size=0.5) + geom_label_repel(data=Hormad1_vs_wt[order(pval)][1:100])
+
+tmp <- which(Mlh3_vs_wt[order(pval)]$gene %in% c(AD_genes, others))
+data.table(tmp, Mlh3_vs_wt[order(pval)]$gene[tmp])
+```
+
+DE genes match well with component 29, especially the underexpessed (previously named "SPG batch??"), and to a lesser extent 43 (ribosomal) for overexpressed genes.
+
+```{r, fig.width=4}
+ranks <- apply(results$loadings[[1]], 1, function(x) rank(abs(x)))
+ranksN <- apply(results$loadings[[1]], 1, function(x) rank(x))
+ranksP <- apply(results$loadings[[1]], 1, function(x) rank(-x))
+colnames(ranksP) <- paste0(colnames(ranksP), "P")
+colnames(ranksN) <- paste0(colnames(ranksN), "N")
+
+ranks <- cbind(ranksN, ranksP)
+
+barplot(table(factor(sapply(Hormad1_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+
+barplot(table(factor(sapply(Hormad1_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+
+qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(Hormad1_vs_wt$FC2))), paste0("C",1:50))
+```
+
+
+# MQ
+
+Only 6 wild type macrophages, so any inference of DE cells is shakey
+
+```{r}
+
+library(ggplot2)
+
+
+matched_cells_MQ2 <- match_cells2(cell_subset = datat[V11>5]$cell, swap_groups = T)
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=V11>5)) +
+  geom_point(size=0.5) +
+  theme(legend.position = "bottom") +
+  ggtitle("Mutant Cell")
+
+matched_cells_MQ2
+
+MQ_vs_wt <- data.table(WT_mean = Matrix::colMeans(data[matched_cells_MQ2[,1],]),
+                        mutant_mean = Matrix::colMeans(data[matched_cells_MQ2[,2],]),
+                        gene=colnames(data))
+
+MQ_vs_wt2 <- data.table(mutant_mean = colMeans(results$scores[matched_cells_MQ2[,1],] %*% results$loadings[[1]]),
+                        WT_mean = colMeans(results$scores[matched_cells_MQ2[,2],] %*% results$loadings[[1]]),
+                        gene=colnames(results$loadings[[1]]))
+
+hist(MQ_vs_wt$WT_mean, breaks=100, main="Not Imputed")
+hist(MQ_vs_wt2$WT_mean, breaks=100, main="Imputed")
+
+MQ_vs_wt[,FC2 := (mutant_mean+0.5)/(WT_mean+0.5)]
+MQ_vs_wt2[,FC2 := (mutant_mean+0.5)/(WT_mean+0.5)]
+
+hist(log(MQ_vs_wt$FC2), breaks=100, main="Not Imputed")
+hist(log(MQ_vs_wt2$FC2), breaks=100, main="Imputed")
+
+MQ_vs_wt2[order(-FC2)][1:50]
+MQ_vs_wt2[order(FC2)][1:50]
+
+plot(MQ_vs_wt$WT_mean, MQ_vs_wt$mutant_mean, main="Not Imputed")
+plot(MQ_vs_wt2$WT_mean, MQ_vs_wt2$mutant_mean, main="Imputed")
+
+AD_genes <- c("Apoe","Trem2","Bin1","Ms4a6d","Tyrobp","Cd33","Mef2c","Spi1","H2-Eb1","Clu","Picalm","Abca7","Cd2ap","Zcwpw1","Nme8","Inpp5d","Sorl1","Rin3","Ptk2b")
+
+ggplot(MQ_vs_wt2[!gene %in% AD_genes], aes(WT_mean, mutant_mean)) +
+  geom_point(size=0.5, alpha=0.5) + 
+  scale_color_brewer(palette = "Set1")+ 
+  geom_abline(slope = 1,intercept = 0) +
+  ggtitle("Non Alzheimers genes")
+
+ggplot(MQ_vs_wt2[gene %in% AD_genes], aes(WT_mean, mutant_mean)) +
+  geom_point(size=0.5, alpha=0.5) + 
+  scale_color_brewer(palette = "Set1")+ 
+  geom_abline(slope = 1,intercept = 0) +
+  ggtitle("Alzheimers genes")
+
+MQ_vs_wt2[gene %in% AD_genes][order(-FC2)]
+
+```
+
+The underexpressed genes have broad low enrichment, mostly leydig?
+
+Overexpressed genes mostly in late components.
+
+```{r, fig.width=6}
+barplot(table(factor(sapply(MQ_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+
+barplot(table(factor(sapply(MQ_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+```
+

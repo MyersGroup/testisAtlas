@@ -1,0 +1,67 @@
+---
+title: "Update SDA dimnames"
+output: html_notebook
+---
+
+
+```{r}
+old_names <- readRDS("../data/conradV3/V3_SDAmerged_mouse_V3_SDA_dimnames.rds")
+
+# backup old dimnames
+saveRDS(old_names, "../data/conradV3/V3_SDAmerged_mouse_V3_SDA_dimnames_archive.rds")
+
+# get ENSEMBL ID for old names
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "http://aug2017.archive.ensembl.org", dataset = "mmusculus_gene_ensembl")
+mapTab <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
+				filter = "external_gene_name", values = old_names[[2]], mart = ensembl, uniqueRows=TRUE)
+mapTab <- data.table(mapTab)
+mapTab[external_gene_name %in% mapTab[duplicated(external_gene_name)]$external_gene_name]
+
+# get new names from IDs
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
+mapTab2 <- data.table(getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
+				filter = "ensembl_gene_id", values = mapTab$ensembl_gene_id, mart = ensembl, uniqueRows=TRUE))
+
+setkey(mapTab, ensembl_gene_id)
+setkey(mapTab2, ensembl_gene_id)
+
+mapTabM <- merge(mapTab, mapTab2, all.x=T)
+mapTabM <- mapTabM[!duplicated(mapTabM)]
+
+# for genes with duplicated external_gene_name.x, are the external_gene_name.y different anyway?
+mapTabM[external_gene_name.x %in% mapTabM[duplicated(external_gene_name.x)]$external_gene_name.x][order(external_gene_name.x)]
+mapTabM[external_gene_name.x %in% mapTabM[duplicated(external_gene_name.x)]$external_gene_name.x][external_gene_name.x!=external_gene_name.y]
+
+
+tmp <- mapTabM[match(old_names[[2]], external_gene_name.x),]
+# which gene names updated
+tmp[external_gene_name.y!=external_gene_name.x]
+
+# which gene names NA (deleted in new database), use old IDs as names
+tmp[is.na(external_gene_name.y)]
+tmp[is.na(external_gene_name.y), external_gene_name.y := ensembl_gene_id]
+
+# which gene names duplicated, use old IDs as names
+tmp[external_gene_name.y %in% tmp[duplicated(external_gene_name.y)]$external_gene_name.y][order(external_gene_name.y)]
+tmp[external_gene_name.y %in% tmp[duplicated(external_gene_name.y)]$external_gene_name.y & external_gene_name.y!=external_gene_name.x ,external_gene_name.y := ensembl_gene_id]
+
+tmp[is.na(external_gene_name.y) | duplicated(external_gene_name.y)]
+
+str(tmp$external_gene_name.y)
+str(old_names[[2]])
+
+tail(tmp$external_gene_name.y)
+tail(old_names[[2]])
+
+old_names[[2]] <- tmp$external_gene_name.y
+saveRDS(old_names, "../data/conradV3/V3_SDAmerged_mouse_V3_SDA_dimnames.rds")
+```
+
+```{r}
+library(biomaRt)
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "http://Dec2017.archive.ensembl.org", dataset = "mmusculus_gene_ensembl")
+mapTab1 <- data.table(getBM(attributes = c("external_gene_name",'ensembl_gene_id'),mart = ensembl, uniqueRows=TRUE))
+
+saveRDS(mapTab1, "../data/Ensembl_92_gene_symbols.rds")
+
+```

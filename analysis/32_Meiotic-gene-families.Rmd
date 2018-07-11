@@ -1,0 +1,284 @@
+---
+title: "Classes of spermatogenic genes"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+Expression Patterns of related sets of genes relevant to spermatogenesis.
+
+# Histones
+
+There are extensive changes to chromatin during spermatogenesis, most well known in the replacement of histones with transition proteins then protamines at the late stages. But histone variants are used throught the process.
+
+```{r, fig.width=6}
+histone_genes <- c("H3f3b","H3f3a","H3f3aos","H3f3a-ps1",
+  "H2al2a","H2afz","H2afv","H2al3","H2afy","H2al1b","H2afb3","H2afx","H2afj","H2al1n","H2afy3","H2bfm","H2afy2","H2al1m","H2al1a","H2al1i","H1fnt","H1f0","H1fx",
+"Hist1h2bp", "Hist1h4a", "Hist1h2bc", "Hist3h2a", "Hist1h2al", 
+"Hist1h1c", "Hist1h1t", "Hist1h1a", "Hist1h3a", "Hist1h2ba", 
+"Hist2h2be", "Hist2h2aa2", "Hist1h2aa", "Hist1h4h", "Hist1h1e", 
+"Hist2h3c2", "Hist1h4i", "Hist2h2ac", "Hist1h2ag", "Hist1h4c", 
+"Hist2h2aa1", "Hist1h2bj", "Hils1","Cenpa","Tnp1","Tnp2","Prm1","Prm2","Gm12260")
+
+grid.arrange(grobs=create_grob_list(fn = print_marker, input = histone_genes[1:24]), nrow=4, heights = c(1,1,1,1))
+
+grid.arrange(grobs=create_grob_list(fn = print_marker, input = histone_genes[25:46]), nrow=4, heights = c(1,1,1,1))
+
+```
+
+```{r, fig.width=6}
+hist_subset <- c("Cenpa","Hist1h2bj", "Hist1h1e", "Hist1h2aa", "Hist1h2ba", "Hist1h1a", 
+"H1f0","Gm12260" , "H2bfm", "H2afv", "H2afx", "H2afy", "H2afz", "H2afy3",
+ "Hist2h2be","Hist1h1t", "Hist1h2bp", "Hist1h4a", "Hils1", "H2al3", "H2al1m", 
+"H2al1n", "H2al2a", "H1fnt","Tnp1","Tnp2","Prm1","Prm2")
+
+tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- merge(tmp, sda_predict(hist_subset, name_extension = ""))
+
+grid.arrange(grobs=create_grob_list(fn = print_marker2, input = hist_subset), nrow=4, heights = c(1,1,1,1))
+
+```
+
+```{r, fig.width=6}
+
+plot_pseudotime_expression_panel(hist_subset, title = "Histone Genes")
+
+```
+
+## Literature
+
+**Reviews:**
+
+- Chromatin dynamics during spermiogenesis (2014)
+https://doi.org/10.1016/j.bbagrm.2013.08.004
+
+- Dynamic expression of combinatorial replication-dependent histone variant genes during mouse spermatogenesis (2014)
+https://doi.org/10.1016/j.gep.2013.10.002
+
+- List of histone proteins in mouse: http://www.informatics.jax.org/marker/summary?interpro=IPR009072
+
+**Hils1**
+
+* HILS1 is a spermatid-specific linker histone H1-like protein implicated in chromatin remodeling during mammalian spermiogenesis
+https://doi.org/10.1073/pnas.1837812100
+"HILS1 is highly expressed in nuclei of elongating and elongated spermatids"
+
+**H1fnt**
+
+* Polar nuclear localization of H1T2, a histone H1 variant, required for spermatid elongation and DNA condensation during spermiogenesis
+https://doi.org/10.1073/pnas.0406060102
+"selectively and transiently expressed in male haploid germ cells"
+
+* HANP1/H1T2, a novel histone H1-like protein involved in nuclear formation and sperm fertility.
+https://doi.org/10.1128/MCB.25.16.7107-7119.2005
+"haploid germ cell-specific nuclear protein designated HANP1/H1T2"
+
+* Structure and expression of the mouse testicular H1 histone gene (H1t)
+https://doi.org/10.1016/0167-4781(93)90162-7
+
+* Transcriptional control of the testis-specific histone H1t gene. (2003)
+PMID: 12568711
+"H1t is synthesized only in pachytene"
+
+* Expression of the mouse testicular histone gene H1t during spermatogenesis. (1996)
+PMID: 8877387
+"H1t mRNA only in the late and mid-pachytene stages"
+
+* Localization of mRNA for testis-specific histone H1t by in situ hybridization. (1991)
+PMID: 1959566
+"in the mid and late pachytene spermatocytes"
+
+
+**H3t (aka Gm12260)**
+
+- Tissue-specific expression of histone H3 variants diversified after species separation
+https://doi.org/10.1186/s13072-015-0027-3
+
+- Structural basis of instability of the nucleosome containing a testis-specific histone variant, human H3T
+https://doi.org/10.1073/pnas.1003064107
+
+- Testis-Specific Histone Variant H3t Gene Is Essential for Entry into Spermatogenesis
+http://dx.doi.org/10.1016/j.celrep.2016.12.065
+
+**TH2B (aka Hist1h2ba)**
+
+- Chromatin-to-nucleoprotamine transition is controlled by the histone H2B variant TH2B.
+https://doi.org/10.1101/gad.220095.113
+
+**TH2A = HIST1H2AA**
+
+- Disruption of Th2a and Th2b genes causes defects in spermatogenesis
+https://doi.org/10.1242/dev.121830
+
+**H2afy aka MACROH2A1.2**
+
+- Histone MacroH2A1.2 Is Concentrated in the XY-Body by the Early Pachytene Stage of Spermatogenesis
+https://doi.org/10.1006/excr.2000.4951
+
+**H2AFZ**
+
+- The X and Y Chromosomes Assemble into H2A.Z, Containing Facultative Heterochromatin, following Meiosis
+https://doi.org/10.1128/MCB.00519-06
+"expression begins to increase at pachytene, when meiotic sex chromosome inactivation (MSCI) occurs, peaking at the round spermatid stage"
+
+**H2afx**
+
+- H2AX Is Required for Chromatin Remodeling and Inactivation of Sex Chromosomes in Male Mouse Meiosis
+https://doi.org/10.1016/S1534-5807(03)00093-5
+
+**H2AL1 and H2AL2**
+
+- Pericentric heterochromatin reprogramming by new histone variants during mouse spermiogenesis
+https://doi.org/10.1083/jcb.200604141
+expressed in late spermiogenic cells
+
+# Transcription Factors
+
+Tbpl1=TRF2
+
+```{r fig.width=6}
+tfs <- c("Tbp","Tbpl1","Rfx2","Fhl5","Crem","Kif17","Taf7l","Taf7","Taf4b","Gtf2a1l","Gtf2a2","Foxo1","Foxj3","Foxj2","Zbtb33","E2f1","E2f2","E2f3","E2f4","E2f5","E2f7","Tfdp1","Evx1","Evx2","Mybl2","Myb","Mybl1")
+tfs <- tfs[(tfs %in% colnames(results$loadings[[1]]))]
+
+tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- merge(tmp, sda_predict(tfs))
+
+grid.arrange(grobs=create_grob_list(fn = print_marker2, input = tfs), nrow=4, heights = c(1,1,1,1))
+
+```
+
+
+# Cell Cycle Cyclins
+
+Cyclins are well established regulators of the mitotic cell cycle (https://dx.doi.org/10.1038/nrm.2016.27). However in meiosis their expression is less well defined and there are variants.
+
+CyclinA2 functions in mitotic cells at the S-G2 and G2-M cell cycle checkpoints. In meiosis CyclinA1 is instead used which is expressed "only in late pachytene to diplotene spermatocytes" consistent with our data. Ccna1 KO mice are infertile with apoptosis occurring at diplotene to metaphase transition ([Role of cyclins in controlling progression of mammalian spermatogenesis](https://dx.doi.org/10.1387%2Fijdb.130047av)).
+
+Some studies report "clear expression of cyclin D3 in round spermatids" which is consistent with the expression trajectory we see in our data. ([Function of cyclins in regulating the mitotic and meiotic cell cycles in male germ cells](https://dx.doi.org/10.4161%2Fcc.7.22.6978)).
+
+Ccnb2 and 1 were reported as being most highly expressed in meiotic spermatocytes and post-meiotic spermatids respectively, however our data shows similar expression at both of these time points.
+
+```{r fig.width=6}
+cyclins <- c("Ccno", "Ccna2", "Ccng1", "Ccnb1", "Ccne1", "Ccni", "Ccnt1", "Ccny", "Ccnf", "Ccndbp1", "Ccng2", "Ccnc", "Ccne2", "Ccnb2", "Ccnd1", "Ccnd2", "Ccnj", "Ccnh", "Ccnt2", "Ccnl1", "Ccnl2", "Ccnjl", "Ccna1", "Ccnk", "Ccnd3", "Ccnb1ip1", "Ccnyl1", "Ccnb3")
+cyclins <- cyclins[(cyclins %in% colnames(results$loadings[[1]]))]
+#cyclins <- c("Ccne1","Ccne2", "Ccnb1","Ccnb2", "Ccnd2","Ccnd3", "Ccna1")
+
+tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- merge(tmp, sda_predict(cyclins, name_extension = ""))
+
+grid.arrange(grobs=create_grob_list(fn = print_marker2, input = cyclins), nrow=4, heights = c(1,1,1,1))
+
+```
+
+```{r fig.width=6}
+
+plot_pseudotime_expression_panel(cyclins, title = "Cyclin Genes")
+
+```
+
+
+# Handpicked Genes
+
+Some nice genes to exemplify the dynamic meiotic transcriptome: Zbtb16 Ccnd1 Prdm9 Ccnb3 Piwil1 Ccna1 Ssxb1 Acrv1 Tnp2 Prm2
+
+```{r, fig.width=6}
+
+summary_genes <- c("Zbtb16","Ccnd1","Prdm9","Ccnb3","Piwil1","Ccna1","Ssxb1","Acrv1","Tnp2","Prm2")
+
+tmp <- gene_expression_pseudotime(summary_genes)
+
+ggplot(tmp, aes(-PseudoTime, value, colour=Gene)) +
+  geom_point(alpha=0.2, size=0.3) +
+  geom_smooth(method = "gam", formula = y ~ s(x, k = 100), se=FALSE) +
+  scale_color_brewer(palette = "Paired") +
+  ylab("Predicted Gene Expression") + xlab("Pseudotime")
+
+ggplot(tmp[PseudoTime>16000 & Gene %in% summary_genes[1:4]], aes(-PseudoTime, value, colour=Gene)) +
+  geom_point(alpha=0.4, size=0.7) +
+  geom_smooth(method = "gam", formula = y ~ s(x, k = 10), se=FALSE) +
+  scale_color_brewer(palette = "Set1") +
+  ylab("Predicted Gene Expression") + xlab("Pseudotime")
+
+tmp[, cell2 := factor(cell, levels = tmp[order(-PseudoTime)][variable=="Prdm9"]$cell)]
+
+component_colours <- sample(c(brewer.pal(10, "Paired")))
+
+ggplot(tmp, aes(cell2, value, fill=variable, colour=variable)) +
+  geom_col() +
+  scale_fill_manual(values = component_colours) +
+  scale_colour_manual(values = component_colours) +
+  labs(x="Pesudotime ordered cells", y="Predicted Gene Expression") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+tmp_m <- dcast(tmp, formula = PseudoTime + cell ~ variable, value.var = "value")
+
+aheatmap(t(as.matrix(tmp_m[order(-PseudoTime)][,c(summary_genes), with=FALSE])),  Colv=NA, Rowv=NA, labCol = NA, breaks=0,
+         main="Gene expression over pseudotime", color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)))
+
+```
+
+
+# KRAB - Zinc Finger Proteins
+
+Of the 300 annotated KRAB ZF proteins in mouse (MGI), 233 are detected in this dataset.
+
+**Zfp37**
+
+This gene is expressed at the end of the Acrosomal gene expression / round spermatid stage. Not much is known about this gene, but it is known to be specifically expressed in testis: "expression of Zfp-37 was most abundant in germ cells which have completed meiosis" ([Zfp-37, a new murine zinc finger encoding gene, is expressed in a developmentally regulated pattern in the male germ line.](https://www.ncbi.nlm.nih.gov/pubmed/1614869?dopt=Abstract)) which is consitant with the loadings and the gene expression through pseudotime we see. This gene has a high loading in component 49 (round spermatid 1)
+
+**Zfp39** (aka CTfin33)
+
+This gene has high loadings in component 42 (Pachytene). Again, not much known, but again it is known to be specifically expressed in testis: "CTfin33 were first detected between 2 and 3 weeks after birth in parallel with the onset and progression of meiosis" [Expression of a mouse zinc finger protein gene in both spermatocytes and oocytes during meiosis.](https://doi.org/10.1016/0012-1606(92)90120-6) which could be consistent with the loadings and expression seen here.
+
+**Zfp956**
+
+[most highly expressed in testis](https://www.ncbi.nlm.nih.gov/gene/101197/?report=expression)
+
+**Zfp110** (aka Nrif1)
+
+[Expressed at a higher level in testis](https://www.ncbi.nlm.nih.gov/gene/101197)
+
+
+```{r fig.width=6}
+#http://www.uniprot.org/uniprot/?query=annotation%3A(type%3Azn_fing%20C2H2)%20AND%20organism%3A%22Mus%20musculus%20(Mouse)%20%5B10090%5D%22%20AND%20annotation%3A(type%3A%22positional%20domain%22%20KRAB)&sort=score&columns=id%2Centry%20name%2Creviewed%2Cprotein%20names%2Cgenes%2Corganism%2Clength%2Cgenes(PREFERRED)%2Cdatabase(InterPro)
+#http://www.uniprot.org/uniprot/?query=annotation%3A%28type%3Azn_fing+C2H2%29+AND+organism%3A%22Mus+musculus+%28Mouse%29+%5B10090%5D%22+AND+annotation%3A%28type%3A%22positional+domain%22+KRAB%29&sort=score#
+#krab_zinc_fingers <- fread("krab-znf.tsv")$"Gene names  (primary )" - only 59 found
+
+# Search Mouse Genome Informatics for genes with Zinc finger C2H2 and KRAB domain "IPR001909 AND IPR007087"
+# http://www.informatics.jax.org/marker/summary?nomen=&cm=&coordinate=&coordUnit=bp&startMarker=&endMarker=&go=&goVocab=goFunctionTerm&goVocab=goProcessTerm&goVocab=goComponentTerm&interpro=IPR001909+AND+IPR007087&phenotype=#myDataTable=results%3D500%26startIndex%3D0%26sort%3Ddefault%26dir%3Ddesc
+
+krab_zinc_fingers <- fread("../data/MGImarkerQuery_20170326_120926.txt")$V8 # extract gene symbols
+str(krab_zinc_fingers)
+krab_zinc_fingers <- krab_zinc_fingers[(krab_zinc_fingers %in% colnames(results$loadings[[1]]))]
+str(krab_zinc_fingers)
+
+KZF_melt <- melt_genes(datat, krab_zinc_fingers)
+
+# ggplot(KZF_melt, aes(-PseudoTime, abs(value), colour=variable)) +
+#     geom_smooth(se=FALSE) + ylab("Gene Expression") + xlab("Pseudotime") + ylim(0,NA) + ggtitle("Expression over pseudotime for KRAB-ZF genes") + theme(legend.position = "none")
+
+high_znf_Krab <- as.character(KZF_melt[,mean(value), by=variable][order(-V1)][1:25]$variable)
+
+tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- merge(tmp, sda_predict(high_znf_Krab))
+
+grid.arrange(grobs=create_grob_list(fn = print_marker2, input = high_znf_Krab), nrow=4, heights = c(1,1,1,1))
+
+```
+
+```{r fig.width=6}
+# Top Early expressing ZNF-KRAB genes
+top_10_early_znf <- names(head(sort(datat[PseudoTime>(15000) , colSums(.SD, na.rm = TRUE), .SDcols = krab_zinc_fingers], T),15))
+
+plot_pseudotime_expression_panel(top_10_early_znf, ncol = 5, title = "Top Early expressing ZNF-KRAB genes")
+
+```
+

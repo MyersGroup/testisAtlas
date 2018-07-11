@@ -1,0 +1,270 @@
+---
+title: "Conrad V3 SDA Sensitivity Analysis"
+output:
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+SDA is deterministic given a random starting configuration, so we test multiple random seeds to ensure stability of the results.
+
+# Baseline
+
+This is the result used in the rest of the analysis and we will compare the results of other runs to this.
+
+We will compare two components per run, a large one (pachytene - marked by Nasp), and a smaller one (leptotene - marked by Prdm9).
+
+
+```{r}
+library(SDAtools)
+
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_1",
+        data = "V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "79151 17351",
+        N = 20322)
+
+results1 <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(results1$loadings[[1]]) <- paste0("V",1:50)
+rownames(results1$pips[[1]]) <- paste0("V",1:50)
+
+str(results1)
+max(results1$free_energy)
+check_convergence(results1)
+
+highest_components(results1, "Nasp")
+highest_genes(results1, component = 42)
+
+highest_components(results1, "Prdm9")
+highest_genes(results1, component = 5)
+```
+
+# Different Seed 1
+
+```{r}
+# try different seeds to test consistancy
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_5",
+        data = "../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "82145 34369",
+        N = 20322)
+
+results5 <- load_results(results_folder = "../data/conradV3/conradV3_sda_5/", data_path = "../data/conradV3/")
+rownames(results5$loadings[[1]]) <- paste0("V",1:50)
+rownames(results5$pips[[1]]) <- paste0("V",1:50)
+
+str(results5)
+max(results5$free_energy)
+check_convergence(results5)
+loading_distribution(results5)
+
+highest_components(results5, "Nasp")
+plot(results1$loadings[[1]][42,], results5$loadings[[1]][5,])
+highest_genes(results5, component = 5)
+
+highest_components(results5, "Prdm9")
+plot(results1$loadings[[1]][5,], results5$loadings[[1]][26,])
+highest_genes(results5, component = 26)
+```
+
+# Different Seed 2
+
+```{r}
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_6",
+        data = "../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "69808 6210",
+        N = 20322)
+
+results6 <- load_results(results_folder = "../data/conradV3/conradV3_sda_6/", data_path = "../data/conradV3/")
+rownames(results6$loadings[[1]]) <- paste0("V",1:50)
+rownames(results6$pips[[1]]) <- paste0("V",1:50)
+
+str(results6)
+max(results6$free_energy)
+check_convergence(results6)
+
+highest_components(results6, "Nasp")
+plot(results1$loadings[[1]][42,], results6$loadings[[1]][45,])
+highest_genes(results6, component = 45)
+
+highest_components(results6, "Prdm9")
+plot(results1$loadings[[1]][5,], results6$loadings[[1]][49,])
+highest_genes(results6, component = 49)
+```
+
+# Different Seed 3
+
+```{r}
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_7",
+        data = "../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "31111 30486",
+        N = 20322)
+
+results7 <- load_results(results_folder = "../data/conradV3/conradV3_sda_7/", data_path = "../data/conradV3/")
+rownames(results7$loadings[[1]]) <- paste0("V",1:50)
+rownames(results7$pips[[1]]) <- paste0("V",1:50)
+
+str(results7)
+max(results7$free_energy)
+check_convergence(results7)
+
+highest_components(results7, "Nasp")
+plot(results1$loadings[[1]][42,], results7$loadings[[1]][10,])
+highest_genes(results7, component = 10)
+
+highest_components(results7, "Prdm9")
+plot(results1$loadings[[1]][5,], results7$loadings[[1]][5,])
+highest_genes(results7, component = 5)
+```
+
+# Different Seed 4
+
+```{r}
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_8",
+        data = "../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "79874 65015",
+        N = 20322)
+
+results8 <- load_results(results_folder = "../data/conradV3/conradV3_sda_8/", data_path = "../data/conradV3/")
+rownames(results8$loadings[[1]]) <- paste0("V",1:50)
+rownames(results8$pips[[1]]) <- paste0("V",1:50)
+
+str(results8)
+max(results8$free_energy)
+check_convergence(results8)
+
+highest_components(results8, "Lyar")
+plot(results1$loadings[[1]][42,], results8$loadings[[1]][39,])
+highest_genes(results8, component = 39)
+
+highest_components(results8, "Prdm9")
+plot(results1$loadings[[1]][5,], results8$loadings[[1]][30,])
+highest_genes(results8, component = 30)
+
+```
+
+# 200 Components
+
+```{r}
+# try with different seed & higher components
+# higher components
+# run_SDA(sda_location = "../../SDA/build/sda",
+#         out = "../results/conradV3_sda_2",
+#         data = "../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data",
+#         num_comps = 75,
+#         max_iter = 10000,
+#         save_freq = 1000,
+#         set_seed = "73453 98253",
+#         N = 20322,
+#         eigen_parallel = TRUE,
+# 	      num_blocks = 128,
+# 	      num_openmp_threads = 12)
+
+# Even more components
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_3",
+        data = "../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 200,
+        max_iter = 5000,
+        save_freq = 500,
+        set_seed = "79151 17351",
+        N = 20322,
+        eigen_parallel = TRUE,
+	      num_blocks = 128,
+	      num_openmp_threads = 12)
+
+results3 <- load_results(results_folder = "../data/conradV3/conradV3_sda_3/", data_path = "../data/conradV3/")
+rownames(results3$loadings[[1]]) <- paste0("V",1:200)
+rownames(results3$pips[[1]]) <- paste0("V",1:200)
+
+str(results3)
+max(results3$free_energy)
+check_convergence(results3)
+
+highest_components(results3, "Lyar")
+plot(results1$loadings[[1]][42,], results3$loadings[[1]][157,])
+highest_genes(results3, component = 157)
+
+highest_components(results3, "Prdm9")
+plot(results1$loadings[[1]][5,], results3$loadings[[1]][138,])
+highest_genes(results3, component = 138)
+
+```
+
+# Centered asinh
+
+Using a different normalisation Asinh is like log when x is large but works when x=0
+
+```{r}
+library(data.table)
+library(ggplot2)
+tmp <- data.table(x=seq(-15,50,0.01),
+                  log=log(seq(-15,50,0.01)),
+                  log1p=log1p(seq(-15,50,0.01)),
+                  asinh=asinh(seq(-15,50,0.01)),
+                  sqrt=sqrt(seq(-15,50,0.01)))
+
+ggplot(melt(tmp[x<20], id.vars = "x"), aes(x, value, colour=variable)) +geom_line() + theme_minimal() + geom_abline(intercept = 0,slope=1) + ylim(0,NA) + xlim(0,NA)
+```
+
+
+
+```{r}
+
+export_data(as.matrix(data), name = "merged_mouse_V3_SDA_asinh_c", path="../data/conradV3/")
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_4",
+        data = "../data/conradV3/merged_mouse_V3_SDA_asinh_c.data",
+        num_comps = 50,
+        max_iter = 5000,
+        save_freq = 500,
+        set_seed = "79151 17351",
+        N = 20322,
+        eigen_parallel = TRUE,
+	      num_blocks = 128,
+	      num_openmp_threads = 12)
+
+results4 <- load_results(results_folder = "../data/conradV3/conradV3_sda_4/", data_path = "../data/conradV3/")
+rownames(results4$loadings[[1]]) <- paste0("V",1:50)
+rownames(results4$pips[[1]]) <- paste0("V",1:50)
+
+str(results4)
+max(results4$free_energy)
+check_convergence(results4)
+
+highest_components(results4, "Lyar")
+plot(results1$loadings[[1]][42,], results4$loadings[[1]][47,])
+highest_genes(results4, component = 47)
+
+highest_components(results4, "Prdm9")
+plot(results1$loadings[[1]][5,], results4$loadings[[1]][49,])
+highest_genes(results4, component = 49)
+
+```
+
+

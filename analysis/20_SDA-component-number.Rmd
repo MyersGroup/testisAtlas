@@ -1,0 +1,143 @@
+---
+title: "SDA Stability"
+output: html_notebook
+---
+
+SDA can be run with different number of starting compopnents. So we check different starting values and compare to choose a good initial value.
+
+# Conrad 11 - 50 components
+```{r, fig.width=6}
+results <- load_results(results_folder = "../data/conradV2/conradV2_sda_11/", data_path = "../data/conradV2/")
+rownames(results$loadings[[1]]) <- paste0("V",1:nrow(results$loadings[[1]]))
+plot_maximums(results)
+```
+
+```{r, fig.width=6}
+print_loadings_scores(43)
+print_loadings_scores(4)
+print_loadings_scores(26)
+print_loadings_scores(42)
+highest_components(results, "Dcn")
+print_loadings_scores(28)
+highest_components(results, "Prdm9")
+print_loadings_scores(38)
+conrad11_prdm9 <- results$loadings[[1]]["V38",]
+```
+
+# Conrad 9 - 100 components
+
+```{r, fig.width=6}
+results <- load_results(results_folder = "../data/conradV2/conradV2_sda_9/", data_path = "../data/conradV2/")
+rownames(results$loadings[[1]]) <- paste0("V",1:nrow(results$loadings[[1]]))
+plot_maximums(results)
+```
+
+
+```{r, fig.width=6}
+print_loadings_scores(53)
+print_loadings_scores(45)
+print_loadings_scores(95)
+print_loadings_scores(85)
+highest_components(results, "Dcn")
+print_loadings_scores(5)
+print_loadings_scores(47)
+highest_components(results, "Prdm9")
+print_loadings_scores(1)
+conrad9_prdm9 <- results$loadings[[1]]["V1",]
+```
+
+# Conrad 10 - 500 components
+
+```{r, fig.width=6}
+results2 <- load_results(results_folder = "../data/conradV2/conradV2_sda_10/", data_path = "../data/conradV2/")
+rownames(results2$loadings[[1]]) <- paste0("V",1:nrow(results2$loadings[[1]]))
+
+check_convergence(results2)
+loading_distribution(results2)
+scores_distribution(results2)
+plot_maximums(results2)
+# plot_maximums(results2)
+# #plot_scree(results)
+# PIP_distribution(results)
+# PIP_component_distribution(results, 2)
+# PIP_threshold_distribution(results)
+# 
+# QC_components <- results$component_statistics[max_score<50][order(Component)]$Component_name
+# odd_components <- results$component_statistics[max_score>50][order(Component)]$Component_name
+# 
+# #rna_locations <- load_gene_locations(colnames(results$loadings[[1]]))
+# rna_locations <- load_gene_locations(colnames(data), name="merge_mouse_wt")
+```
+
+
+
+
+```{r, fig.width=6}
+highest_components(results2, "Prdm9", top_n = 10)
+
+temp <- data.table(component = seq_len(results2$n$components),
+                       loading = results2$loadings[[1]][,"Prdm9"],
+                   max_score = apply(abs(results2$scores),2,max))
+qplot(temp$loading, temp$max_score)
+temp[loading<(-0.2) & max_score<50]
+
+print_loadings_scores2 <- function(i, max.items=30){
+grid.arrange(grobs=list(genome_loadings(results2$loadings[[1]][i,], label_both = FALSE, max.items = max.items) + ggtitle(i),
+                        ggplot(data.table(cell_index=1:nrow(results2$scores), score=results2$scores[,paste0("V",i)], experiment=gsub("[0-9]+","",gsub("[A-Z]+\\.","",rownames(results2$scores)))), aes(cell_index, score, colour=experiment)) +
+                          geom_point(size=0.5) + xlab("Cell Index (by Library Size)") +
+                          ylab("Score") +
+                          scale_color_brewer(palette = "Paired")),
+			nrow=2, heights = c(5,2))
+}
+
+print_loadings_scores2(265)
+print_loadings_scores2(51)
+print_loadings_scores2(63)
+print_loadings_scores2(464)
+print_loadings_scores2(136)
+
+print_loadings_scores2(297)
+print_loadings_scores2(271)
+print_loadings_scores2(175)
+print_loadings_scores2(83)
+print_loadings_scores2(239)
+
+print_loadings_scores(265)
+print_loadings_scores(154)
+print_loadings_scores(231)
+print_loadings_scores(15)
+print_loadings_scores(454)
+
+```
+
+
+
+# Conrad 8 - 50 components different seed
+
+```{r, fig.width=6}
+results <- load_results(results_folder = "../data/conradV2/conradV2_sda_8/", data_path = "../data/conradV2/")
+rownames(results$loadings[[1]]) <- paste0("V",1:nrow(results$loadings[[1]]))
+plot_maximums(results)
+```
+
+```{r, fig.width=6}
+print_loadings_scores(26)
+print_loadings_scores(49)
+print_loadings_scores(46)
+print_loadings_scores(6)
+print_loadings_scores(19)
+conrad8_prdm9 <- results$loadings[[1]]["V19",]
+```
+
+# Comparison
+```{r, fig.height=6}
+plot(conrad9_prdm9, conrad11_prdm9, main="100 vs 50 components") + abline(0,-1, col="red")
+plot(conrad11_prdm9, conrad8_prdm9, main="Different seeds") + abline(0,-1, col="red")
+```
+
+```{r, fig.width=6}
+GO38 <- GO_enrichment(38)
+go_volcano_plot(GO38)
+print_gene_list(38)
+```
+

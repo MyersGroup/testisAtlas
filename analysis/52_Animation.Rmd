@@ -1,0 +1,82 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+
+devtools::install_github("thomasp85/tweenr")
+devtools::install_github("dgrtwo/gganimate")
+library(tweenr)
+library(gganimate)
+library(ggplot2)
+library(viridis)
+devtools::load_all()
+load("data/tmp_cache/SDA_objects.rds")
+
+
+print_tsne("Prdm9", curve = T)
+
+tmp <- merge(datat[somatic4==FALSE, c("cell","PseudoTime","PseudoTime1","PseudoTime2","Tsne1_QC1", "Tsne2_QC1","group"), with=FALSE],
+               sda_predict("Prdm9", name_extension = ""))
+
+ts <- list(data.frame(tmp[,.("x"=(Tsne1_QC1-mean(Tsne1_QC1))/sd(Tsne1_QC1), "y"=(Tsne2_QC1-mean(Tsne2_QC1))/sd(Tsne2_QC1), pt=Prdm9)]),
+           data.frame(tmp[,.("x"=(PseudoTime1-mean(Tsne1_QC1))/sd(Tsne1_QC1), "y"=(PseudoTime2-mean(Tsne2_QC1))/sd(Tsne2_QC1), pt=Prdm9)]),
+           data.frame(tmp[,.("x"=scale(-PseudoTime), "y"=Prdm9/(6*sd(Prdm9)), pt=Prdm9)]))
+
+tf <- tween_states(ts, tweenlength = 10, statelength = 1, 
+                   ease = c('cubic-in-out'), 
+                   nframes = 99)
+
+
+# Animate with gganimate
+p <- ggplot(data=tf, aes(x=x, y=y, colour=pt)) + 
+  geom_point(aes(frame = .frame), size=0.5) + 
+  scale_colour_viridis(direction = -1) +
+  theme(legend.position="bottom") +
+  theme_minimal() +
+  labs(colour="Prdm9 Expression")
+
+curve_data <- data.frame(x = (principal_curves[["df_9"]]$s[principal_curves[["df_9"]]$tag, 1]-mean(tmp$Tsne1_QC1))/sd(tmp$Tsne1_QC1),
+                         y = (principal_curves[["df_9"]]$s[principal_curves[["df_9"]]$tag, 2]-mean(tmp$Tsne2_QC1))/sd(tmp$Tsne2_QC1))
+
+curve_data <- curve_data[seq(from = 1,to = 16715, by = 100),]
+#ggplot(curve_data[seq(from = 1,to = 16715, by = 100),], aes(x, y)) + geom_path()
+
+curve_data <- do.call("rbind", replicate(60, curve_data, simplify = FALSE))
+
+curve_data$.frame <- rep(1:60, each=168)
+    
+    p <- p + geom_path(data = curve_data,
+                       aes(frame = .frame),
+                       size = 0.5,
+                       colour="Black",
+                       alpha=1,
+                       arrow = arrow(angle = 15, ends = "first", type = "closed"))
+
+animation::ani.options(interval = 1/15)
+gganimate(p, "results/tSNE_pseudotime.gif", title_frame = F, ani.width = 1000, ani.height = 1000)
+gganimate(p, "results/tSNE_pseudotime4.gif", title_frame = F, ani.width = 1000, ani.height = 1000)
+
+```
+
+```{r}
+merge(datat[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE], expression_dt("Prdm9"))
+merge(datat[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1","Tsne2_QC1"), with=FALSE], sda_predict("Prdm9"))
+```
+
+
+
+```{r, fig.width=2}
+imputed_vs_raw(c("Prdm9"))
+imputed_vs_raw(c("Zbtb16"))
+```
+
+
+```{r, fig.width=2}
+imputed_vs_raw(c("Prdm9"))
+imputed_vs_raw(c("Zbtb16"))
+```
+
+
+

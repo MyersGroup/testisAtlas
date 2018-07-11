@@ -1,0 +1,608 @@
+---
+title: "Meiotic Transcription at Single Cell Resolution"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+<style>
+.main-container {
+  max-width: 1500px !important;
+}
+</style>
+
+
+This is an analysis of mouse testis scRNA dropseq data from [Don Conrad's lab](http://genetics.wustl.edu/dclab/). Here we use [SDA](https://jmarchini.org/sda/) and t-SNE to cluster and developmentally order the single cells.
+
+SDA decomposes a matrix (e.g. digital gene expression matrix) into a number of components represented by two matrices. The column vectors of the first matrix tell you how much a given component is active in each cell/individual. The row vectors of the second matrix tell you which genes are active in a given component.
+
+![](../../figures/matrix_decomp.png)
+
+# Key Findings
+
+- SDA is able to decompose the expression matrix into components which reflect real biological clusters of cells and their associated expressed genes
+- The location of cells and their components in t-SNE space reflects the developmental timing
+- Genes within a component have similar gene expression profile through pseudotime which may reflect shared regulatory mechanisms
+
+
+```{r fig.width=6}
+library(data.table)
+library(ggplot2)
+library(ggrepel)
+library(ggforce)
+library(Matrix)
+library(sinsynthr)
+library(SDAtools)
+library(NMF) # devtools::install_github("renozao/NMF", "devel")
+nmf.options(grid.patch=TRUE) # stop blank pages appearing
+library(RColorBrewer) # colour pallet for dendrogram
+library(viridis)
+library(grid)
+library(gridExtra)
+library(animation)
+
+library(testisAtlas)
+
+```
+
+# Renormalise & Reduce Dimensions
+```{r, fig.width=6}
+raw_data <- readRDS("../data/merged-mouse_counts_tsne-QC_low-mt.rds")
+raw_data <- t(raw_data)
+
+data <- normaliseDGE(raw_data,
+                     center = FALSE,
+                     scale = TRUE,
+                     threshold = 10,
+                     min_library_size = 200,
+                     gene_subset = (2/3))
+
+library_size <- Matrix::colSums(raw_data[,rownames(data)])
+
+# Issue warning if data changes
+stopifnot(digest::digest(data) == "a4a7ae105f7ec26f98ae7934db7b015f")
+stopifnot(digest::digest(library_size) == "3b73df05a6e928be9a878a959f4dcaf5")
+
+saveRDS(list(dge=data, library_size=library_size), "../data/merged_mouse_normalised_tsne-QC_V3.rds") # save a cache for easy reopening
+
+# data <- normaliseDGE(raw_data,
+#                      center = TRUE,
+#                      transformation="asinh",
+#                      scale = TRUE,
+#                      threshold = 10,
+#                      min_library_size = 200,
+#                      gene_subset = (2/3))
+# 
+# saveRDS(list(dge=data, library_size=library_size), "../data/conradV3/merged_mouse_normalised_tsne-QC_V3_centered.rds") # save a cache for easy reopening
+```
+
+
+# Raw tSNE
+
+High library cells tend to be on the outside
+
+Looking at marker genes we can see position on the tSNE correlates with developmental time
+
+```{r, fig.width=6}
+data <- readRDS("../data/merged_mouse_normalised_tsne-QC_V3.rds")
+library_size <- data$library_size
+data <- data$dge
+
+# PCA
+#devtools::install_github("gabraham/flashpca/flashpcaR")
+library(flashpcaR)
+pcaresult <- flashpca(as.matrix(data), ndim=250, stan="center", verbose=T, seed=42)
+
+# tSNE
+set.seed(42)
+tsne_data <- Rtsne::Rtsne(pcaresult$projection, verbose=TRUE, pca=FALSE, perplexity = 100, max_iter=2000)
+
+set.seed(24)
+tsne_data2 <- Rtsne::Rtsne(pcaresult$projection, verbose=TRUE, pca=FALSE, perplexity = 100, max_iter=2000)
+
+
+save(pcaresult, file="../data/conradV3/merged_mouse_pca_QCtsne.rds")
+save(tsne_data, tsne_data2, file="../data/conradV3/merged_mouse_tsne_QCtsne.rds")
+
+# save(pcaresult, file="../data/conradV3/merged_mouse_pca_QCtsne_centered_asinh.rds")
+# save(tsne_data, file="../data/conradV3/merged_mouse_tsne_QCtsne_centered_asinh.rds")
+```
+
+```{r, fig.width=6}
+load("../data/merged_mouse_tsne_QCtsne.rds")
+
+datat <- data.table(tsne_data$Y)
+setnames(datat, c("Tsne1","Tsne2"))
+datat$cell <- rownames(data)
+datat$experiment <- gsub("[A-Z]+\\.","",rownames(data))
+datat$group <- gsub("_.*","",datat$experiment)
+datat$library_size <- library_size
+setkey(datat, "cell")
+# datat <- cbind(datat, data.table(as.matrix(data))) #[,c(marker_genes, mito_genes, other_genes)]
+
+# other_genes <- c("Tex101","Hmgb2","Ddx39","Calm2","Hnrnpa2b1","Tpr","Pcgf5","Tnp2","Hmgb4","Tex37","Spata3","Klk1b8","Paqr5","Cul4a","Cul4b","Cnp","Hormad1","Hormad2","Mlh3","Mlh1") # for GFP like plot, "Mtl5","H2afb1",
+
+mito_genes <- grep("mt-",colnames(data), value=T)
+
+```
+
+```{r, fig.width=6}
+ggplot(datat, aes(Tsne1, Tsne2, color=log(library_size))) +
+  geom_point() +
+  scale_colour_distiller(palette="YlOrRd", direction=1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - library size")
+
+ggplot(datat, aes(Tsne1, Tsne2, color=experiment)) +
+  geom_point(size=0.5) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
+#scale_colour_brewer(palette="Paired")
+
+ggplot(datat, aes(Tsne1, Tsne2, color=group)) +
+  geom_point(size=0.5) +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experimental group")
+```
+
+```{r}
+# tsne_repeat <- data.table(rotate_tsne(tsne_data2, -165))
+# setnames(tsne_repeat, c("Tsne1_v2","Tsne2_v2"))
+# datat$Tsne1_v2 <- NULL
+# datat$Tsne2_v2 <- NULL
+# datat <- cbind(datat, tsne_repeat)
+# 
+# ggplot(datat, aes(Tsne1_v2, Tsne2_v2, color=log(library_size))) +
+#   geom_point() +
+#   scale_colour_distiller(palette="YlOrRd", direction=1) +
+#   theme(legend.position = "bottom") +
+#   ggtitle("t-SNE - library size (Different Seed)")
+```
+
+
+## Marker Genes
+
+```{r, fig.width=6, fig.asp=(2/5)}
+
+"
+C1qa / (Lyz2, Tyrobp, Pf4, C1qb), 
+Ptprc (CD45/LCA)/Lcp1,
+Dcn (Adamts5, Col1a2, Gsn,)
+Cyp11a1, Hsd3b6, Cyp17a1, Agt, Hsd17b3, Star
+Gfra1, Ccnd2
+Sall4, Zbtb16, Nanos3
+Uchl1, Dmrt1, Crabp1, Ccna2
+Ctcfl, Esx1, Pou4f1
+Prdm9, Prss50, Zcwpw1, Dmc1, Ugt8a, Inca1
+Ccnb3, Rad51ap2, Meiob
+Rhox2d, A830018L16Rik, Rhox2h, `Fthl17-ps3`, Dnajc12 (Tex13c2
+Piwil1, Tdrd1, Tdrd5
+Pou5f2 = Sprm1, 4930581F22Rik, Ccna1, Aurka
+Ssxb1, Gm3453, Prss46 `1700001F09Rik`
+Acrv1 Spaca1 Lyzl6
+Lrrd1 Klf5 `1700122O11Rik` Saxo1 Tex29 Tbc1d23
+Fam71b Hemgn Cd46 Cd55 Fam71a
+Tnp2 Tnp1 Prm1
+Prm2
+Smcp Oaz3
+"
+
+marker_genes <- c("C1qa", "Ptprc","Dcn","Cyp11a1","Gsta3","Aard","Trim7","Gfra1","Nanos1","Sall4","Uchl1","Ctcfl","Prdm9","Ccnb3","Rhox2d","Piwil1","Pou5f2","Ssxb1","Acrv1","Lrrd1","Fam71b","Tnp2","Prm2","Smcp")
+
+marker_genes <- c("Csf1r", "Dcn","Cyp11a1","Aard","Trim7","Gfra1","Nanos1","Esx1","Ctcfl","Prdm9","Ccnb3","Rhox2d","Piwil1","Ccna1","Ssxb1","Acrv1","Lrrd1","Fam71b","Tnp2","Prm2")
+
+```			
+
+```{r, fig.width=6}
+
+grid.arrange(grobs=create_grob_list(fn = print_raw_tsne, input = marker_genes), nrow=3, heights = c(1,1,1))
+
+```
+
+
+```{r, fig.width=4}
+# are the KO genes still expressed?
+
+ggplot(datat, aes(Tsne1, Tsne2, color=Cul4a)) +
+  geom_point(size=1) +
+  scale_colour_distiller(palette="YlOrRd", direction=1) +
+  theme(legend.position = "bottom")
+
+group_vector <- gsub("_.*","",gsub("[A-Z]+\\.","",rownames(data)))
+
+qplot(1:20322, raw_data["Cul4a",], col=group_vector, geom="point") +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom")
+
+qplot(1:20322, raw_data["Cul4b",], col=group_vector, geom="point") +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom")
+
+# CNP is Knock In
+# qplot(1:20322, raw_data["Cnp",], col=group_vector, geom="point") +
+#   scale_color_manual(values = brewer.pal(11,"Paired")) +
+#   theme(legend.position = "bottom")
+
+qplot(1:20322, raw_data["Hormad1",], col=group_vector, geom="point") +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom")
+
+qplot(1:20322, raw_data["Mlh3",], col=group_vector, geom="point") +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom")
+```
+
+
+
+```{r, fig.width=6}
+# Compare to Principal Components
+
+pca_dt <- data.table(pcaresult$projection[,1:10]) #data.table(pca_result$x[,1:10], keep.rownames = T)
+setnames(pca_dt, paste0("PC",1:10))
+datat <- cbind(datat[cell==rownames(data)], pca_dt)
+
+
+grid.arrange(grobs=list(print_pca("PC1"),
+                        print_pca("PC2"),
+                        print_pca("PC3"),
+                        print_pca("PC4"),
+                        print_pca("PC5"),
+                        print_pca("PC6"),
+                        print_pca("PC7")),
+			nrow=3, heights = c(1,1,1))
+
+ggplot(datat, aes(PC1, PC2, color=experiment)) +
+  geom_point() +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2)))
+
+
+```
+
+# SDA Run Statistics
+
+Load SDA factorisation and check:
+
+- That the run converged
+- That PIPs (posterior inclusion probability: [approximate] posterior probability that a gene contributes to a given component) behave as expected (i.e. close to 0 or 1)
+- That the gene loadings are indeed sparse (and the distribution of cell scores)
+- Which components contribute the most to the variability of the original data
+
+A basic clustering of the components by maximum score and maximum loading shows two main clusters. We will see that the high score components have a single high score so it seems that these components represent overfitting and are therefore not as interesting.
+
+```{r, fig.width=6}
+export_data(as.matrix(data), name = "merged_mouse_V3_SDA")
+
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_1",
+        data = "V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "79151 17351",
+        N = 20322)
+```
+
+
+```{r, fig.width=6}
+# load SDA factorisation and helper functions
+results <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
+rownames(results$loadings[[1]]) <- paste0("V",1:50)
+rownames(results$pips[[1]]) <- paste0("V",1:50)
+str(results)
+
+check_convergence(results)
+loading_distribution(results)
+
+qplot(as.numeric(results$loadings[[1]]), binwidth = 0.005, 
+        main = "Overall distribution of gene loadings", xlab = "Gene Loading")
+
+density_data <- rbind(data.table(density=as.data.table(density(results$loadings[[1]][results$pips[[1]]>0.5], bw=1e-4, n=5000)[c("x","y")]), type="Slab (PIP>0.5)"),
+                  data.table(density=as.data.table(density(results$loadings[[1]][results$pips[[1]]<0.5],bw=1e-4, n=5000)[c("x","y")]), type="Spike (PIP<0.5)"))
+setnames(density_data, c("gene_loading","density","type"))
+
+sparsity_plot <- ggplot(density_data, aes(gene_loading, density, colour=type)) +
+  geom_line()+
+  facet_zoom(xy = density<20 & abs(gene_loading)<0.1) +
+  scale_color_brewer(palette = "Set1") + 
+  theme_bw() +
+  theme(legend.title=element_blank()) +
+  labs(x="Gene Loading",y="Density") +
+  scale_x_continuous(labels = function(x) as.character(x))
+sparsity_plot
+
+saveRDS(sparsity_plot, "../data/tmp_cache/sparsity_plot.rds")
+
+density_data <- as.data.table(density(results$loadings[[1]], n=5000)[c("x","y")])
+ggplot(density_data, aes(x, y)) + geom_line()+ facet_zoom(xy = y<1e5 & abs(x)<0.1)
+
+scores_distribution(results)
+plot_maximums(results)
+#plot_scree(results)
+PIP_distribution(results)
+PIP_component_distribution(results, 2)
+PIP_threshold_distribution(results)
+
+```
+
+
+```{r, fig.width=6}
+
+rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
+rna_locations[,.N,by=chromosome_name][order(-N)]
+
+# LOAD SDA into data.table
+merge_sda4 <- data.table(results$scores, keep.rownames = T)
+setnames(merge_sda4, "rn", "cell")
+setkey(merge_sda4, cell)
+setkey(datat, cell)
+datat <- merge(datat, merge_sda4)
+#merge_sda3$library_size <- library_size[merge_sda3$cell]
+
+```
+
+
+## Component scores in tSNE
+Some components are uninteresting, wheras others have spatially (hence peseudotemporally) varying patterns.
+These components tend to cluster in sections around the outside of the t-SNE plot and so be ordered in terms of spacial position.:
+
+```{r, fig.width=8}
+# # odd - 13
+# odd_components <- c(1,4,6,9,8,10,14,22,25,41,46,16,21)
+# grid.arrange(grobs=create_grob_list(fn = print_tsne, input = odd_components), nrow=3, heights = c(1,1,1))
+# 
+# # somatic - 12
+# somatic_components <- c(3,11,24,26,32,37,40,45,48,43,49,19)
+# grid.arrange(grobs=create_grob_list(fn = print_tsne, input = somatic_components), nrow=3, heights = c(1,1,1))
+# 
+# # - 25
+# meiotic_components <- c(31,50,27,33,7,29,2,5,44, 12,13,23,47,38,42,39,20,28,30,35,15,17,36,18,34)
+#grid.arrange(grobs=create_grob_list(fn = print_tsne, input = meiotic_components), nrow=4, heights = c(1,1,1,1))
+
+
+```
+
+```{r}
+
+load_component_orderings()
+
+QC_components <- paste0("V",component_order_dt[QC_fail==F]$component_number)
+```
+
+
+# Components Overview
+
+The first heatmap shows again that some components only have a single high loading in one cell. Removing these components you can start to see more structure and relationships between the components. 
+
+```{r, fig.width=6}
+
+# cell scores
+clustered_heatmap(asinh(datat[,QC_components, with=FALSE]), "Cells can have multiple components active (Asinh Transformed)", col_lab=NA)
+#annotation.col=datat[,.(Prm2, Insl3, Nasp, Uchl1, Acrv1)],
+aheatmap(cor(datat[,QC_components, with=FALSE]), breaks=0, main="Correlation between components, by Cell Score", hclustfun="ward.D")
+
+# Gene loadings
+aheatmap(results$loadings[[1]][QC_components,], breaks=0, labCol=NA, Rowv=NA, main="Overview of genes loadings in each component", hclustfun="ward.D")
+aheatmap(results$pips[[1]][QC_components,], breaks=0, labCol=NA,  Rowv=NA, main="Overview of genes active (PIP>0.99) in each component", hclustfun="ward.D")
+tmp <- results$pips[[1]][QC_components,]>0.99
+mode(tmp) <- "numeric"
+aheatmap(tmp, breaks=0, labCol=NA,  Rowv=NA, main="Overview of genes active (PIP>0.99) in each component", hclustfun="ward.D")
+
+# every gene is in at least one component
+qplot(seq_along(results$loadings[[1]][2,]), apply(results$pips[[1]], 2, max)) + labs(x="Gene", y="Maximum PIP",title="Every gene is in at least one component")
+qplot(seq_along(results$loadings[[1]][2,]), sort(apply(results$loadings[[1]], 2, max))) + labs(x="Gene", y="Max Loading", title="Maximum loading for each gene")
+
+tmp <- cor(t(results$loadings[[1]][QC_components,]))
+tmp[tmp==1] <- NA
+aheatmap(tmp, breaks=0, main="Most components have low correlations by gene loadings", na.color="grey")
+
+
+```
+
+
+
+
+
+```{r, fig.width=6}
+#48, 4,7,42,5,21,49,50,33,27,32,11
+#c(50,31,33,2,5,38,23,13,47,42,39,20,30,28,53,15,17,34,18)
+trace.animate <- function() {lapply(component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)][QC_fail==FALSE]$component_number, function(i) {print(print_tsne(i))})}
+
+# Create Animations
+saveGIF(trace.animate(), interval = 1, movie.name="tSNE.gif", ani.width = 1600, ani.height = 800)
+```
+
+![](tSNE.gif)
+
+
+# tSNE on SDA subset
+We can get rid of some of the batch effects by running tSNE on the SDA scores rather than counts directly
+
+```{r, fig.width=6}
+
+set.seed(42) # 28 - AV2?
+tsne_data2 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+
+set.seed(1234) # 28 - AV2?
+tsne_data3 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+
+# PCA_onSDA <- prcomp(results$scores)
+# 
+# ggplot(data.table(PCA_onSDA$x[,1:4]), aes(PC1,PC2)) +geom_point()
+
+# add tsne to datat
+tsne_data_dt <- data.table(tsne_data3$Y)
+setnames(tsne_data_dt, c("Tsne1_QC1", "Tsne2_QC1"))
+tsne_data_dt$cell <- rownames(results$scores)
+setkey(tsne_data_dt, cell)
+datat[,Tsne1_QC1 := NULL]
+datat[,Tsne2_QC1 := NULL]
+setkey(datat, cell)
+datat <- merge(datat, tsne_data_dt)
+
+# add tsne to datat
+tsne_data_dt2 <- data.table(tsne_data2$Y)
+setnames(tsne_data_dt2, c("Tsne1_QC2", "Tsne2_QC2"))
+tsne_data_dt2$cell <- rownames(results$scores)
+setkey(tsne_data_dt2, cell)
+datat[,Tsne1_QC2 := NULL]
+datat[,Tsne2_QC2 := NULL]
+setkey(datat, cell)
+datat <- merge(datat, tsne_data_dt2)
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=log(library_size))) +
+  geom_point(size=0.25) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - library size")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=experiment)) +
+  geom_point(size=0.5) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
+#scale_colour_brewer(palette="Paired")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
+  geom_point(size=0.5) +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+```
+
+
+## Clustering Components with tSNE
+
+```{r, fig.width=10}
+
+set.seed(42)
+tsne_loadings <- Rtsne::Rtsne(abs(results$loadings[[1]]), verbose=TRUE, pca=FALSE, perplexity=2)
+
+set.seed(42)
+tsne_scores <- Rtsne::Rtsne(abs(t(results$scores)), verbose=TRUE, pca=FALSE, perplexity=2)
+
+ggplot(data.table(tsne_loadings$Y, C=names(sort(component_labels))), aes(V1, V2, label=C)) + geom_point() + geom_label_repel()
+
+ggplot(data.table(tsne_scores$Y, C=names(sort(component_labels))), aes(V1, V2, label=C)) + geom_point() + geom_label_repel()
+
+
+pca_loadings <- prcomp(abs(results$loadings[[1]]))
+ggplot(data.table(pca_loadings$x, C=names(sort(component_labels))), aes(PC1, PC2, label=C)) + geom_point() + geom_label_repel()
+```
+
+
+## Components
+
+```{r, fig.width=10}
+
+component_tsne <- plot_grid(plotlist = create_grob_list(fn = print_tsne, input = c(11,32,40,26,37,45,31,33,2,5,38,13,42,39,20,30,35,15,17,18,34)), nrow=3)
+component_tsne
+
+pdf("../results/component_tsne.pdf", width=24,height=13.5)
+component_tsne
+dev.off()
+
+```
+
+Odd components:
+
+```{r, fig.width=6}
+
+grid.arrange(grobs=create_grob_list(fn = print_tsne, input = QC_fail_components), nrow=3, heights = c(1,1,1))
+
+```
+
+## Marker Genes
+```{r, fig.height=6}
+
+marker_genes <- c("Csf1r", "Dcn","Cyp11a1","Aard","Trim7","Gfra1","Nanos1","Esx1","Ctcfl","Prdm9","Ccnb3","Rhox2d","Piwil1","Ccna1","Ssxb1","Acrv1","Lrrd1","Fam71b","Tnp2","Prm2")
+
+marker_tsne <- plot_grid(plotlist = create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)}, input = marker_genes), ncol = 4, label_size=16)
+
+plot_grid(plotlist = create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = F)}, input = marker_genes), ncol = 7, label_size=16)
+marker_tsne
+
+pdf("../results/markers.pdf", width=6, height=9)
+marker_tsne
+dev.off()
+
+pdf("../results/components&markers.pdf", width=24, height=24)
+plot_grid(NULL, component_tsne, NULL, marker_tsne, ncol=2, rel_widths = c(1,25))
+dev.off()
+```			
+
+## Define Somatic Cells via Hard Clustering
+
+```{r, fig.width=10}
+d <- dist(results$scores[,-c(22,6,25,29,12,28,41,1,46,4,8,14,9,43)], method = "euclidean")
+hc1 <- hclust(d, method = "ward.D2" )
+
+groups <- cutree(hc1, k=25) # cut tree into 25 clusters
+datat[,hclust_group := groups[datat$cell]]
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group))) +
+  geom_point(data = transform(datat, hclust_group = NULL), colour = "grey85", size=0.1) +
+  geom_point(size=0.25) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") + 
+  facet_wrap(~hclust_group)
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group) %in% c(21,22,20,19,16,11,6,17,23,25))) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+datat[, somatic3 := FALSE]
+datat[hclust_group %in% c(21,22,20,19,16,11,6,17,23,25), somatic3 := TRUE]
+
+ggplot(datat[somatic3 == FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+```
+
+## Define Somatic Cells via Cell Scores
+
+```{r}
+
+datat <- merge(datat, expression_dt("mt-Rnr2"))
+
+datat[,somatic4 := FALSE]
+datat[abs(V26)>2 | abs(V11)>2 | abs(V3)>2 | abs(V32)>1 | abs(V37)>1.5 | abs(V45)>2 | abs(V24)>2 |abs(V40)>1 | `mt-Rnr2`>3, somatic4 := TRUE]
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=somatic4)) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+ggplot(datat[somatic4==FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+# datat[,somatic2 := FALSE]
+# datat[V32<(-5) | V49>(1)|V21>(1) | V16<(-1) | V10>(5) | V45>(3) | V19>(1) | V40>(2) | V11>(5) | V3>(5)|V24<(-1)|V37>(2) , somatic2 := TRUE]
+
+# ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=((Tsne1_QC1-5)^2+(Tsne2_QC1-10)^2)<5)) +
+#   geom_point(size=0.25) +
+#   theme(legend.position = "bottom") +
+#   ggtitle("t-SNE - experiment")
+
+# ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=somatic2)) +
+#   geom_point(size=0.25) +
+#   theme(legend.position = "bottom") +
+#   ggtitle("t-SNE - experiment")
+```
+

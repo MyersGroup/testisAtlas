@@ -1,0 +1,547 @@
+---
+title: "Create Figures"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+---
+
+
+
+```{r}
+
+# save(datat, principal_curves, results, rna_locations, chromosome.lengths, data, file = "../data/tmp_cache/SDA_objects.rds", compress = FALSE)
+
+library(cowplot)
+library(gridExtra)
+
+library(testisAtlas)
+load("../data/tmp_cache/SDA_objects.rds")
+load_component_orderings()
+
+# rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
+# rna_locations[,.N,by=chromosome_name][order(-N)]
+```
+
+
+
+# Figure 3
+
+## Loadings V5
+
+```{r, fig.width=6}
+v5_loadings_plot <- genome_loadings(results$loadings[[1]][5,]*(-1), label_both = FALSE, max.items = 10, label.size = 5, gene_locations = rna_locations) + ylab("Gene Loading (Component 5)") + theme_minimal() + theme(legend.position = "none")
+v5_loadings_plot
+```
+
+## tSNE v5
+
+```{r, fig.width=6}
+tsne_plot <- print_tsne(5, flip = T, curve = T) + ggtitle("")
+tsne_plot
+```
+
+## Imputed vs Raw
+
+```{r, fig.width=6}
+genes_tmp <- c("Zbtb16","Prdm9","Piwil1","Ccna1","Ssxb1","Lrrd1","Gapdhs")
+
+imputation_plot <- imputed_vs_raw(genes_tmp)
+imputation_plot
+
+```
+
+
+```{r, fig.width=6, height=20}
+
+matrix_plot <- ggdraw() + draw_image("../../figures/matrix_decomp_cells.png", clip="on")
+scores_heatmap <- ggdraw() + draw_image("../results/scores_heatmap.pdf", clip="on")
+
+sparsity_plot <- readRDS("data/tmp_cache/sparsity_plot.rds")
+
+left <- plot_grid(matrix_plot, tsne_plot, imputation_plot, rel_heights = c(1,2,2), ncol=1, labels = c("A","C","E"), scale = c(1,1,1))
+
+right <- plot_grid(sparsity_plot, v5_loadings_plot, NULL, rel_heights = c(1,2,2), ncol=1, labels = c("B","D","F"), scale = c(1,1,1))
+
+pdf(height=10, width=10, file="../results/SDA_figure_3.pdf")
+plot_grid(left, right, ncol=2)
+dev.off()
+
+png(height=10, width=10, units="in", res=500, file="../results/SDA_figure_3.png")
+plot_grid(left, right, ncol=2)
+dev.off()
+
+# paste in scores heatmap as png - or colours go muddy
+```
+
+# Figure 6
+
+## Rhox2h Hormad vs WT
+
+```{r}
+tmp <- gene_expression_pseudotime(c("Rhox2h"))
+tmp[group=="Hormad1", Hormad1_KO := TRUE]
+tmp[group!="Hormad1", Hormad1_KO := FALSE]
+
+Hormad1_gxe <- ggplot(tmp[PseudoTime>14500], aes(-PseudoTime, value, colour=Hormad1_KO)) +
+  geom_point(size=0.5) + 
+  theme_minimal() + 
+  ylab("Rhox2h Gene Expression") +
+  xlab("Pseudotime") +
+  theme(legend.position = c(0.8,0.7),
+        legend.background = element_rect(colour="black")) + 
+  scale_color_brewer(palette = "Set1",name="Hormad1 KO?")
+
+Hormad1_gxe
+
+pdf(width = 7, height = 4, file = "../results/Hormad1_gxe.pdf")
+Hormad1_gxe
+dev.off()
+```
+
+## Hormad1 Scores & Loadings
+
+```{r}
+tmp <- datat[,.(group,V38)]
+tmp[group=="mj",group:="WT"]
+
+v38_scores <- ggplot(tmp, aes(V38, group, colour=group)) +
+  geom_jitter(size=0.6) +
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  theme(legend.position = "none", axis.title.y=element_blank() ) +
+  xlab("Component 38\n Cell Score")
+
+v38_loadings_plot <- genome_loadings(results$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = rna_locations) + ylab("Gene Loading (Component 38)") + theme_minimal() + theme(legend.position = "none")
+
+
+pdf(width = 12, height = 6, file = "../results/Component_Hormad_Xactive.pdf")
+plot_grid(loadings_plot, v38_scores, ncol = 2, rel_widths = c(3,1))
+dev.off()
+
+
+```
+
+## Cul4a Scores & Loadings
+
+```{r}
+tmp <- datat[,.(group,V25)]
+tmp[group=="mj",group:="WT"]
+
+v25_scores <- ggplot(tmp, aes(-V25, group, colour=group)) +
+  geom_jitter(size=0.6) +
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  theme(legend.position = "none", axis.title.y=element_blank() ) +
+  xlab("Component 25\n Cell Score")
+
+v25_loadings_plot <- genome_loadings(-results$loadings[[1]][25,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = rna_locations) + ylab("Gene Loading (Component 25)") + theme_minimal() + theme(legend.position = "none")
+
+pdf(width = 12, height = 6, file = "../results/Component_Cul4a.pdf")
+plot_grid(v25_loadings_plot, v25_scores, ncol = 2, rel_widths = c(3,1))
+dev.off()
+
+
+```
+
+## MQ Scores & Loadings
+
+```{r}
+tmp <- datat[,.(group,V11)]
+tmp[group=="mj",group:="WT"]
+
+v11_scores <- ggplot(tmp, aes(V11, group, colour=group)) +
+  geom_jitter(size=0.6) +
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  theme(legend.position = "none", axis.title.y=element_blank() ) +
+  xlab("Component 11\n Cell Score")
+
+v11_loadings_plot <- genome_loadings(results$loadings[[1]][11,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = c(AD_genes,"Ms4a7","Ms4a6c"), label_genes = c("Trem2","Apoe","Mef2c","H2-Eb1","Spi1","Bin1","Ms4a7","Cd33")) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+
+
+pdf(width = 12, height = 6, file = "../results/Component_MQ.pdf")
+plot_grid(v11_loadings_plot, v11_scores, ncol = 2, rel_widths = c(3,1))
+dev.off()
+
+pdf(width = 12, height = 6, file = "../results/Component_MQ_alternative.pdf")
+plot_grid(v11_loadings_plot, print_tsne(11), ncol = 2, rel_widths = c(2,1))
+dev.off()
+
+```
+
+# Fig 6 Mutant Loadings & AZ enrichment
+
+```{r}
+# from alzheimers.Rmd
+AZ_enrich_plot <- readRDS("../data/tmp_cache/AZ_enrich_plot.rds")
+
+c38 <- plot_grid(v38_loadings_plot, v38_scores, ncol = 2, rel_widths = c(3,1))
+c25 <- plot_grid(v25_loadings_plot, v25_scores, ncol = 2, rel_widths = c(3,1))
+c11 <- plot_grid(v11_loadings_plot, v11_scores, ncol = 2, rel_widths = c(3,1))
+
+pdf(width = 12, height = 6, file = "../results/Figure_6_AtoD.pdf")
+plot_grid(plotlist = list(c38,
+                       Hormad1_gxe,
+                       c25,
+                       AZ_enrich_plot + theme(axis.text.x=element_text(size=4))),
+          rel_widths = c(3,2),
+          labels = "AUTO")
+dev.off()
+
+pdf(width = 12, height = 6, file = "../results/Figure_6_AtoD_Alternative.pdf")
+plot_grid(plotlist = list(c38,
+                       Hormad1_gxe,
+                       c11,
+                       AZ_enrich_plot + theme(axis.text.x=element_text(size=4))),
+          rel_widths = c(3,2),
+          labels = "AUTO")
+dev.off()
+```
+
+# Figure 2 (MSCI ratio & Escape genes)
+
+```{r}
+
+pdf(width = 12, height = 6, file = "../results/Figure_2_MSCI.pdf")
+plot_grid(plotlist = list(msci_pseudotime_sans38 +
+  geom_rect(data=data.frame(xmin=-15000, xmax=-12500, ymin=-Inf, ymax=Inf),
+            aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax),
+              fill="grey20",
+              colour=NA,
+              alpha=0.2,
+              inherit.aes = FALSE) + theme_minimal(base_size = 15),
+                       X_escapees_plot + theme_minimal(base_size = 15)),
+          labels = c("C","D"))
+dev.off()
+
+
+```
+
+
+
+
+# Supplementary
+
+## Exerpimental group on tSNE
+
+```{r, fig.width=6}
+tmp <- datat
+
+tnse_groups <- ggplot(datat[group!="mj"], aes(Tsne1_QC1, Tsne2_QC1, colour=group)) +
+        geom_point(data = transform(datat, group = NULL), colour = "grey85", size=0.1) + 
+        geom_point(size=0.1) +
+        scale_color_manual(values = c(brewer.pal(7,"Dark2"),"red", "black")) +
+        facet_wrap(~group) +
+        labs(x="t-SNE 1", y="t-SNE 2") +
+        theme_minimal() +
+        theme(legend.position = "none")
+
+pdf("../results/tsne_groups.pdf", width=10,height=7)
+tnse_groups
+dev.off()
+```
+
+## Mins markers_from_FIG1
+
+```{r}
+marker_genes2 <- c("Dazl", "Dmrt1","Sycp3","Shcbp1l","Cdca8","Aurka","Nxt1","Acrv1","Lyzl1","Hemgn","Prm1","Tssk6","Oaz3","Aard","Clu","Defb19","Ptgds","Insl3","Lcn2","Col1a2")
+
+pdf("../results/markers_from_FIG1.pdf", width=6, height=9)
+plot_grid(plotlist = create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)}, input = marker_genes2), ncol = 4, label_size=16)
+dev.off()
+
+```
+
+## C42 (MSCI)
+
+```{r}
+v42_loadings_plot <- genome_loadings(-results$loadings[[1]][42,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) + ylab("Gene Loading (Component 42)") + theme_minimal() + theme(legend.position = "none")
+
+pdf(width = 12, height = 6, file = "../results/Component_42_(MSCI).pdf")
+plot_grid(v42_loadings_plot, print_tsne(42), rel_widths = c(2,1))
+dev.off()
+
+```
+
+# Other Random Plots
+
+## Just Chromosome 1 to show sparsity
+
+```{r}
+devtools::load_all("~/Dropbox/Github/SDAtools/")
+genome_loadings(results$loadings[[1]][5,], label_both = FALSE, max.items = 100, label.size = 4, hide_unknown = T, gene_locations = rna_locations) + theme_minimal() + theme(legend.position = "none") + xlim(0,2e8)
+```
+
+## C83 vs Trip13 & Hormad1 KO genes
+
+```{r, fig.width=6}
+
+# from Meiotic_components.Rmd
+trip13_enrich_plot <- readRDS("../data/tmp_cache/trip13_enrich_plot.rds")
+c83_rug_plot <- readRDS("../data/tmp_cache/c83_rug_plot.rds")
+
+# from MSCI.Rmd
+msci_tsne <- readRDS("../data/tmp_cache/msci_tsne.rds")
+
+pdf(width = 12, height = 12, file="../results/c38_KO_comparison.pdf")
+plot_grid(c83_rug_plot, trip13_enrich_plot, print_tsne(38, curve = T) + ggtitle(""), msci_tsne+ ggtitle(""), labels = "AUTO")
+dev.off()
+
+```
+
+
+## Leydig Cells
+
+```{r, fig.width=6}
+c40_loadings_plot <- genome_loadings(results$loadings[[1]][40,], label_both = FALSE, max.items = 10, label.size = 4, gene_locations = rna_locations, hide_unknown = T, highlight_genes = c("Cyp17a1","Hsd3b6","Star","Cyp11a1","Hsd17b3"), label_genes = c("Cyp17a1","Hsd3b6","Star","Cyp11a1","Hsd17b3")) +
+  ylab("Gene Loadings (Component 40)") + theme_minimal() + theme(legend.position = "none")
+
+c40_loadings_plot
+#height=5, width=5*1.7
+pdf(width = 12, height = 6, file="../results/Leydig.pdf")
+plot_grid(c40_loadings_plot, NULL, rel_widths = c(2,1))
+dev.off()
+```
+
+## For talks
+
+```{r, fig.width=6}
+loadings_plot <- genome_loadings(results$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T) +
+  ylab("Gene Loadings (Component 38)") + theme_minimal() + theme(legend.position = "none")
+
+loadings_plot
+
+pdf(height=5, width=5*1.7, file="../results/C38.pdf")
+loadings_plot
+dev.off()
+
+
+pdf(height=5, width=5*1.7, file="../results/Prdm9_impute.pdf")
+imputed_vs_raw(c("Prdm9"), facet = F) + theme_minimal(base_size = 18) + theme(legend.position = "none") + ggtitle("Prdm9")
+dev.off()
+
+imputed_vs_raw(c("Piwil1"), facet = F) + theme_minimal(base_size = 18) + theme(legend.position = "none") + ggtitle("Piwil1")
+imputed_vs_raw(c("Ssxb1"), facet = F) + theme_minimal(base_size = 18) + theme(legend.position = "none") + ggtitle("Ssxb1")
+
+pdf(height=5, width=5*1.7, file="../results/Zfp37_impute.pdf")
+imputed_vs_raw(c("Zfp37"), facet = F) + theme_minimal(base_size = 18) + theme(legend.position = "none") + ggtitle("Zfp37")
+dev.off()
+
+pdf(height=5, width=5*1.7, file="../results/Gapdhs_impute.pdf")
+imputed_vs_raw(c("Gapdhs"), facet = F) + theme_minimal(base_size = 18) + theme(legend.position = "none") + ggtitle("Gapdhs")
+dev.off()
+
+GO_data <- readRDS("../data/GO_enrichment.rds")
+
+library(ggrepel)
+pdf(height=5, width=5*1.7, file="../results/V5N_enrich.pdf")
+go_volcano_plot(component = "V5N", label_size = 3, OR_threshold = 10)
+dev.off()
+
+```
+
+
+## Denovo Motifs
+
+```{r}
+# old don't use
+#denovo_motifs_plot <- plot_grid(plotlist=readRDS("../data/tmp_cache/denovo_summary_trimmed.rds"), ncol=5)
+
+#denovo_motifs_plot
+
+TF_heatmap_plot <- ggdraw() + draw_image("../results/TF_Overview_heatmap.png", clip="on")
+
+pdf(height=12, width=12, file="../results/Motif_figure.pdf")
+plot_grid(denovo_motifs_plot, TF_heatmap_plot, labels = c("A", "B"), ncol = 1, label_size=16, rel_heights = c(1,1))
+dev.off()
+```
+
+
+
+## Compare Soh et al Ovary Pprophase genes
+
+"A Gene Regulatory Program for Meiotic Prophase in the Fetal Ovary"
+https://doi.org/10.1371/journal.pgen.1005531
+
+Enriched in 5N
+
+```{r, fig.width=6}
+library(readxl)
+fetal_ovary <- read_excel("../data/previous_studies/Soh/journal.pgen.1005531.s008.XLSX", sheet = 1)
+
+union_ovary <- as.character(fetal_ovary$Row.names[fetal_ovary$Row.names %in% colnames(results$loadings[[1]])])
+
+str(union_ovary)
+
+ovary_enrich <- component_enrichment(union_ovary)
+
+library(ggrepel)
+ggplot(ovary_enrich[!Component %in% gsub("V","",ordering[half_exclusions])], aes(Component, -log(p.value,10), label=Component)) +
+  geom_point() +
+  geom_label_repel(data=ovary_enrich[-log(p.value,10) > 15]) +
+  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
+  ggtitle("Manhattan Plot - Enrichment for Soh et al Meiotic Prophase genes in Ovary") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+## SDA example
+
+Current schematic doesn't use real data? But it's hard to colour each column/row seperately to match the components across matrices in R. Also hard to represent both positive and negative with a single colour per comopnent..
+
+```{r, fig.width=3.5, fig.height=3}
+
+library(ComplexHeatmap)
+
+tmp <- simulate_2D_data(n_individuals = 20, n_variables = 15, n_components = 5, sparsity = 0.7)
+
+Heatmap(tmp$Y, 
+        cluster_rows = F, cluster_columns = F,
+        col = circlize::colorRamp2(c(-3, 0, 3), c("#E41A1C", "white", "#377EB8")),
+        rect_gp = gpar(col = "grey", lty = 1, lwd = 2),
+        show_heatmap_legend = F,
+        column_title = "Genes",
+        row_title = "Cells")
+
+Heatmap(tmp$A, 
+        cluster_rows = F, cluster_columns = F,
+        col = circlize::colorRamp2(c(-3, 0, 3), c("#E41A1C", "white", "#377EB8")),
+        rect_gp = gpar(col = "grey", lty = 1, lwd = 2),
+        show_heatmap_legend = F,
+        width = unit(3.5, "cm"),
+        column_title = "Components",
+        row_title = "Cells")
+```
+
+```{r, fig.width=3, fig.height=1}
+Heatmap(tmp$X, 
+        cluster_rows = F, cluster_columns = F,
+        col = circlize::colorRamp2(c(-3, 0, 3), c("#E41A1C", "white", "#377EB8")),
+        rect_gp = gpar(col = "grey", lty = 1, lwd = 2),
+        show_heatmap_legend = F,
+        column_title = "Genes",
+        row_title = "Components")
+```
+
+## Spermatogonia candidate markers + Ctcfl
+
+```{r, fig.width=6}
+sg_genes <- c("Gfra1","Id4","Nanos3","Glis3","Sipa1","Zbtb16","Ctcfl","Egr4","Upp1","Afp","Lin28a","Foxf1","Foxo1","Rhox10","Fbxo32","Morc1","Irf4","Dppa4","Dctd","Pramef12","Erap1","Ccdc141","Sohlh1","Nefm","Sbk1","Prtg")
+
+Spermatogonia_plot <- ggplot(melt_genes(sg_genes, predict = T)[PseudoTime>15500], aes(-PseudoTime, Expression, group=Gene, colour=Gene=="Ctcfl")) +
+  geom_point(size=0.1) +
+  geom_smooth(method = "gam",formula = y ~ s(x, k = 50),  se=FALSE, colour="black") +
+  ylab("Gene Expression") + xlab("Pseudotime") +
+  theme_minimal() +
+   facet_wrap(~Gene, scales = "free_y") +
+   theme(legend.position ="none") +
+  ggtitle("Early Spermatogonial Genes, with Pre-leptotene Ctcfl for reference")
+
+Spermatogonia_plot
+
+pdf(width = 8, file="../results/Spermatogonia_candidate_markers.pdf")
+Spermatogonia_plot
+plot_grid(plotlist = create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1)}, input = sg_genes), ncol = 4, label_size=16)
+dev.off()
+```
+
+
+## Tsne different seeds
+
+```{r, fig.width=6}
+
+library(SDAtools)
+library(ggplot2)
+library(data.table)
+
+results <- load_results(results_folder = "../results/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(results$loadings[[1]]) <- paste0("V",1:50)
+rownames(results$pips[[1]]) <- paste0("V",1:50)
+str(results)
+
+do_tsne <- function(i){
+  seed <- sample(10^6,1)
+  set.seed(seed)
+  tsne_data5 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+  tsne_data5$seed <- seed
+  return(tsne_data5)
+}
+
+QC_fail_components <- c(22,6,25,29,12,28,41,1,46,4,8,14,9,43)
+
+tsne_repo_rand_seeds <- mclapply(1:20, function(x) do_tsne(x), mc.cores = 16, mc.silent=TRUE, mc.preschedule = FALSE)
+
+saveRDS(tsne_repo_rand_seeds, "../data/tmp_cache/tsne_repo_rand_seeds.rds")
+
+tsne_repo_rand_seeds <- readRDS("../data/tmp_cache/tsne_repo_rand_seeds.rds")
+
+#c(262279, 609512, 225666, 140187, 857033, 857033, 880642, 940864, 293105, 648670)
+
+selected <- which(sapply(tsne_repo_rand_seeds, function(x) x$seed) %in% c(225666, 880642, 262279, 648670))
+rotations <- c(-165, -50, 95, 45)
+
+tsne_repo_plots <- vector("list", 4)
+
+for(i in 1:4){
+tsne_repo_plots[[i]] <- ggplot(data.table(rotate_tsne(tsne_repo_rand_seeds[[selected[i]]], rotations[i])), aes(V1, V2, colour=datat$PseudoTime[match(rownames(results$scores), datat$cell)])) +
+  geom_point(size=0.1) +
+  scale_color_viridis() +
+  theme(legend.position = "none") +
+  labs(x="tSNE 1", y="tSNE 2") +
+  ggtitle(paste0("Random Seed: ",tsne_repo_rand_seeds[[selected[i]]]$seed," (rotated ",rotations[i],"°)"))
+}
+
+pdf("../results/tsne_random_seeds.pdf", width = 10, height = 8)
+plot_grid(plotlist = tsne_repo_plots, labels = "AUTO")
+dev.off()
+```
+
+
+## Counts / Lib Size
+
+```{r}
+
+data <- readRDS("../data/merged_mouse_normalised_tsne-QC_V3.rds")
+library_size <- data$library_size
+data <- data$dge
+
+
+retina <- fread("../data/previous_studies/mccarroll/GSM1626798_P14Retina_6_gene_exon.dge.summary.txt")
+retina2 <- fread("../data/previous_studies/mccarroll/GSM1626794_P14Retina_2_gene_exon.dge.summary.txt")
+
+retina <- rbind(retina2, retina)
+
+bipolar <- fread("../data/previous_studies/biopolar/Bipolar_neurons_gene_exon.dge.summary.txt")
+
+pbmc10x <- fread("../data/previous_studies/10X_genomics/293t/293t_10X_gene_exon.dge.summary.txt")
+
+lib_sizes <- rbind(data.table(counts = library_size, exp="conrad"),
+                   data.table(counts = retina$NUM_TRANSCRIPTS, exp="mccarrol"),
+                   data.table(counts = bipolar$NUM_TRANSCRIPTS, exp="bipolar"),
+                   data.table(counts = pbmc10x$NUM_TRANSCRIPTS, exp="293t10x"))
+
+cell_sums <- lib_sizes[order(-counts)]
+
+cell_sums[, cumulative_reads := cumsum(counts), by=exp]
+cell_sums[, cell_index := seq_len(.N), by=exp]
+
+
+ggplot(cell_sums, aes(cell_index, cumulative_reads, colour = exp)) + 
+  geom_line() +
+  theme(legend.position="bottom")
+
+
+ggplot(cell_sums, aes(counts)) + geom_histogram(bins=100) + facet_wrap(~exp, scales = "free_y") + xlim(0,5000)
+ggplot(cell_sums, aes(log(counts))) + geom_histogram(bins=100) + facet_wrap(~exp)
+
+
+
+```
+

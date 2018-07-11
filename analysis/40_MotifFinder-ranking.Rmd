@@ -1,0 +1,369 @@
+---
+title: "Rank genes using MotifFinder"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+```{r}
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("Biostrings")
+library(Biostrings)
+#devtools::install_github("myersgroup/MotifFinder")
+library(MotifFinder)
+library(ggseqlogo)
+library(SDAtools)
+library(biomaRt)
+library(stringr)
+library(data.table)
+library(ggplot2)
+library(NMF) # devtools::install_github("renozao/NMF", "devel")
+nmf.options(grid.patch=TRUE) # stop blank pages appearing
+```
+
+# Load SDA & tss sequences
+
+```{r}
+results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(results$loadings[[1]]) <- paste0("V",1:50)
+
+library(testisAtlas)
+
+tss <- download_tss(colnames(results$loadings[[1]]))
+#saveRDS(tss, "../data/motifs/promoter_sequences/transcription_start_sites.rds")
+
+tss <- readRDS("../data/motifs/promoter_sequences/transcription_start_sites.rds")
+str(tss)
+
+tss[, strand := gsub("1","+",gsub("-1","-",strand))]
+
+# wget ftp://ftp.ensembl.org/pub/release-91/fasta/mus_musculus/dna/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz
+# gunzip < Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz
+# samtools faidx Mus_musculus.GRCm38.dna_sm.primary_assembly.fa
+
+# +- 1,000bp
+
+fwrite(tss[,.(chromosome_name, transcription_start_site-1000, transcription_start_site+1000, external_gene_name, 0, strand)], 
+       "../data/motifs/promoter_sequences/all_genes_tss.bed", col.names = FALSE, sep = "\t")
+
+system("bedtools getfasta -s -fi ../data/motifs/promoter_sequences/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa -bed ../data/motifs/promoter_sequences/all_genes_tss.bed -name > ../data/motifs/promoter_sequences/all_genes_tss.fasta")
+
+# +-500bp
+
+fwrite(tss[,.(chromosome_name, transcription_start_site-500, transcription_start_site+500, external_gene_name, 0, strand)], 
+       "../data/motifs/promoter_sequences/all_genes_tss_500.bed", col.names = FALSE, sep = "\t")
+
+system("bedtools getfasta -s -fi ../data/motifs/promoter_sequences/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa -bed ../data/motifs/promoter_sequences/all_genes_tss_500.bed -name > ../data/motifs/promoter_sequences/all_genes_tss_500.fasta")
+  
+```
+
+
+# Calculate regprobs for all TSS Hocomoco
+
+## Download hocomoco
+
+```{bash}
+# Human
+
+curl http://hocomoco11.autosome.ru/final_bundle/hocomoco11/full/HUMAN/mono/HOCOMOCOv11_full_pcm_HUMAN_mono.tar.gz > ../data/motifs/HocomocoV11/human.tar.gz
+tar zxvf ../data/motifs/HocomocoV11/human.tar.gz -C ../data/motifs/HocomocoV11/
+mv ../data/motifs/HocomocoV11/pcm ../data/motifs/HocomocoV11/human
+
+# Mouse
+
+curl http://hocomoco11.autosome.ru/final_bundle/hocomoco11/full/MOUSE/mono/HOCOMOCOv11_full_pcm_MOUSE_mono.tar.gz > ../data/motifs/HocomocoV11/mouse.tar.gz
+tar zxvf ../data/motifs/HocomocoV11/mouse.tar.gz -C ../data/motifs/HocomocoV11/
+mv ../data/motifs/HocomocoV11/pcm ../data/motifs/HocomocoV11/mouse
+```
+
+
+## PCM to PWM for hocomoco
+
+```{r}
+
+motif_files <- list.files("../data/motifs/HocomocoV11/", recursive = T)
+
+hocomoco <- vector("list", length(motif_files))
+
+for(motif in seq_along(motif_files)){
+  pwm <- fread(paste0("../data/motifs/HocomocoV11/", motif_files[motif]))
+  pwm <- t(as.matrix(pwm))
+  rownames(pwm) <- c("A", "C", "G", "T")
+  hocomoco[[motif]] <- pwm
+  names(hocomoco)[motif] <- gsub("[a-z]+/|.pcm","",motif_files[motif])
+}
+
+str(motif_files)
+str(hocomoco[735])
+str(hocomoco[1302])
+
+saveRDS(hocomoco,"../data/motifs/Hocomoco_11_raw_motifs.rds")
+
+# Split full motif set into Core and Extra
+extra_motifs <- grep("\\.[1-3]\\.|\\.D\\.",motif_files, value=T)
+core_motifs <- motif_files[!motif_files %in% extra_motifs]
+
+# remove path and file ending
+extra_motifs <- gsub("[a-z]+/|.pcm","",extra_motifs)
+core_motifs <- gsub("[a-z]+/|.pcm","",core_motifs)
+
+
+saveRDS(hocomoco[extra_motifs],"../data/motifs/Hocomoco_11_raw_motifs_extra.rds")
+saveRDS(hocomoco[core_motifs],"../data/motifs/Hocomoco_11_raw_motifs_core.rds")
+
+```
+
+## Run MotifFinder
+
+this step on the server
+
+```{r}
+
+tss_seqs <- seqinr::read.fasta("../data/extracted_seqs/all_genes_tss_500.fasta", forceDNAtolower = FALSE, as.string = TRUE)
+tss_seqs_s <- toupper(as.character(tss_seqs))
+names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs))
+
+library(MotifFinder)
+
+# Core motifs
+
+hocomoco_core <- readRDS("../data/motifs/Hocomoco_11_raw_motifs_core.rds")
+
+system.time(results_core <- mclapply(seq_along(hocomoco_core), find_motifs_parallel, mc.cores = 15, mc.silent=TRUE, mc.preschedule = FALSE))
+
+#      user    system   elapsed
+# 866220.79  36891.56  62255.26
+# = 17.3 hrs (on 15 cores)
+
+saveRDS(results_core, "MotifFinder_Hocomoco_V11.rds")
+
+
+# Non Core motifs
+
+hocomoco_extra <- readRDS("../data/motifs/Hocomoco_11_raw_motifs_extra.rds")
+
+system.time(results_extra <- mclapply(seq_along(hocomoco_core), find_motifs_parallel, mc.cores = 15, mc.silent=TRUE, mc.preschedule = FALSE))
+
+# for extra motifs
+#     user    system   elapsed
+# 855947.01  27336.79  62126.83
+
+saveRDS(results_extra, "MotifFinder_Hocomoco_V11_extra.rds")
+```
+
+## Load results
+
+Back on local computer
+
+```{r fig.width=10}
+
+results_core <- readRDS("../data/motifs/MotifFinder_Hocomoco_V11.rds")
+results_extra <- readRDS("../data/motifs/MotifFinder_Hocomoco_V11_extra.rds")
+
+stopifnot(which(sapply(results_core, class)=="try-error")==0)
+stopifnot(which(sapply(results_extra, class)=="try-error")==0)
+
+names(results_core) <- sapply(results_core, function(x) x$motifID)
+names(results_extra) <- sapply(results_extra, function(x) x$motifID)
+
+length(results_core)
+length(results_extra)
+
+# to extract just gene names
+#unlist(strsplit(sapply(results_core, function(x) x$motifID),"_"))[seq(1,length(results_core)*2,2)]
+
+```
+
+## Clean & create matrix of regprobs
+
+```{r fig.width=10}
+
+hocomoco_alphas_core <- sapply(results_core, function(x) x$alpha)
+hocomoco_alphas_extra <- sapply(results_extra, function(x) x$alpha)
+
+# some have alpha = int(0) ?!?!
+almost_not_found_core <- which(sapply(hocomoco_alphas_core, is.null))
+# 23, none found
+str(results_core[165])
+# alphas also all missing...
+
+# rerunning to check sdout
+# tmp <- pcm2pwm(t(hocomoco[[165]]))
+    
+#"Some motifs have <=10 expected copies, removing"
+#"In min(dimvec) : no non-missing arguments to min; returning Inf"
+
+almost_not_found_extra <- which(sapply(hocomoco_alphas_extra, is.null))
+#  round2 18 missing
+str(results_extra[46])
+
+
+regprobs_matrix_core <- sapply(results_core[-almost_not_found_core], function(x) x$dt$regprob)
+rownames(regprobs_matrix_core) <- results_core[[1]]$dt$sequence
+
+regprobs_matrix_extra <- sapply(results_extra[-almost_not_found_extra], function(x) x$dt$regprob)
+rownames(regprobs_matrix_extra) <- results_extra[[1]]$dt$sequence
+
+str(regprobs_matrix_core)
+str(regprobs_matrix_extra)
+
+saveRDS(regprobs_matrix_core, "../data/motifs/HocomocoV11_regprobs_matrix.rds")
+saveRDS(regprobs_matrix_extra, "../data/motifs/HocomocoV11_regprobs_matrix_extra.rds")
+```
+
+## Check convergance
+
+```{r fig.width=10}
+
+# duplicates <- which(colnames(regprobs_matrix_core) %in% c("PBX1_MOUSE.H11MO.1.A","ZFP42_MOUSE.H11MO.0.A")) #???
+# regprobs_matrix <- regprobs_matrix[,-duplicates]
+
+hocomoco_alphas_core <- unlist(hocomoco_alphas_core)
+hocomoco_alphas_extra <- unlist(hocomoco_alphas_extra)
+
+str(hocomoco_alphas_core)
+str(hocomoco_alphas_extra)
+
+hocomoco_alphas_core_matrix <- sapply(results_core[-almost_not_found_core], function(x) as.numeric(x$alphas))
+hocomoco_alphas_extra_matrix <- sapply(results_extra[-almost_not_found_extra], function(x) as.numeric(x$alphas))
+
+rownames(hocomoco_alphas_core_matrix) <- 1:20
+rownames(hocomoco_alphas_extra_matrix) <- 1:20
+
+hocomoco_alphas_dt_core <- melt(data.table(motif=seq_along(hocomoco_alphas_core), t(hocomoco_alphas_core_matrix), motif_name=colnames(hocomoco_alphas_core_matrix)),
+                         id.vars=c("motif","motif_name"),
+                         variable.name = "iteration",
+                         value.name = "alpha")
+
+hocomoco_alphas_dt_extra <- melt(data.table(motif=seq_along(hocomoco_alphas_extra), t(hocomoco_alphas_extra_matrix), motif_name=colnames(hocomoco_alphas_extra_matrix)),
+                         id.vars=c("motif","motif_name"),
+                         variable.name = "iteration",
+                         value.name = "alpha")
+
+ggplot(hocomoco_alphas_dt_core, aes(iteration, alpha, group=motif)) + geom_line(alpha=0.15) + ggtitle("Alpha convergence per iteration (Core motifs)")
+ggplot(hocomoco_alphas_dt_core, aes(iteration, alpha, group=motif)) + geom_line(alpha=0.15) + scale_y_log10() + ggtitle("Alpha convergence per iteration (Core motifs) Log")
+
+ggplot(hocomoco_alphas_dt_extra, aes(iteration, alpha, group=motif)) + geom_line(alpha=0.15) + ggtitle("Alpha convergence per iteration (Extra motifs)")
+ggplot(hocomoco_alphas_dt_extra, aes(iteration, alpha, group=motif)) + geom_line(alpha=0.15) + scale_y_log10() + ggtitle("Alpha convergence per iteration (Extra motifs) Log")
+
+
+```
+
+## check Time running
+
+higher alpha => longer running time
+
+```{r}
+hocomoco_time_core <- sapply(results_core, function(x) x$time)
+hocomoco_time_extra <- sapply(results_extra, function(x) x$time)
+
+plot(hocomoco_alphas_core, hocomoco_time_core[3,][-almost_not_found_core], main="Alpha vs Run time for core motifs")
+plot(log(hocomoco_alphas_core),log(hocomoco_time_core[3,][-almost_not_found_core]), main="Alpha vs Run time for core motifs (log)")
+
+plot(hocomoco_alphas_extra, hocomoco_time_extra[3,][-almost_not_found_extra], main="Alpha vs Run time for extra motifs")
+plot(log(hocomoco_alphas_extra),log(hocomoco_time_extra[3,][-almost_not_found_extra]), main="Alpha vs Run time for extra motifs (log)")
+
+```
+
+
+<!-- # Calculate regprobs for all TSS Jaspar -->
+
+<!-- ```{r} -->
+
+<!-- # as.list(subset(MotifDb, providerName == 'M0002_1.02')) -->
+<!-- # as.list(subset(MotifDb, providerName == 'RFX2_MOUSE.H10MO.C')) -->
+<!-- # MotifDb[grep('RFX2', values (MotifDb)$geneSymbol, ignore.case=TRUE)] -->
+<!-- # subset(MotifDb, dataSource=='JASPAR_CORE') -->
+<!-- # subset(MotifDb, dataSource=='HOCOMOCOv10') -->
+<!-- # as.list(subset(MotifDb, dataSource=='HOCOMOCOv10')[motif])[[1]] -->
+
+<!-- # for(thing in names(found_motif_macro_dn)){ -->
+<!-- #   print(thing) -->
+<!-- #   print(identical(found_motif_macro_dn[[thing]], found_motif_macro_dn_c[[thing]])) -->
+<!-- # } -->
+
+
+<!-- #devtools::install_github("PriceLab/MotifDb") -->
+
+<!-- tss_seqs <- seqinr::read.fasta("../data/extracted_seqs/all_genes_tss_500.fasta", forceDNAtolower = FALSE, as.string = TRUE) -->
+<!-- tss_seqs_s <- toupper(as.character(tss_seqs)) -->
+<!-- names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs)) -->
+
+
+<!-- library(MotifDb) -->
+<!-- library(MotifFinder) -->
+
+<!-- system.time(results2 <- mclapply(1:722, function(x) find_motifs_parallel(x, database=="jaspar"), mc.cores = 14, mc.silent=TRUE, mc.preschedule = FALSE)) -->
+
+<!-- #      user    system   elapsed -->
+<!-- # 139825.24  15713.99  10799.39 -->
+<!-- # = 3hrs -->
+<!-- # Warning message: -->
+<!-- # In mclapply(1:722, find_motifs_parallel, mc.cores = 14, mc.silent = TRUE,  : -->
+<!-- #   52 function calls resulted in an error -->
+
+<!-- saveRDS(results2, "MotifFinder_Jaspar_2018.rds") -->
+<!-- ``` -->
+
+<!-- ## Clean results -->
+
+<!-- ```{r fig.width=10} -->
+
+<!-- results2 <- readRDS("MotifFinder_Jaspar_2018.rds") -->
+
+<!-- not_found <- which(sapply(results2, class)=="try-error") -->
+
+<!-- results2 <- results2[-not_found] -->
+
+<!-- names(results2) <- unlist(strsplit(sapply(results2, function(x) x$motifID),"jaspar2018-"))[seq(2,1340,2)] -->
+
+<!-- regprobs_matrix <- sapply(results2, function(x) x$regprob) -->
+<!-- rownames(regprobs_matrix) <- results2[[1]]$dt$genes -->
+<!-- ``` -->
+
+<!-- ## Check convergance -->
+
+<!-- ```{r fig.width=10} -->
+
+<!-- jaspar_alphas <- sapply(results2, function(x) x$alpha) -->
+
+<!-- # some have alpha = int(0) ?!?! -->
+<!-- almost_not_found <- which(is.na(jaspar_alphas>0)) -->
+<!-- str(results2[42]) -->
+<!-- # alphas also all missing... -->
+
+<!-- # rerunning to check sdout -->
+<!-- tmp <- as.list(subset(MotifDb, providerName=='MA0074.1' & dataSource=='jaspar2018'))[[1]] -->
+
+<!-- #"Some motifs have <=10 expected copies, removing" -->
+<!-- #"In min(dimvec) : no non-missing arguments to min; returning Inf" -->
+
+<!-- jaspar_alphas <- unlist(jaspar_alphas) -->
+<!-- #667 -->
+
+<!-- jaspar_alphas_matrix <- sapply(results2[-almost_not_found], function(x) as.numeric(x$alphas)) -->
+<!-- rownames(jaspar_alphas_matrix) <- 1:10 -->
+
+<!-- jaspar_alphas_dt <- melt(data.table(motif=seq_along(jaspar_alphas), t(jaspar_alphas_matrix)), -->
+<!--                          id.vars="motif", -->
+<!--                          variable.name = "iteration", -->
+<!--                          value.name = "alpha") -->
+
+<!-- ggplot(data.table(jaspar_alphas), aes(seq_along(jaspar_alphas), jaspar_alphas)) + geom_point() -->
+<!-- ggplot(data.table(jaspar_alphas), aes(seq_along(jaspar_alphas), jaspar_alphas)) + geom_point() + scale_y_log10() -->
+
+<!-- ggplot(jaspar_alphas_dt, aes(iteration, alpha, group=motif)) + geom_line(alpha=0.15) -->
+<!-- ggplot(jaspar_alphas_dt, aes(iteration, alpha, group=motif)) + geom_line(alpha=0.15) + scale_y_log10() -->
+
+
+
+<!-- ``` -->
+

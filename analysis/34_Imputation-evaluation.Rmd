@@ -1,0 +1,360 @@
+---
+title: "Imputation Assesment via Partitioning"
+output: 
+  html_notebook: 
+    code_folding: hide
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+# Split into Test & Train
+
+For each entry in Cell by Gene count matrix, split read counts using binomial.
+
+```{r}
+
+# for each entry in raw_data, split read counts using binomial
+
+raw_data <- readRDS("../data/merged-mouse_counts_tsne-QC_low-mt.rds")
+
+# create train data
+set.seed(562393)
+raw_data_train <- apply(raw_data, 2, function(y) sapply(y, function(x) rbinom(1, size = x, prob = 0.8)))
+
+raw_data_train2 <- Matrix(raw_data_train, sparse = TRUE)
+
+rm(raw_data_train)
+
+# create test data
+raw_data_test <- raw_data - raw_data_train2
+
+# force compression
+raw_data_test <- Matrix(as.matrix(raw_data_test), sparse = TRUE)
+
+# sanity check
+sum(raw_data < raw_data_train2)
+
+saveRDS(raw_data_train2, "../data/raw_data_train.rds")
+saveRDS(raw_data_test,"../data/raw_data_test.rds")
+
+```
+
+Normalise data & run SDA
+
+```{r}
+data <- readRDS("../data/raw_data_train.rds")
+
+normalised_data <- dropsim::normaliseDGE(t(data),
+                     center = FALSE,
+                     scale = TRUE,
+                     threshold = 10,
+                     min_library_size = 200,
+                     gene_subset = (2/3))
+
+saveRDS(normalised_data,"../data/train_0.8_normalised.rds")
+
+library(SDAtools)
+export_data(as.matrix(normalised_data), name = "merged_mouse_V3_SDA_train_0.8.data", path="")
+
+run_SDA(sda_location = "../sda",
+        out = "../results/conradV3_sda_train_0.8_1",
+        data = "merged_mouse_V3_SDA_train_0.8.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "79151 17351",
+        N = 20036,
+        eigen_parallel = TRUE,
+        num_openmp_threads = 5,
+        num_blocks = 5)
+
+```
+
+
+# Compute counts recovery info
+
+Calculate information required to untransorm the data back to counts. We need the standard deviations we divided by and the library sizes.
+
+```{r}
+
+raw_data <- readRDS("../data/raw_data_train.rds")
+dge <- t(raw_data)
+
+library(Matrix)
+library_size <- Matrix::colSums(dge)
+#gene_sizes <- rowSums(dge)
+lib_size_correction_factor <- library_size/median(sqrt(library_size))
+
+dge <- t(t(dge)/lib_size_correction_factor)
+cell_subset <- library_size >= 200
+gene_mean <- Matrix::rowMeans(dge[, cell_subset])
+gene_subset <- data.table(gene_mean, names(gene_mean))[order(-gene_mean)][1:round(length(gene_mean) * 2/3)]$V2
+dge <- dge[gene_subset, cell_subset]
+dge <- sqrt(10000 * dge)
+
+dge <- t(dge)
+
+colSdColMeans <- function(x, na.rm = TRUE) {
+            if (na.rm) {
+                n <- Matrix::colSums(!is.na(x))
+            }
+            else {
+                n <- nrow(x)
+            }
+            colVar <- Matrix::colMeans(x * x, na.rm = na.rm) - (Matrix::colMeans(x, 
+                na.rm = na.rm))^2
+            return(sqrt(colVar * n/(n - 1)))
+        }
+
+sds <- colSdColMeans(dge)
+
+dge <- t(t(dge)/colSdColMeans(dge))
+
+save(gene_subset, sds, lib_size_correction_factor, cell_subset, file = "../data/count_dge_recovery_information_train.rds")
+
+# this part can't be reversed as throwing information away
+# dge2 <- copy(dge)
+# sum(dge2 > 10)
+# dge2[dge2 > 10] <- 10
+# dge2[dge2 < (-10)] <- (-10)
+
+
+
+
+# check reverse_normalisation works
+# tmp <- reverse_normalisation(dge)
+
+# identical(round(tmp), raw_data[cell_subset, gene_subset])
+# TRUE
+
+```
+
+# Load SDA results & calculate prediction (imputed values)
+
+```{r}
+
+library(SDAtools)
+
+# predicted with mask
+results_train <- load_results(results_folder = "../data/SDA/conradV3_sda_train_0.8_1/", data_path = "../data/count_matrices/")
+rownames(results_train$loadings[[1]]) <- paste0("V",1:50)
+rownames(results_train$pips[[1]]) <- paste0("V",1:50)
+
+predicted_train <- results_train$scores %*% results_train$loadings[[1]]
+
+str(results_train)
+str(predicted_train)
+```
+
+# Reverse Normalisation of training data
+
+```{r}
+
+load(file = "../data/count_dge_recovery_information.rds")
+
+cell_subset <- rownames(predicted_train)
+
+predicted_train_counts <- reverse_normalisation(predicted_train, sign = TRUE)
+
+predicted_train_counts_0 <- copy(predicted_train_counts)
+predicted_train_counts_0[predicted_train_counts_0 < 0] <- 0
+
+predicted_train_counts_rpkm <- predicted_train_counts_0/rowSums(predicted_train_counts_0)
+
+str(predicted_train)
+str(predicted_train_counts)
+str(predicted_train_counts_0)
+str(predicted_train_counts_rpkm)
+rm(predicted_train)
+rm(predicted_train_counts)
+```
+
+# Load raw test & train data
+
+```{r}
+raw_data_test <- readRDS("../data/raw_data_test.rds")
+raw_data_test <- raw_data_test[rownames(predicted_train_counts_0), colnames(predicted_train_counts_0)]
+
+raw_data_train <- readRDS("../data/raw_data_train.rds")
+raw_data_train <- raw_data_train[rownames(predicted_train_counts_0), colnames(predicted_train_counts_0)]
+
+```
+
+# AUC
+
+```{r}
+
+set.seed(42)
+reorder = sample(1:ncol(raw_data_train))
+av_exp_order <- names(sort(colSums(raw_data_train), T))
+
+predicted_train_counts_rpkm2 = predicted_train_counts_rpkm[,reorder]
+raw_data_test2 = raw_data_test[,reorder]
+raw_data_train2 = raw_data_train[,reorder]
+
+cumsum_predictF <- function(i){
+  testvec = raw_data_test2[i,]
+  cumsum(testvec[order(predicted_train_counts_rpkm2[i,], decreasing=T)]) / sum(testvec)
+}
+
+cumsum_trainF <- function(i){
+  testvec = raw_data_test2[i,]
+  cumsum(testvec[order(raw_data_train2[i,], decreasing=T)]) / sum(testvec)
+}
+
+cumsum_meanF <- function(i){
+  testvec = raw_data_test2[i,]
+  cumsum(testvec[av_exp_order]) / sum(testvec) #order(reorder)
+}
+
+
+cumsum_predict <- sapply(1:nrow(raw_data_train), cumsum_predictF)
+cumsum_train <- sapply(1:nrow(raw_data_train), cumsum_trainF)
+cumsum_mean <- sapply(1:nrow(raw_data_train), cumsum_meanF)
+
+
+cellAUCs <- data.table(cell = rownames(raw_data_train),
+                       predict = colSums(cumsum_predict) /ncol(raw_data_train),
+                       train = colSums(cumsum_train) /ncol(raw_data_train),
+                       mean = colSums(cumsum_mean) /ncol(raw_data_train))
+
+saveRDS(cellAUCs, file = "../data/tmp_cache/cellAUCs.rds")
+
+save(cumsum_predict, cumsum_train, cumsum_mean, file = "../data/tmp_cache/imputed_ranks.rds")
+
+density_auc <- get_density(cellAUCs$mean, cellAUCs$predict, kern=0.025)
+density_auc_t <- get_density(cellAUCs$train, cellAUCs$predict, kern=0.025)
+
+a <- ggplot(cbind(cellAUCs, density_auc), aes(train, predict, color=density_auc_t)) +
+  geom_point(size=0.1) +
+  geom_abline(colour="red") +
+  scale_colour_viridis() + 
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(colour="Cell density", x="Cellwise Training Expression AUC", y="Imputed Expression AUC")
+
+b <- ggplot(cbind(cellAUCs, density_auc), aes(mean, predict, color=density_auc)) +
+  geom_point(size=0.1) +
+  geom_abline(colour="red") +
+  scale_colour_viridis() +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(colour="Cell density", x="Average Training Expression AUC", y="Imputed Expression AUC")
+
+a
+b
+
+```
+
+## Example Curves
+
+```{r}
+
+a=sample(1:20000,1);plotCellAUC(a);print(a)
+a=sample(1:20000,1);plotCellAUC(a);print(a)
+a=sample(1:20000,1);plotCellAUC(a);print(a)
+a=sample(1:20000,1);plotCellAUC(a);print(a)
+a=sample(1:20000,1);plotCellAUC(a);print(a)
+
+```
+
+## Failures
+
+In which cells do we do worse than imputation?
+
+```{r}
+
+str(cellAUCs[train>predict])
+
+plotCellAUCg(which(rownames(raw_data_train)=="GTCCATAGTCAT.Cul4a_2017-03-30"))
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
+  geom_point(size=0.2) +
+  geom_point(size=1, data = datat[cell %in% cellAUCs[train>predict]$cell], colour="red")
+
+str(cellAUCs[test>predict])
+
+plotCellAUCg(which(rownames(raw_data_train)=="ATGACGGTGCGC.CNP_2016-12-15"))
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
+  geom_point(size=0.2) +
+  geom_point(size=0.5, data = datat[cell %in% cellAUCs[mean>predict]$cell], colour="red")
+```
+
+## tSNE
+
+In general which cells are better with / without imputation
+
+```{r}
+setkey(cellAUCs, cell)
+
+# which cells are best
+c <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
+  geom_point(size=0.2) + 
+  scale_color_viridis(direction = -1) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
+  labs(x="t-SNE 1", y="t-SNE 2", colour="Ratio of Imputed Expression AUC\n to Average Training Expression AUC")
+
+d <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=predict/train)) +
+  geom_point(size=0.2) + 
+  scale_color_viridis(direction = -1) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
+  labs(x="t-SNE 1", y="t-SNE 2", colour="Ratio of Imputed Expression AUC\n to Cellwise Training Data AUC")
+
+e <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=log(library_size))) +
+  geom_point(size=0.2) + 
+  scale_color_viridis(direction = -1) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
+  labs(x="t-SNE 1", y="t-SNE 2", colour="Log Library Size (Total UMI Counts)")
+
+
+```
+
+## 80:20
+
+```{r}
+predict80 <- apply(cumsum_predict, 2, function(x) min(which(x>0.8)/nrow(cumsum_predict)))
+train80 <- apply(cumsum_train, 2, function(x) min(which(x>0.8)/nrow(cumsum_predict)))
+mean80 <- apply(cumsum_mean, 2, function(x) min(which(x>0.8)/nrow(cumsum_predict)))
+
+frac80 <- data.table(mean80, train80, predict80)
+
+density_frac80 <- get_density(frac80$mean80, frac80$predict80, kern=0.025)
+density_frac80_t <- get_density(frac80$train80, frac80$predict80, kern=0.025)
+
+ggplot(cbind(frac80, density_frac80_t), aes(train80, predict80, color=density_frac80_t)) +
+  geom_point(size=0.1) +
+  geom_abline(colour="red") +
+  scale_colour_viridis() + 
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(colour="Cell density", x="Cellwise Training Fraction of Genes for 80% Cumsum", y="Imputed Fraction of Genes for 80% Cumsum")
+
+ggplot(cbind(cellAUCs, density_frac80), aes(mean80, predict80, color=density_frac80)) +
+  geom_point(size=0.1) +
+  geom_abline(colour="red") +
+  scale_colour_viridis() +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(colour="Cell density", x="Average Training Fraction of Genes for 80% Cumsum", y="Imputed Fraction of Genes for 80% Cumsum")
+```
+
+
+save figure
+
+```{r}
+pdf(width = 18, height = 12, file = "../results/imputationAUC.pdf")
+plot_grid(plotCellAUCg(5749), a, b, e, d, c, ncol = 3, labels = "AUTO")
+dev.off()
+```
+

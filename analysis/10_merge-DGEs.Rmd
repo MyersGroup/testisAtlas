@@ -1,0 +1,140 @@
+---
+title: "Merge DGEs"
+author: "Daniel Wells"
+date: "`r Sys.Date()`"
+output: 
+  html_notebook:
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+Merge together all experimental files which are from mice testis to create largest possible data set.
+
+# Get files from server
+
+```{bash, eval=FALSE}
+find . -name "*_out_gene_exon_tagged.dge.txt.gz" -print0 | cpio -o -H ustar -0 > count_matrices.tar
+```
+
+# Load individual DGEs
+
+```{r}
+library(data.table)
+
+files_to_merge <- list.files(path="../data/count_matrices/",pattern="*_out_gene_exon_tagged.dge.txt.gz", recursive = TRUE)
+
+files_to_merge
+
+# load each file
+individual_dges <- list()
+
+for (file in files_to_merge){
+individual_dges[[length(individual_dges)+1]] <- fread(paste0("zcat < ../data/count_matrices/", file))
+names(individual_dges)[length(individual_dges)] <- strsplit(file,"/")[[1]][1] #gsub("_out_gene_exon_tagged.dge.txt.gz","",file)
+}
+
+cell_names <- list()
+
+for (i in 1:length(individual_dges)){
+setkey(individual_dges[[i]],GENE)  
+key(individual_dges[[i]])
+
+colnames(individual_dges[[i]]) <- paste0(colnames(individual_dges[[i]]),".",names(individual_dges)[i])
+colnames(individual_dges[[i]])[1] <- "GENE"
+
+cell_names[[i]] <- colnames(individual_dges[[i]])
+}
+
+names(cell_names) <- names(individual_dges)
+
+#check duplicates in cell barcode
+unlist(cell_names)[duplicated(unlist(cell_names))]
+```
+
+# Summarise each DGE
+
+& check for possible duplicates
+
+```{r}
+merged2 <- data.table(GENE = character(), experiment = character(), expression=numeric())
+setkey(merged2,GENE)
+
+for (i in 1:length(individual_dges)){
+  experiment_summary <- data.table(GENE = individual_dges[[i]]$GENE,
+                                   experiment = colnames(individual_dges[[i]])[2],
+                                   expression = rowSums(individual_dges[[i]][,-"GENE",with=FALSE]))
+  merged2 <- rbind(merged2, experiment_summary)
+}
+
+merged_cast <- dcast(merged2, GENE ~ substring(experiment, 14), value.var="expression")
+
+duplicated_genes <- merged_cast[duplicated(tolower(GENE))]$GENE
+
+merged_cast[toupper(GENE) %in% toupper(duplicated_genes)][order(toupper(GENE))]
+```
+
+# Merge DGEs
+
+```{r}
+merged <- data.table(GENE = c("NOT_A_GENE_TEMP"))
+setkey(merged,GENE)
+
+for (i in 1:length(individual_dges)){
+merged <- merge(merged, individual_dges[[i]], all=TRUE)
+}
+
+merged <- merged[GENE != "NOT_A_GENE_TEMP"]
+
+individual_dges <- NULL
+gc()
+```
+
+recheck for duplicate genes
+
+```{r}
+sum(duplicated(merged$GENE))
+merged$GENE[duplicated(toupper(merged$GENE))]
+#data.table(t(merged[toupper(GENE)=="ATF7"]), keep.rownames = T)[is.na(V2)]
+```
+
+# Convert NA to 0
+
+```{r}
+library(Matrix)
+# remove cells with no counts!
+zero_cells <- which(colSums(merged[,!"GENE", with=FALSE], na.rm=TRUE)==0)
+
+merged[, (zero_cells+1) := NULL]
+
+# replace NA with 0
+f_dowle3 = function(DT) {
+  for (j in seq_len(ncol(DT))){
+    set(DT,which(is.na(DT[[j]])),j,0)
+  }
+  return(DT)
+}
+
+merged <- f_dowle3(merged)
+```
+
+# Save as sparse matrix
+
+```{r}
+
+merged_M <- Matrix(as.matrix(merged[, -c("GENE"), with=FALSE]), sparse = TRUE)
+rownames(merged_M) <- merged$GENE
+
+str(merged_M)
+saveRDS(merged_M, "../data/count_matrices/merged_dge_sparse.rds")
+```
+
+```{r}
+digest::digest(merged_M)
+```
+

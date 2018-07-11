@@ -1,0 +1,1059 @@
+---
+title: "Meiotic Components"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+# Meiotic Components
+
+```{r}
+library(DT)
+motifEnrichment_wLogo <- readRDS("../data/motifs/TFenrichment_V2.rds")
+GO_data <- readRDS("../data/GO_enrichment.rds")
+
+library(testisAtlas)
+load("../data/tmp_cache/SDA_objects.rds")
+load_component_orderings()
+```
+
+
+## 50 Gfra1+ Stem Cells
+
+Steady-state self-renewal Spermatogonia
+
+```{r, fig.width=6}
+print_tsne(50, point_size = 0.5)
+print_loadings_scores(50)
+print_gene_list(50)
+
+go_volcano_plot(component = "V50N")
+head(GO_data[["V50N"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V50P")
+head(GO_data[["V50P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V50N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+- Gfra1 [GDNF Family Receptor alpha1 Phenotype of Spermatogonial Stem Cells in Immature Mouse Testes](https://doi.org/10.1095/biolreprod.105.043810), [Regulation of cell fate decision of undifferentiated spermatogonia by GDNF.](https://www.ncbi.nlm.nih.gov/pubmed/10688798?dopt=Abstract)
+- Ccnd2 [Genetic reconstruction of mouse spermatogonial stem cell self-renewal in vitro by Ras-cyclin D2 activation.](https://doi.org/10.1016/j.stem.2009.04.020)
+- Cd9 [CD9 Is Expressed on Human Male Germ Cells That Have a Long-Term Repopulation Potential after Transplantation into Mouse Testes](http://doi.org/10.1095/biolreprod.112.098913)
+- Etv5 [Spermatogonial Stem Cell Self-Renewal Requires ETV5-Mediated Downstream Activation of Brachyury in Mice](https://dx.doi.org/10.1095%2Fbiolreprod.111.091793)
+- Sall4
+
+## 7 Intermediate Spermatogonia
+
+In spermatogonial tsne location, but just enrichment not very spematogonial?
+
+```{r, fig.width=6}
+print_tsne(7, point_size = 0.5)
+print_loadings_scores(7)
+print_gene_list(7)
+
+go_volcano_plot(component = "V7P")
+head(GO_data[["V7P"]][c(2,7,8,10)], 20)
+
+head(GO_data[["V7N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V7N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+Nxf2 "restricted exclusively to spermatogonia" [The role of spermatogonially expressed germ cell-specific genes in mammalian meiosis](https://doi.org/10.1007/s10577-007-1141-2)
+
+
+## 31 Undiff Spermatogonia
+
+```{r, fig.width=6}
+print_tsne(31, point_size = 0.5)
+print_loadings_scores(31)
+print_gene_list(31)
+
+go_volcano_plot(component = "V31P")
+head(GO_data[["V31P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V31P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+- Sall4 [The regulatory repertoire of PLZF and SALL4 in undifferentiated spermatogonia.](https://doi.org/10.1242/dev.132761) & [Germline Stem Cell Activity Is Sustained by SALL4-Dependent Silencing of Distinct Tumor Suppressor Genes](http://dx.doi.org/10.1016/j.stemcr.2017.08.001)
+- Zbtb16 (PLZF) [Essential role of Plzf in maintenance of spermatogonial stem cells.](https://doi.org/10.1038/ng1367) & [Plzf is required in adult male germ cells for stem cell self-renewal.](https://doi.org/10.1038/ng1366). [Repression of kit Expression by Plzf in Germ Cells](http://doi.org/10.1128/MCB.00479-07)
+- Nanos3 [Potential role of Nanos3 in maintaining the undifferentiated spermatogonia population.](https://doi.org/10.1016/j.ydbio.2007.11.011) & [The heterogeneity of spermatogonia is revealed by their topology and expression of marker proteins including the germ cell-specific proteins Nanos2 and Nanos3.](https://doi.org/10.1016/j.ydbio.2009.10.002)
+- Lin28a [LIN28A marks the spermatogonial progenitor population and regulates its cyclic expansion.](https://doi.org/10.1002/stem.1584), [The pluripotency factor LIN28 marks undifferentiated spermatogonia in mouse](https://doi.org/10.1186/1471-213X-9-38), [Lin28a regulates germ cell pool size and fertility.](https://doi.org/10.1002/stem.1343)
+- Mageb4 "Mage-b4 is highly expressed in the cytoplasm of spermatogonia" in [E2F1 deficiency impairs murine spermatogenesis and augments testicular degeneration in SCP3-nullizygous mice](http://doi.org/10.1038/sj.cdd.4401362)
+- Glis3 - [Transcription Factor GLIS3: A New and Critical Regulator of Postnatal Stages of Mouse Spermatogenesis.](https://doi.org/10.1002/stem.2449)
+- Sox4 [SOX4 regulates gonad morphogenesis and promotes male germ cell differentiation in mice](https://doi.org/10.1016/j.ydbio.2017.01.013)
+- Sohlh1 [Sohlh1 is essential for spermatogonial differentiation.](https://doi.org/10.1016/j.ydbio.2006.02.027) [SOHLH1 and SOHLH2 coordinate spermatogonial differentiation.](https://doi.org/10.1016/j.ydbio.2011.10.027)
+- Sox3 [Sox3 expression in undifferentiated spermatogonia is required for the progression of spermatogenesis.](https://doi.org/10.1016/j.ydbio.2005.04.013)
+
+- Foxo1
+
+- [Foxo1 is required in mouse spermatogonial stem cells for their maintenance and the initiation of spermatogenesis.](https://doi.org/10.1172/JCI57984)
+- [Multiple roles of FOXJ3 in spermatogenesis: A lesson from Foxj3 conditional knockout mouse models.](https://doi.org/10.1002/mrd.22750)
+- [FOXJ2 controls meiosis during spermatogenesis in male mice.](https://doi.org/10.1002/mrd.22671)
+
+
+## 33 Diff Spermatogonia
+
+```{r, fig.width=6}
+print_tsne(33, point_size = 0.5)
+print_loadings_scores(33)
+print_gene_list(33)
+
+go_volcano_plot(component = "V33N")
+head(GO_data[["V33N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V33N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+```
+
+Dmrt1 [DMRT1 Is Required for Mouse Spermatogonial Stem Cell Maintenance and Replenishment](https://doi.org/10.1371/journal.pgen.1006293)
+Dnmt3b & Dnmt3a [Dynamic expression of DNMT3a and DNMT3b isoforms during male germ cell development in the mouse.](https://doi.org/10.1016/j.ydbio.2006.04.436)
+Dnmt1
+Uchl1 [Marks cells on edge of tubule in HPA](https://www.proteinatlas.org/ENSG00000154277-UCHL1/tissue/testis#img), [Asymmetric distribution of UCH-L1 in spermatogonia is associated with maintenance and differentiation of spermatogonial stem cells.](https://doi.org/10.1002/jcp.21789)
+Map7d2 [Marks cells on edge of tubule in HPA](https://www.proteinatlas.org/ENSG00000184368-MAP7D2/tissue/testis#img)
+Scml2 [SCML2 establishes the male germline epigenome through regulation of histone H2A ubiquitination.](https://doi.org/10.1016/j.devcel.2015.01.014)
+
+## 27 Early ?
+
+Overlaps with component 33, but with more late (~pachytene) expression
+
+```{r, fig.width=6}
+print_tsne(27, point_size = 0.5)
+print_loadings_scores(27)
+print_gene_list(27)
+
+go_volcano_plot(component = "V27P")
+head(GO_data[["V27P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V27P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+- Hsp90aa1: [The Molecular Chaperone Hsp90α Is Required for Meiotic Progression of Spermatocytes beyond **Pachytene** in the Mouse](http://doi.org/10.1371/journal.pone.0015770)
+
+## 2 pre-leptotene
+
+```{r, fig.width=6}
+print_tsne(2, point_size = 0.5)
+print_loadings_scores(2)
+print_gene_list(2)
+
+go_volcano_plot(component = "V2P")
+head(GO_data[["V2P"]][c(2,7,8,10)], 20)
+head(GO_data[["V2N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V2P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 5 Zygotene / Leptotene
+
+```{r, fig.width=6}
+print_tsne(5, point_size = 0.5)
+print_loadings_scores(5)
+print_gene_list(5)
+
+go_volcano_plot(component = "V5N")
+head(GO_data[["V5N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V5N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+Well known meiotic genes Prdm9, Dmc1, Tex12. Prdm9 is expressed in pre-lepotene and early-leptotene [doi.org/10.1007/s00412-015-0511-3](https://doi.org/10.1007/s00412-015-0511-3). Dmc1 is also expressed in leptotene [doi.org/10.1016/S1097-2765(00)80070-2](https://doi.org/10.1016/S1097-2765(00)80070-2), Dmc1KO germ cells progress up until an abnormal looking zygotene [doi.org/10.1016/S1097-2765(00)80069-6](http://dx.doi.org/10.1016/S1097-2765(00)80069-6).
+
+GO hits for meiosis, synapsis, chromosome segregation, recombination etc.
+
+- Gm7972 Pseudogene but known enriched in testis
+- *Prdm9* - well known *meiotic* expressed in pre-lepotene and early-leptotene [doi.org/10.1007/s00412-015-0511-3](https://doi.org/10.1007/s00412-015-0511-3).
+- Zcwpw1 - Zinc Finger, CW-Type With PWWP Domain 1<!-- , binds *H3K4me* (https://doi.org/10.1016/j.str.2010.06.012) and *H3K36me3* (http://dx.doi.org/10.1016/j.tibs.2014.09.001), and (https://doi.org/10.1371/journal.pgen.1006146 for Prdm9 association) -->
+- Ddb2 Nucleotide excision repair of UV damage, 
+- Prss50 (TSP50) - threonine protease, expression enriched in testis, primary target unknown, ER & Cytoplasmic membrane localization [TSP50 Encodes a Testis-Specific Protease and Is Negatively Regulated by p53](doi.org/10.1158/0008-5472.CAN-06-3688)
+induced by CTCFL/BORIS - [Transcription Factor BORIS (Brother of the Regulator of Imprinted Sites) Directly Induces Expression of a Cancer-Testis Antigen, TSP50, through Regulated Binding of BORIS to the Promoter](https://dx.doi.org/10.1074%2Fjbc.M111.243576). Also in ES cells [Expression of the CTCFL Gene during Mouse Embryogenesis Causes Growth Retardation, Postnatal Lethality, and Dysregulation of the Transforming Growth Factor β Pathway](10.1128/MCB.00381-15). Also see [The male germ cell gene regulator CTCFL is functionally different from CTCF and binds CTCF-like consensus sites in a nucleosome composition-dependent manner](https://doi.org/10.1186/1756-8935-5-8)
+- Ugt8a - aka CGT - Ceramide UDP-Galactosyltransferase, synthesyses seminolipid (principal glycolipid in sperm cell membrane), likely infertile (but severe early neuronal defect [Requirement of Seminolipid in Spermatogenesis Revealed by UDP-galactose:Ceramide Galactosyltransferase-deficient Mice](10.1074/jbc.C000200200)) Expressed in zygotene [Timing of sulphogalactolipid biosynthesis in the rat testis studied by tissue autoradiography](https://www.ncbi.nlm.nih.gov/pubmed/4044678). Enzyme catalysing next step in synthesis pathway also (see Prss50) targeted by CTCFL/BORIS (Gal3st1 (aka CST - cerebroside sulfotransferase) [Expression of a Testis-Specific Form of Gal3st1 (CST), a Gene Essential for Spermatogenesis, Is Regulated by the CTCF Paralogous Gene BORIS](10.1128/MCB.01093-09) - CTCFL KO finds Gal3st1 and Prss50 downregulated in P14 mice. Gal3st1/CST KO infertile [Paranodal junction formation and spermatogenesis require sulfoglycolipids.](https://doi.org/10.1073/pnas.032068299) & [Testis-specific sulfoglycolipid, seminolipid, is essential for germ cell function in spermatogenesis](https://doi.org/10.1093/glycob/cwi043). Review: [Biosynthesis and biological function of sulfoglycolipids](https://dx.doi.org/10.2183%2Fpjab.89.129)
+
+![CGT & CST](../figures/seminolipid.jpg)
+
+- Dmc1 - well known *meiotic* expressed in leptotene [doi.org/10.1016/S1097-2765(00)80070-2](https://doi.org/10.1016/S1097-2765(00)80070-2), Dmc1KO germ cells progress up until an abnormal looking zygotene [doi.org/10.1016/S1097-2765(00)80069-6](http://dx.doi.org/10.1016/S1097-2765(00)80069-6).
+- Pbx3 - Pre-B-Cell Leukemia Transcription Factor 3, NB Pbx4 is expressed in pachytene germ cells https://doi.org/10.1016/S0925-4773(01)00349-5
+- Stra8 - top CTCFL-binding site (along with Prss50), key regulator of spermatogenesis
+- Eml5 - Echinoderm Microtubule Associated Protein
+- Tex15 - Necessary for formation of DMC1 and RAD51
+- Inca1 -Inhibitor Of CDK, Cyclin A1 Interacting Protein 1
+- Esco2 - Establishment Of Sister Chromatid Cohesion N-Acetyltransferase 2 -essential for sister chromatid cohesion
+- Gm4969 - BHMG1 in humans
+- Primpol - DNA primase & polymerase with ZFN, not yet linked to meiosis or testis
+- Gal3st1 - see Ugt8
+- Rbpms2 - rnabinding protein
+- Gm15262 - specific to testis, unknown, BEND2 in humans - chromatin restructuring
+- Rad21l - cohesin complex component
+- 4930447C04Rik, aka C14orf39 / Six6os1, *synaptonemal complex* element, required for *fertility* https://doi.org/10.1038/ncomms13298
+- Acer3 - Alkaline Ceramidase 3
+- Atad5 - Involved in a RAD9A-related damage checkpoint
+- Eaf2
+- Uba6 - ubiquitin-activating enzyme 6, found as having similar profile to Stra8 https://dx.doi.org/10.1095%2Fbiolreprod.110.086215, "UBA6 was present only in the nuclei of preleptotene, leptotene, and zygotene spermatocytes"
+- Brca2 - dna repair
+- Pigp - first step of glycosylphosphatidylinositol (GPI) anchor synthesis
+- Prim1 - primase - DNA replication
+- Lrrc42 -Leucine Rich Repeat
+- H2-K1 - histocompatibility 2, K1?!
+- Smc1b - Structural Maintenance Of Chromosomes 1B, cohesin
+
+- Fmr1nb & Fmr1 (fragile X mental retardation 1, trinucleotide repeat expansion disease, can cause Premature ovarian aging, required for *fertility*)
+- Msh5
+- Brip1 (BRCA1 Interacting Protein)
+- BUB1 Mitotic Checkpoint Serine/Threonine Kinase
+- Tex12 binds SYCE2 as part of *Synaptonemal* complex (https://doi.org/10.1098/rsob.120099)
+- Smc3 (cohesin complex subunit). 
+- Gm364 - contains Nonaspanin (TM9SF) domain, so maybe endosomal integral membrane protein, ChrX, Testis enriched. Identified as one of 32 genes involved in meiotic entry in the folicle along with Sycp3, Syce1, Tex101, Tex16, Sohlh3, fkbp6 [Genomewide Discovery and Classification of Candidate Ovarian Fertility Genes in the Mouse](https://doi.org/10.1534/genetics.107.074823). And again in [The Dynamics of Genome-wide DNA Methylation Reprogramming in Mouse Primordial Germ Cells](https://dx.doi.org/10.1016%2Fj.molcel.2012.11.001) along with Sycp2, Ugt8a, Prdm9, Ccnb3, Fmr1 etc.
+- Taf7l
+- Gm960 aka Top6bl (Component of a topoisomerase 6 complex specifically required for meiotic recombination)
+- Hfm1 (HFM1/Mer3 is required for crossover formation - 10.1371/journal.pgen)
+- Rhox13 (Rhox13 is required for a quantitatively normal first wave of spermatogenesis in mice - 10.1530/REP-16-0268)
+- Taf4b (Diseases associated with TAF4B include Spermatogenic Failure 13.)
+
+
+- [Differential expression of members of the E2F family of transcription factors in rodent testes](https://doi.org/10.1186/1477-7827-4-63) "E2F-1 protein is stage-specific and most abundant in leptotene to early pachytene spermatocytes"
+- [E2F1 controls germ cell apoptosis during the first wave of spermatogenesis](https://doi.org/10.1111/andr.12090)
+- [E2F1 deficiency impairs murine spermatogenesis and augments testicular degeneration in SCP3-nullizygous mice](https://doi.org/10.1038/sj.cdd.4401362)
+- [Tumor Induction and Tissue Atrophy in Mice Lacking E2F-1](https://doi.org/10.1016/S0092-8674(00)81254-4)
+- ["in the testis, E2F1 is the predominant E2F on all promoters that we have examined"](https://doi.org/10.1073/pnas.062047499)
+
+
+## 44 Leptotene/Zygotene V2 ??
+
+Similar cells and genes to component 5 (LZ). Also has Prdm9.
+Ccnb3 - known expression in "leptotene and zygotene" "blocks the mitotic cell cycle in late anaphase" [Characterization and expression of mammalian cyclin b3, a prepachytene meiotic cyclin.](https://doi.org/10.1074/jbc.M203951200)
+Meiob - ssDNA exonucleoase, required for recombination, colocalises with RPA foci [MEIOB exhibits single-stranded DNA-binding and exonuclease activities and is essential for meiotic recombination.](https://doi.org/10.1038/ncomms3788) & [MEIOB Targets Single-Strand DNA and Is Necessary for Meiotic Recombination](https://doi.org/10.1371/journal.pgen.1003784)
+Rad51ap2 - [RAD51AP2, a novel vertebrate- and meiotic-specific protein, shares a conserved RAD51-interacting C-terminal domain with RAD51AP1/PIR51.](https://doi.org/10.1093/nar/gkl665) see also [Molecular basis for enhancement of the meiotic DMC1 recombinase by RAD51 associated protein 1 (RAD51AP1).](https://doi.org/10.1073/pnas.1016454108)
+M1ap - [Meiosis I arrest abnormalities lead to severe oligozoospermia in meiosis 1 arresting protein (M1ap)-deficient mice.](https://doi.org/10.1095/biolreprod.111.098673)
+Gm960	aka TOPOVIBL / C11orf80 - "TOPOVIBL protein interacts and forms a complex with SPO11 and is required for meiotic DSB formation" [The TopoVIB-Like protein family is required for meiotic DNA double-strand break formation.](https://doi.org/10.1126/science.aad5309)
+
+```{r, fig.width=6}
+print_tsne(44, point_size = 0.5)
+print_loadings_scores(44)
+print_gene_list(44)
+
+go_volcano_plot(component = "V44N")
+head(GO_data[["V44N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V44N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+#aheatmap(t(results$loadings[[1]][,head(names(sort(-abs(results$loadings[[1]][44,]))),35)]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
+```
+
+## 13 X inactive
+
+```{r, fig.width=6}
+print_tsne(13, point_size = 0.5)
+print_loadings_scores(13)
+print_gene_list(13)
+
+go_volcano_plot(component = "V13N")
+head(GO_data[["V13N"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V13P")
+head(GO_data[["V13P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V13N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+datatable(motifEnrichment_wLogo[geneSet=="V13P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+- Piwil1
+- Tdrd1
+- Tdrd5 [ TDRD5 is required for retrotransposon silencing, chromatoid body assembly, and spermiogenesis in mice](https://doi.org/10.1083/jcb.201009043)
+- Gm14244 [piRNA complex](https://www.ncbi.nlm.nih.gov/gene/102641286)
+
+Pbx3? - in component 5
+
+## 47 Early Pachy?
+
+```{r, fig.width=6}
+print_tsne(47, point_size = 0.5)
+print_loadings_scores(47)
+print_gene_list(47)
+
+go_volcano_plot(component = "V47N")
+head(GO_data[["V47N"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V47P")
+head(GO_data[["V47P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V47N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+datatable(motifEnrichment_wLogo[geneSet=="V47P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+## 23 Hormad1 KO
+
+```{r, fig.width=6}
+print_tsne(23, point_size = 0.5)
+print_loadings_scores(23)
+print_gene_list(23)
+
+go_volcano_plot(component = "V23P")
+head(GO_data[["V23P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V23P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+- Tex101 - [TEX101, a glycoprotein essential for sperm fertility, is required for stable expression of **Ly6k** on testicular germ cells](https://dx.doi.org/10.1038/srep23616)
+- Sycp3
+- Sycp1
+- Mov10l1
+- Dazl "Dazl immunoreactivity was found predominantly in the cytosol of primary pachytene spermatocytes" [Dazl protein expression in adult rat testis is up-regulated at meiosis and not hormonally regulated.](https://www.ncbi.nlm.nih.gov/pubmed/10632763)
+- Ccnb3 - also in 44
+- Meiob - also in 44
+- H2afv & H2afx
+- Tex12 [Structural analysis of the human SYCE2-TEX12 complex provides molecular insights into synaptonemal complex assembly.](https://doi.org/10.1098/rsob.120099)
+- H3f3b
+- Hormad1
+- 4930447C04Rik	/ C14orf39
+- Sycp2
+- Hormad2
+
+## 38 X activation (Hormad1 KO)
+
+```{r, fig.width=6}
+print_tsne(38, point_size = 0.5)
+print_loadings_scores(38)
+print_gene_list(38)
+
+go_volcano_plot(component = "V38P")
+head(GO_data[["V38P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V38P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+Many genes [previously found](https://doi.org/10.1371/journal.pgen.1001190.g008) to be upregulated in Hormad1KO by microarray have high loadings, including non XY genes.
+
+```{r}
+Hormad1KO <- fread("../data/previous_studies/Shin/Hormad1_KO_differentially_expressed_genes.csv", header = FALSE)
+
+Hormad1KO[!V1 %in% colnames(data)]$V1
+
+# rename old gene https://www.ncbi.nlm.nih.gov/gene/195726
+Hormad1KO[V1=="Gm47", V1:="Scml1"]
+
+Hormad1KO_genes <- Hormad1KO[V1 %in% colnames(data)]$V1
+
+str(Hormad1KO_genes)
+
+tmp <- data.table(loading = sort(results$loadings[[1]][38,],T),
+                  gene = names(sort(results$loadings[[1]][38,],T)))
+tmp$rank <- seq_along(tmp$loading)
+ggplot(tmp, aes(rank, loading)) + geom_point() + geom_rug(data=tmp[gene %in% Hormad1KO_genes], sides = "b", colour="red", size=0.1)
+
+
+plot(sort(round(results$loadings[[1]][38,Hormad1KO[V1 %in% colnames(data)]$V1],4), T), ylab="Component 38 Loading", xlab="Genes overexpressed in Hormad1 KO (ordered by p value)")
+
+hist(rank(-results$loadings[[1]][38,])[Hormad1KO$V1], breaks=200, xlab='Component 38 loading rank')
+
+tripKOgenesranked <- names(sort(-results$loadings[[1]][38,]))
+
+#seq_along(tripKOgenesranked)
+tmp <- sapply(1:1000, function(x) sum(Hormad1KO$V1 %in% tripKOgenesranked[1:x])/x)
+plot(tmp, ylab="fraction of genes overexpress in Trim13 KO", xlab="Top X genes of component 38")
+tmp[200]
+
+tmp <- sapply(1:1000, function(x)
+  sum(Hormad1KO$V1 %in% tripKOgenesranked[1:x])/nrow(Hormad1KO))
+plot(tmp, ylab="Fraction of overexpressed genes in top X genes", xlab="Top X genes of component 38")
+tmp[200]
+```
+
+![Hormad1 KO](../figures/Hormad1KOmicroarray.png)
+
+from [Hormad1 Mutation Disrupts Synaptonemal Complex Formation, Recombination, and Chromosome Segregation in Mammalian Meiosis](https://doi.org/10.1371/journal.pgen.1001190)
+
+In addition, many of the genes are also those statistically significantly overexpressed in Trip13 KO mice [link](https://ddd.uab.cat/pub/tesis/2016/hdl_10803_387429/mmo1de1.pdf). Trip13 is required for removing Hormad1 from synapsed chromosomes. [Mouse HORMAD1 and HORMAD2, Two Conserved Meiotic Chromosomal Proteins, Are Depleted from Synapsed Chromosome Axes with the Help of TRIP13 AAA-ATPase](https://doi.org/10.1371/journal.pgen.1000702) & [Mouse TRIP13/PCH2 Is Required for Recombination and Normal Higher-Order Chromosome Structure during Meiosis](https://doi.org/10.1371/journal.pgen.1001062)
+
+
+The autosomal genes:
+
+```{r}
+Trip13KO <- fread("../data/previous_studies/Ortega/TripKO.csv", header = FALSE)
+Trip13KO$LFC <- as.numeric(fread("../data/previous_studies/Ortega/TripKOLFC.txt", header = FALSE))
+
+Trip13KO[V1=="RP23-280E8.2", V1:="Tex13c2"]
+Trip13KO[V1=="BC023829", V1:="Tmem185a"]
+Trip13KO[V1=="Gm5753", V1:="Fthl17-ps3"]
+Trip13KO[V1=="A830080D01Rik", V1:="Bclaf3"]
+Trip13KO[V1=="Ppp1r3fos", V1:="Flicr"]
+
+#Trip13KO[V1=="5730457N03Rik", V1:="Evx1os"]
+#Trip13KO[V1=="RP23-328P19.4", V1:="Gm42923"]
+ 
+str(Trip13KO[!V1 %in% colnames(results$loadings[[1]])]$V1)
+
+Trip13KO <- Trip13KO[V1 %in% colnames(results$loadings[[1]])]
+str(Trip13KO)
+
+
+tmp <- data.table(loading = sort(results$loadings[[1]][38,],T),
+                  gene = names(sort(results$loadings[[1]][38,],T)))
+tmp$rank <- seq_along(tmp$loading)
+tmp[gene %in% Trip13KO$V1, KO := "Trip13"]
+tmp[gene %in% Hormad1KO_genes, KO := "Hormad1"]
+
+
+c83_rug_plot <- ggplot(tmp, aes(rank, loading,colour=KO)) +
+  geom_point(colour="black") +
+  geom_rug(data=tmp[gene %in% Trip13KO$V1], sides = "b", size=0.2) +
+  geom_rug(data=tmp[gene %in% Hormad1KO_genes], sides = "t", size=0.2) +
+  ylab("Component 38 Gene Loading") + xlab("Rank of gene by loading") +
+  scale_color_brewer(palette = "Set1")+
+  guides(colour = guide_legend(override.aes = list(size=5))) +
+  theme(legend.position = c(0.7,0.7)) + labs(colour="KO DE Genes")
+
+c83_rug_plot
+
+saveRDS(c83_rug_plot, "../data/tmp_cache/c83_rug_plot.rds")
+
+# scale_color_manual(values=c("Trip13"="#377EB8", "Hormad1"="#E41A1C")) +
+
+hormad1_enrich <- component_enrichment(Hormad1KO_genes)
+trip13_enrich <- component_enrichment(Trip13KO$V1)
+
+hormad1_enrich$KO <- "Enrichment of Hormad1 KO DE Genes"
+trip13_enrich$KO <- "Enrichment of Trip13 KO DE Genes"
+
+trip13_enrich <- rbind(trip13_enrich, hormad1_enrich)
+
+trip13_enrich_plot <- ggplot(trip13_enrich, aes(Component, -log(p.value,10), label=paste0(Component," - ",name))) +
+  geom_point(aes(colour=Type)) +
+  geom_label_repel(data=trip13_enrich[p.value<1e-20], ylim=c(30,140), force = 20, nudge_y = -20) +
+  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5),
+        legend.position = c(0.85,0.8),
+        legend.background = element_rect(colour="black")) +
+  scale_color_brewer(palette = "Set1") +
+  xlab("Components by Type and Pseudotime") +
+  facet_wrap(~KO, scales = "free_y", nrow=2)
+
+trip13_enrich_plot
+
+saveRDS(trip13_enrich_plot, "../data/tmp_cache/trip13_enrich_plot.rds")
+
+plot(results$loadings[[1]][38,Trip13KO$V1], ylab="Component 38 Loading", xlab="Genes overexpressed in Trim18 KO (ordered by p value)")
+
+plot(rank(-results$loadings[[1]][38,])[Trip13KO$V1], Trip13KO$LFC, ylab="Log Fold Change in Trim18 KO", xlab='Component 38 loading rank')
+
+hist(rank(-results$loadings[[1]][38,])[Trip13KO$V1], breaks=200, xlab='Component 38 loading rank')
+
+tripKOgenesranked <- names(sort(-results$loadings[[1]][38,]))
+
+#seq_along(tripKOgenesranked)
+tmp <- sapply(1:1000, function(x) sum(Trip13KO$V1 %in% tripKOgenesranked[1:x])/x)
+plot(tmp, ylab="fraction of genes overexpress in Trim13 KO", xlab="Top X genes of component 38")
+tmp[200]
+
+tmp <- sapply(1:1000, function(x)
+  sum(Trip13KO$V1 %in% tripKOgenesranked[1:x])/nrow(Trip13KO))
+plot(tmp, ylab="Fraction of overexpressed genes in top X genes", xlab="Top X genes of component 38")
+tmp[200]
+
+tmp <- sapply(seq_along(tripKOgenesranked), function(x)
+  sum(Trip13KO$V1 %in% tripKOgenesranked[1:x])/nrow(Trip13KO))
+plot(tmp, ylab="Fraction of overexpressed genes in top X genes", xlab="Top X genes of component 38")
+
+str(fisher.test(matrix(c(x, 200-x, 176-x, 19262-200-176+x), 2, 2), alternative='greater'))
+
+```
+
+## 42 Pachytene
+
+```{r, fig.width=6}
+print_tsne(42, point_size = 0.5)
+print_loadings_scores(42)
+print_gene_list(42)
+
+go_volcano_plot(component = "V42N")
+head(GO_data[["V42N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V42N",-c("enrichedGenes","geneSet"), with=FALSE][1:40], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+- [A-MYB (MYBL1) transcription factor is a master regulator of male meiosis.](https://doi.org/10.1242/dev.067645) "The results reveal that MYBL1 is a master regulator of meiotic genes that are involved in multiple processes in spermatocytes, particularly those required for cell cycle progression through pachynema."
+- [An ancient transcription factor initiates the burst of piRNA production during early meiosis in mouse testes.](https://doi.org/10.1016/j.molcel.2013.02.016) "A-MYB initiates pachytene piRNA production"
+
+- Ldhc - Lactate Dehydrogenase C - testis version of glycolytic LDHA
+- Ldhal6b Lactate Dehydrogenase A Like 6B
+- Cox8c (Cytochrome C Oxidase Subunit VIIIC) - testis spefic, 
+- Ybx1 & Ybx3 [Compound Heterozygosity for Y Box Proteins Causes Sterility Due to Loss of Translational Repression](https://doi.org/10.1371/journal.pgen.1005690)
+- Phf7 [NYD-SP6, a novel gene potentially involved in regulating testicular development/spermatogenesis.](https://doi.org/10.1006/bbrc.2002.6396) "confined to Sertoli cells" and [Phf7 controls male sex determination in the Drosophila germline.](https://doi.org/10.1016/j.devcel.2012.04.013.) "in Drosophila. PHF7 exhibits male-specific expression in early germ cells, germline stem cells, and spermatogonia."
+- Spink2 [Impaired spermatogenesis and fertility in mice carrying a mutation in the Spink2 gene expressed predominantly in testes.](https://doi.org/10.1074/jbc.M111.244905)
+- Lyar [Expression and Function of the Testis-Predominant Protein LYAR in Mice](http://doi.org/10.1007/s10059-013-2271-3) Zinc finger, nucleolar, binds nucleolin, Transcription increased considerably at postnatal day 16, (**pachytene**)
+- Rsph1 (Meichroacidin- meiotic metaphase chromosome-associated acidic protein). primary ciliary dyskinesia-24  It is necessary for proper building of the axonemal central pair and radial spokes. [Radial spoke protein 44 (human meichroacidin) is an axonemal alloantigen of sperm and cilia.](https://doi.org/10.1016/j.gene.2007.02.031)
+- Spata4 Spermatogenesis Associated 4
+- Nasp: [Association of NASP with HSP90 in mouse spermatogenic cells: stimulation of ATPase activity and transport of linker histones into nuclei.](http://doi.org/10.1074/jbc.M410397200), binds H1t and HSP90
+["Expression of HSP90 and tNASP precede the expression of H1t in **pachytene** spermatocytes"](http://grantome.com/grant/NIH/U54-HD012629-31-9005)
+[Sequence and Localization of Human NASP: Conservation of a Xenopus Histone-Binding Protein 1992]() - protein "predominantly in **primary spermatocytes**"
+[Characterisation of a Sperm-specific Nuclear Autoantigenic Protein. II. Expression and Localization in the Testis 1990]()mRNA in "**pachytene**"
+- Clgn (Calmegin is a testis-specific endoplasmic reticulum (memb prot) chaperone protein. homologous to calnexin) "calmegin was expressed exclusively in germ cells of **pachytene** spermatocyte to spermatid stage" [The putative chaperone calmegin is required for sperm fertility.](https://doi.org/10.1038/42484) and "calmegin (CLGN) and calsperin (CALR3) are expressed as germ cell-specific counterparts of CANX and CALR, respectively" & "the onset of CLGN and CALR3 expression was considered to be meiotic and **post-meiotic**, respectively" [Calsperin Is a Testis-specific Chaperone Required for Sperm Fertility](https://doi.org/10.1074/jbc.M110.140152), involved in ADAM3 maturation, "CLGN was detected from spermatocytes to spermatids" [Protein disulfide isomerase homolog PDILT is required for quality control of sperm membrane protein ADAM3 and male fertility](https://doi.org/10.1073/pnas.1204275109)
+- Ropn1l (Rhophilin Associated Sperm Tail Protein 1 Like)
+
+```{r}
+library(ggraph)
+graph <- readRDS("V42_network_graph")
+ggraph(graph, layout = 'nicely') + 
+    geom_edge_link(aes(colour = motif)) + 
+    geom_node_point() +
+    theme_graph()
+```
+
+
+
+```{r}
+
+# from "A-MYB (MYBL1) transcription factor is a master regulator of male meiosis"
+# (Supp tables are PDFs...)
+
+#"Nek2","Moap1", P38ip=Supt20, "Mat2a",
+Mybl1_genes <- c("Morc2b",
+"Piwil1",
+"Als2cr12",
+"Cklf",
+"Cntd1",
+"Cenpp",
+"Poteg",
+"Znrd1as",
+"Nol8",
+"Taf9",
+"Supt20",
+"Rpl39l",
+"Tbl2",
+"Snx1",
+"Ralgps2",
+"Hsp90aa1",
+"Ube2t",
+"Ccnb3",
+"Rfx2")
+
+#aheatmap(t(results$loadings[[1]][,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of predicted direct targets of MYBL1 by ChIPseq")
+
+aheatmap(t(results$loadings[[1]][,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings by component of \n predicted direct targets of MYBL1 by ChIPseq", scale="row")
+
+pirna_genes <- c("Piwil1",
+"Tdrd1",
+"Tdrd5",
+"Mov10l1",
+"Tdrd12",
+"Piwil2",
+"Fkbp6",
+"Mael",
+"Pld6",
+"Asz1",
+"Exd1",
+"Ddx4",
+"Tdrkh",
+"Tdrd9")
+
+#aheatmap(t(results$loadings[[1]][,pirna_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings of pirna genes for each component")
+
+aheatmap(t(results$loadings[[1]][,pirna_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of pirna genes for each component", scale="row")
+
+```
+
+## 39 Pachy2
+
+Similar genes to C42 but turning off (negative loadings + positive cell scores). Apart from Hormad1 KO. No enrichment for positive.
+
+```{r, fig.width=6}
+print_tsne(39, point_size = 0.5)
+print_loadings_scores(39)
+print_gene_list(39)
+
+go_volcano_plot(component = "V39N")
+head(GO_data[["V39N"]][c(2,7,8,10)], 20)
+
+head(GO_data[["V39P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V39N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 20 DUF622
+
+The *negative* loadings contain many DUF622 genes. Mlh3 positive loadings opposite to the rest.
+
+Similar genes to DUF622 / α-takusan component previously. Prss46 (not DUF622), 1700001F09Rik, Gm5458, Gm8362, BC061237, Gm3453 etc.
+
+A number of these genes have been assigned to the SPEER family (SPErm-associated glutamate (E)-Rich protein (SPEER)). By FISH "clear and stage-specific signals are seen in late pachytene spermatocytes and round spermatids" and "marked temporal pattern of expression ... appearing on Day 16 ... coincides with the first appearance of spermatocytes" from [SPEER--a new family of testis-specific genes from the mouse. (2003)](https://doi.org/10.1095/biolreprod.102.011593). These genes have high loadings in this component: Speer4b (-0.19), Speer3 (-0.16), Speer4a (-0.15), Speer4e (-0.14). The expression observations are consistent with the placement of this component as the first post-meiotic component. Some of the genes with with this domain are expressed in the brain as part of a larger family [Takusan: a large gene family that regulates synaptic activity. (2007)](https://doi.org/10.1016/j.neuron.2007.06.021).
+
+The DUF622 gene family is absent from non-rodent genomes - it arose from a recent duplication of Dlg5. Many of these genes were previously not present in the mouse genome assembly [Lineage-Specific Biology Revealed by a Finished Genome Assembly of the Mouse](https://dx.doi.org/10.1371%2Fjournal.pbio.1000112).
+
+One study "observed that portions of chromosome 14 and of the sex chromosomes share specific features, such as enrichment in H3K9me3 and the presence of multicopy genes that are specifically expressed in round spermatids, suggesting that parts of chromosome 14 are under the same evolutionary constraints than the sex chromosomes." These portions of chr14 "encompass ampliconic genes of the α-takusan family" [Expression and epigenomic landscape of the sex chromosomes in mouse post-meiotic male germ cells](https://dx.doi.org/10.1186%2Fs13072-016-0099-8).
+
+```{r, fig.width=6}
+print_tsne(20, point_size = 0.5)
+print_loadings_scores(20)
+print_gene_list(20)
+
+go_volcano_plot(component = "V20N")
+head(GO_data[["V20N"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V20P")
+head(GO_data[["V20P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V20N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+datatable(motifEnrichment_wLogo[geneSet=="V20P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+
+
+```{r}
+DUF622 <- fread("../../data/MGImarkerQuery_20170327_215120.txt")$V8 # extract gene symbols
+str(DUF622)
+DUF622 <- DUF622[(DUF622 %in% colnames(results$loadings[[1]]))]
+str(DUF622)
+
+data.table(t(results$loadings[[1]][30, DUF622, drop=F]), keep.rownames = T)[order(-V30)]
+data.table(t(results$loadings[[1]][20, DUF622, drop=F]), keep.rownames = T)[order(V20)]
+
+sum(names(sort(results$loadings[[1]][20,]))[1:500] %in% DUF622)
+sum(names(sort(-results$loadings[[1]][30,]))[1:500] %in% DUF622)
+sum(names(sort(results$loadings[[1]][42,]))[1:500] %in% DUF622)
+
+aheatmap(t(results$loadings[[1]][,DUF622]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings of DUF622 genes for each component", scale='row')
+```
+
+There are also some in the next component C30 and the previous one C42 but of the top 500 genes in C30 only 3 are DUF622 and of the top 500 in C42 only 1 is DUF622. In the top 500 of C20 35 are DUF622 genes.
+
+```{r, fig.width=3}
+
+grid.arrange(grobs=list(print_marker("Gm3453") + simplify,
+                        print_marker("Ssxb1") + simplify,
+                        print_marker("Ssxb2") + simplify,
+                        print_marker("Ssxb3") + simplify),
+			nrow=2, heights = c(1,1))
+
+```
+
+
+## 25 Cul4a
+
+Only Cul4a have negative scores, many genes with negative loadings are those overexpressed in Cul4a.
+
+```{r, fig.width=6}
+print_tsne(25, point_size = 0.5)
+print_loadings_scores(25)
+print_gene_list(25)
+
+go_volcano_plot(component = "V25N")
+head(GO_data[["V25N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V25N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+```
+
+The cul4a association becomes clearer if we transform the scores and flip the colouring - then compare to the position of groups in tsne. See also the codistribution ofsome specific genes with large negative loadings with the Cul4a cells.
+
+```{r, fig.width=6}
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=asinh(V25))) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
+  geom_point(size=0.5) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=`Rps13-ps1`)) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Hist1h2al)) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Gm10036)) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Jakmip2)) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Tagln2)) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Lpo)) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+```
+
+## 30 Acrosome - post meiotic
+As before Acrv1, Spaca3 & 1, Sox5, Lyzl1 & 6
+
+GO terms for fertilization, sperm egg recognition
+
+```{r, fig.width=6}
+print_tsne(30, point_size = 0.5)
+print_loadings_scores(30)
+print_gene_list(30)
+
+go_volcano_plot(component = "V30P")
+head(GO_data[["V30P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V30P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+- [Transcription Factor RFX2 Is a Key Regulator of Mouse Spermiogenesis.](https://doi.org/10.1038/srep20435)
+- [RFX2 Is a Major Transcriptional Regulator of Spermiogenesis.](https://doi.org/10.1371/journal.pgen.1005368)
+- [RFX2 is a candidate downstream amplifier of A-MYB regulation in mouse spermatogenesis](https://doi.org/10.1186/1471-213X-9-63)
+- [Essential requirement for both hsf1 and hsf2 transcriptional activity in spermatogenesis and male fertility.](https://doi.org/10.1002/gene.20005)
+
+```{r}
+acrosomal_genes <- c(
+"Lyzl1",
+"Spaca3",
+"Lyzl4",
+"Spaca5",
+"Lyzl6",
+"Spata31",
+"Spata9",
+"Spaca1",
+"Acrv1",
+"Spaca4",
+"Spaca7",
+"1700016D06Rik")
+
+aheatmap(t(results$loadings[[1]][,acrosomal_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
+
+
+# from "RFX2 Is a Major Transcriptional Regulator of Spermiogenesis."
+rfx2_genes <- readxl::read_excel("../data/supplementary_data/Kistler/journal.pgen.1005368.s011.XLSX", skip=2)
+setnames(rfx2_genes, make.names(names(rfx2_genes)))
+
+#rfx2_genes <- data.table(rfx2_genes)[ChIP.Seq=="yes"][order(logFC.at.P30)][1:50]$Ensembl.ID
+rfx2_genes <- data.table(rfx2_genes)[order(Pvalue.at.P30)][!is.na(Pvalue.at.P30)]$Ensembl.ID
+rfx2_genes <- data.table(rfx2_genes)[ChIP.Seq=="yes"][order(Pvalue.at.P30)][!is.na(Pvalue.at.P30)]$Ensembl.ID
+
+# 1700026D08Rik -> Cfap161, Ttc18 -> Cfap70, Ccdc135 -> Drc7, Ccdc11 -> Cfap53, 9330101J02Rik -> Cfap46, Adck4 -> Coq8b
+library(biomaRt)
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
+mapTab2 <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
+				filter = "ensembl_gene_id", values = rfx2_genes, mart = ensembl, uniqueRows=TRUE)
+rfx2_genes <- mapTab2[match(rfx2_genes, mapTab2$ensembl_gene_id),]$external_gene_name
+
+rfx2_genes[which(!rfx2_genes %in% colnames(results$loadings[[1]]))]
+
+rfx2_genes <- rfx2_genes[which(rfx2_genes %in% colnames(results$loadings[[1]]))]
+
+aheatmap(t(results$loadings[[1]][,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+
+aheatmap(t(results$pips[[1]][,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+
+#ranks <- apply(results$loadings[[1]], 1, function(x) qnorm(rank(x) / (ncol(results$loadings[[1]])+1) ))
+#ranks <- apply(results$loadings[[1]], 1, function(x) qnorm(rank(abs(x)) / (ncol(results$loadings[[1]])+1) ))
+#ranks <- apply(results$loadings[[1]], 1, function(x) rank(abs(x))) #19263-
+```
+
+```{r, fig.width=6}
+aheatmap(asinh(t(results$loadings[[1]][QC_meiotic_components_ordered,rfx2_genes])), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+
+aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,m168_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+
+aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,m168_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+
+aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,m1478_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+
+```
+
+
+```{r}
+aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,rfx2_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+
+tmp <- t(results$pips[[1]][,rfx2_genes]==1)
+mode(tmp) <- "numeric"
+aheatmap(tmp[, QC_meiotic_components_ordered], breaks=0, Rowv = NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+```
+
+
+- Spaca1 (SAMP32) [SAMP32, a testis-specific, isoantigenic sperm **acrosomal** membrane-associated protein.](https://doi.org/10.1095/biolreprod66.3.735) [SPACA1-deficient male mice are infertile with abnormally shaped sperm heads reminiscent of globozoospermia.](https://doi.org/10.1242/dev.081778.)
+- Acrv1: [The **acrosomal** protein SP-10 (Acrv1) is an ideal marker for staging of the cycle of seminiferous epithelium in the mouse.](https://doi.org/10.1002/mrd.22358) [**Acrosome** markers of human sperm](https://doi.org/10.1007/s12565-015-0323-9)
+- Spata46: "SPATA46 was expressed predominantly in condensed spermatids, with a highly specific localization restricted to the subacrosomal area" [Deficiency of SPATA46, a Novel Nuclear Membrane Protein, Causes Subfertility in Male Mice.](https://doi.org/10.1095/biolreprod.116.140996)
+- Sox5: [An SRY-related gene expressed during spermatogenesis in the mouse encodes a sequence-specific DNA-binding protein.](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC556830/) "Sox-5 is restricted to **post-meiotic** germ cells" [A genome-wide association study in Chinese men identifies three risk loci for non-obstructive azoospermia](https://doi.org/10.1038/ng.1040) 2,927 individuals with NOA and 5,734 controls, [http://scienceblogs.com/geneticfuture/2010/07/07/serious-potential-flaws-in-lon/](POOR QUALITY??) [Association study between polymorphisms of PRMT6, PEX10, SOX5, and nonobstructive azoospermia in the Han Chinese population.](https://doi.org/10.1095/biolreprod.113.116541) Only Sox5 replicated
+- Lyzl6:
+[Characterisation of Lyzls in mice and antibacterial properties of human LYZL6](https://doi.org/10.1038/aja.2013.93) "**post-acrosomal** area and midpiece"
+- Spaca3 (Lyzl3, SLLP1):
+[SLLP1, a unique, **intra-acrosomal**, non-bacteriolytic, c lysozyme-like protein of human spermatozoa.](https://doi.org/10.1095/biolreprod.102.010108)
+[Mouse SLLP1, a sperm lysozyme-like protein involved in sperm–egg binding and fertilization](http://dx.doi.org/10.1016/j.ydbio.2005.05.008)
+c-type lysozyme:
+[Molecular cloning and characterization of three novel lysozyme-like genes, predominantly expressed in the male reproductive system of humans, belonging to the c-type lysozyme/alpha-lactalbumin family.](https://doi.org/10.1095/biolreprod.105.041889)
+- Lyzl1 (Lyzl1 & 2 in humans):
+[Immunization against lysozyme-like proteins affect sperm function and fertility in the rat.](https://doi.org/10.1016/j.jri.2016.11.001)
+- Spata31: (in humans SPATA31A1,6,3,7,5, C1, E1, akak VAD1.3 (aka AEP1 - **Acrosome** Expressed Protein)):
+[The testis-specific VAD1.3/AEP1 interacts with β-actin and syntaxin 1 and directs peri-nuclear/Golgi expression with bipartite nucleus localization (BNL) sequence.](https://doi.org/10.1016/j.bbrc.2010.09.049) "It is expressed at the acrosomal region of spermatids from postnatal day 25"
+[Targeted disruption of the spermatid-specific gene Spata31 causes male infertility.](https://doi.org/10.1002/mrd.22491) "very specific localization restricted to the **acrosome** position"
+[Acrosome-specific gene AEP1: Identification, characterization and roles in spermatogenesis](https://doi.org/10.1002/jcp.20746)"AEP1 localizes to the **acrosome**"
+
+- Spata45: expressed in testis
+
+- Lyzl4:
+[Lyzl4, a novel mouse sperm-related protein, is involved in fertilization](https://doi.org/10.1093/abbs/gmr017) "located on the spermatozoa of **acrosomal** region"
+
+- Spaca7:
+[Identification of a new mouse sperm **acrosome**-associated protein](https://doi.org/10.1530/REP-11-0270)
+
+- Zp3r
+[Recombinant mouse sperm ZP3-binding protein (ZP3R/sp56) forms a high order oligomer that binds eggs and inhibits mouse fertilization in vitro.](https://doi.org/10.1074/jbc.M706421200) "localized in the acrosomal matrix"
+[Function of the **acrosomal** matrix: zona pellucida 3 receptor (ZP3R/sp56) is not essential for mouse fertilization.](https://doi.org/10.1095/biolreprod.111.095877)
+
+- Spaca4 (SAMP14)
+[SAMP14, a novel, **acrosomal** membrane-associated, glycosylphosphatidylinositol-anchored member of the Ly-6/urokinase-type plasminogen activator receptor superfamily with a role in sperm-egg interaction.](https://doi.org/10.1074/jbc.M301713200)
+
+- Spata9 aka NYD-SP16 [Human testicular protein NYD-SP16 is involved in sperm capacitation and the **acrosome** reaction.](https://doi.org/10.1016/j.fertnstert.2006.05.025)
+
+- Lyzl4os (lysozyme-like 4) specifically expressed in the testis
+
+- Spaca5 (Sperm **Acrosome** Associated 5)
+
+- Tekt2 & Tekt4 - Associated with commitment to meiosis, expressed post meiotically - [A Global Expression Switch Marks Pachytene Initiation during Mouse Male Meiosis](https://dx.doi.org/10.3390%2Fgenes1030469)
+
+- Tssk1 & Tssk4 "Tssk mRNAs are almost exclusively expressed post meiotically in the testis" [Expression and localization of five members of the testis-specific serine kinase (Tssk) family in mouse and human sperm and testis.](https://doi.org/10.1093/molehr/gaq071).
+
+- Izumo1 & Izumo2
+[The immunoglobulin superfamily protein Izumo is required for sperm to fuse with eggs](https://doi.org/10.1038/nature03362)
+[Juno is the egg Izumo receptor and is essential for mammalian fertilization](https://doi.org/10.1038/nature13203)
+
+- Tmem190: [Characterization of mouse sperm TMEM190, a small transmembrane protein with the trefoil domain: evidence for co-localization with **IZUMO1** and complex formation with other sperm proteins.](https://doi.org/10.1530/REP-10-0391)
+
+- Crem - "The essential role of the Crem gene in normal sperm development is widely accepted and is confirmed by azoospermia in male mice lacking the Crem gene" [Novel Insights into the Downstream Pathways and Targets Controlled by Transcription Factors CREM in the Testis](http://dx.doi.org/10.1371/journal.pone.0031798)
+
+- Lrcc34 (immunostained by Min) @ 0.5
+
+###Zbtb12 (transfac 2824) vs Rfx (cisbp 2392)
+
+```{r}
+library(ggraph)
+graph <- readRDS("V30_network_graph")
+ggraph(graph, layout = 'nicely') + 
+    geom_edge_link(aes(colour = motif)) + 
+    geom_node_point() +
+    theme_graph()
+```
+
+## 35 Post Acrosomal?
+
+Positive and negative loadings, overalpping C30
+
+```{r, fig.width=6}
+print_tsne(35, point_size = 0.5)
+print_loadings_scores(35)
+print_gene_list(35)
+
+go_volcano_plot(component = "V35N")
+head(GO_data[["V35N"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V35P")
+head(GO_data[["V35P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V35N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+datatable(motifEnrichment_wLogo[geneSet=="V35P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 15 Round Spermatid
+
+```{r, fig.width=6}
+print_tsne(15, point_size = 0.5)
+print_loadings_scores(15)
+print_gene_list(15)
+
+go_volcano_plot(component = "V15N")
+head(GO_data[["V15N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V15N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+- Hemgn - hemogen, has testis specific isoform , "specifically expressed in **round spermatids**" - [Alternative promoters and polyadenylation regulate tissue-specific expression of Hemogen isoforms during hematopoiesis and spermatogenesis](https://doi.org/10.1002/dvdy.10399)
+
+- Fam71a / GARI-L4 involved in golgi morphology
+
+- Fam71b - unknown function but expressed in testis [Proteomic characterization of the human sperm nucleus](https://doi.org/10.1002/pmic.201000799). [Has late human protein expression](http://www.proteinatlas.org/ENSG00000170613-FAM71B/tissue/testis#imid_11293072).
+
+- Cst13 (Cymg1 / Cystatin-T) - similar to CRES, expressed in testis at sexual maturity
+
+- Ccin - Calicin, basic protein of the sperm head cytoskeleton (calyx), binds actin
+
+- Actrt3 - Actin Related Protein T3 (ARPM1) - "expressed exclusively in the testis, particularly in **haploid germ cells**. ArpM1 protein first appears in the round spermatid" - binds to Profilin 3 another actin binding gene [Nuclear localization of profilin III–ArpM1 complex in mouse spermiogenesis](https://doi.org/10.1016/j.febslet.2008.07.058)
+
+- Ccdc159 causes infertility but little known
+
+- Cd59b [Further characterization of reproductive abnormalities in mCd59b knockout mice: a potential new function of mCd59 in male reproduction.](https://www.ncbi.nlm.nih.gov/pubmed/16272280?dopt=Abstract)
+
+- Prss37 "especially in the elongating spermatids" [Prss37 is required for male fertility in the mouse.](https://doi.org/10.1095/biolreprod.112.107086)
+
+- Calr3 - Calreticulin 3 (Calsperin), endoplasmic reticulum, "calmegin (CLGN) and calsperin (CALR3) are expressed as germ cell-specific counterparts of CANX and CALR, respectively" & "the onset of CLGN and CALR3 expression was considered to be meiotic and **post-meiotic**, respectively" [Calsperin Is a Testis-specific Chaperone Required for Sperm Fertility](https://doi.org/10.1074/jbc.M110.140152), involved in ADAM3 maturation. "CALR3 and PDILT were only expressed in **haploid spermatids**" [Protein disulfide isomerase homolog PDILT is required for quality control of sperm membrane protein ADAM3 and male fertility](https://doi.org/10.1073/pnas.1204275109)
+
+- Ccser2 (Ccser1 in previous component & in this at rank 85)
+
+- Tekt5 (Tekt2 & Tekt4 in previous component) - Associated with commitment to meiosis, expressed post meiotically - [A Global Expression Switch Marks Pachytene Initiation during Mouse Male Meiosis](https://dx.doi.org/10.3390%2Fgenes1030469)
+
+- Banf2 - Barrier To Autointegration Factor 2
+
+- Znf37 - KRAB ZNF protein
+
+## 17 Spermiogenesis
+
+Many well known late spermatogenesis infertility genes.
+
+```{r, fig.width=6}
+print_tsne(17, point_size = 0.5)
+print_loadings_scores(17)
+print_gene_list(17)
+
+go_volcano_plot(component = "V17P")
+head(GO_data[["V17P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V17P",-c("enrichedGenes"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+```
+
+NB Atf3 is Crem family TF
+- [CREM, a master-switch of the transcriptional cascade in male germ cells](https://doi.org/10.1007/BF03343781)
+- [Novel Insights into the Downstream Pathways and Targets Controlled by Transcription Factors CREM in the Testis](https://dx.doi.org/10.1371%2Fjournal.pone.0031798)
+- [Cell-specific occupancy of an extended repertoire of CREM and CREB binding loci in male germ cells.](https://doi.org/10.1186/1471-2164-11-530)
+
+general reviews:
+- [Specialized rules of gene transcription in male germ cells: the CREM paradigm.](https://doi.org/10.1111/j.1365-2605.2004.00494.x)
+- [Genetic control of spermiogenesis: insights from the CREM gene and implications for human infertility](https://doi.org/10.1016/S1472-6483(10)60805-X)
+
+```{r}
+
+crem_genes <- readxl::read_excel("../data/supplementary_data/Kosir/Table_S4.xls", skip=2)
+setnames(crem_genes, make.names(names(crem_genes)))
+
+crem_genes <- crem_genes$Symbol[1:100]
+crem_genes <- crem_genes[which(crem_genes %in% colnames(results$loadings[[1]]))]
+crem_genes <- crem_genes[1:50]
+
+aheatmap(t(results$loadings[[1]][,crem_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Crem KO & Bound by Crem in ChIPseq", scale="row")
+
+```
+
+
+## 18 Late Spermiogenesis 1
+Oaz3, Gapdhs, Smcp
+```{r, fig.width=6}
+print_tsne(18, point_size = 0.5)
+print_loadings_scores(18)
+print_gene_list(18)
+
+go_volcano_plot(component = "V18N")
+head(GO_data[["V18N"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V18P")
+head(GO_data[["V18P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V18N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+datatable(motifEnrichment_wLogo[geneSet=="V18P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 34 Late Spermiogenesis 2
+
+```{r, fig.width=6}
+print_tsne(34, point_size = 1)
+print_loadings_scores(34)
+print_gene_list(34)
+
+go_volcano_plot(component = "V34P")
+head(GO_data[["V34P"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V34N")
+head(GO_data[["V34N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V34N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+# Batch Effect Hunting
+
+```{r, fig.width=10}
+
+tmp <- data.table(results$scores,
+                  cell_index = 1:nrow(results$scores),
+                  experiment = gsub("[A-Z]+\\.","",rownames(results$scores)),
+                  group = gsub("_.*","",gsub("[A-Z]+\\.","",rownames(results$scores))))
+tmp <- melt(tmp, id.vars = c("experiment","cell_index","group"))
+
+ggplot(tmp[variable %in% paste0("V",1:15)], aes(experiment, value, colour=group)) +
+  geom_boxplot() +
+  facet_wrap(~variable, scales = "free_y") +
+  scale_color_manual(values=c(brewer.pal(9,"Set1"),"black")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(tmp[variable %in% paste0("V",16:30)], aes(experiment, value, colour=group)) +
+  geom_boxplot() +
+  facet_wrap(~variable, scales = "free_y") +
+  scale_color_manual(values=c(brewer.pal(9,"Set1"),"black")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(tmp[variable %in% paste0("V",31:45)], aes(experiment, value, colour=group)) +
+  geom_boxplot() +
+  facet_wrap(~variable, scales = "free_y") +
+  scale_color_manual(values=c(brewer.pal(9,"Set1"),"black")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(tmp[variable %in% paste0("V",46:50)], aes(experiment, value, colour=group)) +
+  geom_boxplot() +
+  facet_wrap(~variable, scales = "free_y") +
+  scale_color_manual(values=c(brewer.pal(9,"Set1"),"black")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+# Previous Studies GRN
+![](../figures/GRN.jpg)
+
+
+From [Regulatory complexity revealed by integrated cytological and RNA-seq analyses of meiotic substages in mouse spermatocytes](https://dx.doi.org/10.1186%2Fs12864-016-2865-1)
+
+![](../figures/TFs.jpg)
+
+
+From [Expression dynamics, relationships, and transcriptional regulations of diverse transcripts in mouse spermatogenic cells](https://dx.doi.org/10.1080%2F15476286.2016.1218588)
+
+
+Others (Pol II GTFs):
+- TBL1 (TRF2)
+- TAF4b
+- TAF7l
+- GTF2a1l (ALF)
+

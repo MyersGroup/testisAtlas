@@ -1,0 +1,114 @@
+---
+title: "Alzhemiers Enrichment"
+output: html_notebook
+---
+
+Many of the genes in component 11 (Macrophages) are Alzheimers GWAS hits or otherwise well known in AD.
+
+Microglia, the brain resident marcrophages, are heavily implicated in the development and progression of AD.
+
+Key studies:
+
+- Meta-analysis of 74,046 individuals identifies 11 new susceptibility loci for Alzheimer's disease (https://doi.org/10.1038/ng.2802)
+- Microglia in Alzheimer’s disease (http://dx.doi.org/10.1083/jcb.201709069)
+- A Unique Microglia Type Associated with Restricting Development of Alzheimer’s Disease (http://dx.doi.org/10.1016/j.cell.2017.05.018)
+- The TREM2-APOE Pathway Drives the Transcriptional Phenotype of Dysfunctional Microglia in Neurodegenerative Diseases (http://dx.doi.org/10.1016/j.immuni.2017.08.008)
+- Pharmacological targeting of CSF1R inhibits microglial proliferation and prevents the progression of Alzheimer’s-like pathology (http://dx.doi.org/10.1093/brain/awv379)
+
+Full Literature: http://www.citeulike.org/user/danielwells/tag/alzheimers
+
+```{r, fig.width=6}
+library(testisAtlas)
+load("../data/tmp_cache/SDA_objects.rds")
+load_component_orderings()
+```
+
+Notable hits in top 25 genes include: Apoe, Tyrobp, Trem2, and Ms4a7 (Part of MS4A cluster)
+
+```{r, fig.width=6}
+devtools::load_all("~/Dropbox/Github/SDAtools/")
+rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
+genome_loadings(results$loadings[[1]][11,], label_both = FALSE, max.items = 25, label.size = 4) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+```
+
+
+Genes from Late Onset Alzheimers Disease GWAS - expressed in macropgages (component 11)
+
+```{r, fig.width=6}
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)},
+                                    input = c("Apoe","Trem2","Bin1","Ms4a6d","Ms4a6b","Ms4a6c","Ms4a7","Tyrobp","Cd33","Mef2c","Spi1","H2-Eb1")),
+             nrow=3, heights = c(1,1,1))
+```
+
+Genes from Late Onset Alzheimers Disease GWAS - not specifically expressed in macropgages
+
+```{r, fig.width=6}
+
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)},
+                                    input = c("Clu","Picalm","Abca7","Cd2ap","Zcwpw1","Nme8","Inpp5d","Sorl1","Rin3","Ptk2b")),
+             nrow=3, heights = c(1,1,1))
+
+```
+
+Other genes
+
+```{r, fig.width=6}
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)},
+                                    input = c("Lpl","Itm2c","Itm2b","App")),
+             nrow=2, heights = c(1,1))
+```
+
+Not in dataset: EPAH1, CASS4
+
+There are 20 GWAS hits which have loadings. For component 11 (macrophages), 8 of them are in the top 200 genes. This gives a p-value of ~1e-11
+
+```{r, fig.width=6}
+AD_genes <- read.table("../data/previous_studies/alzhemiers/alzheimers_genes.txt", stringsAsFactors = F)
+AD_genes
+#DGS2?, APP. PSEN1, TAU, PLD3 - unconfirmed, Pld4...
+str(AD_genes$V2[!AD_genes$V2 %in% names(results$loadings[[1]][11,])])
+AD_genes <- AD_genes$V2[AD_genes$V2 %in% names(results$loadings[[1]][11,])]
+
+#AD_genes <- c("Apoe","Trem2","Bin1","Ms4a6d","Tyrobp","Cd33","Mef2c","Spi1","H2-Eb1","Clu","Picalm","Abca7","Cd2ap","Zcwpw1","Nme8","Inpp5d","Sorl1","Rin3","Ptk2b")
+
+str(AD_genes)
+
+tmp <- rank(-results$loadings[[1]][11,],F)
+names(tmp) <- names(results$loadings[[1]][11,])
+
+data.table(rank=tmp[AD_genes], gene=AD_genes)[order(rank)]
+
+plot(sort(results$loadings[[1]][11,],T))
+rug(tmp[AD_genes], col="red", lwd=0.3, ticksize = 0.1)
+
+fisher.test(matrix(c(8,20-8,200-8,19262-(200-20+8)),nrow=2,ncol=2),alternative="greater")
+```
+
+Repeating this one sided fishers test for all components gives three results with significant bonferooni corrected hits. Component 8P has a single cell - in the macrophage cluster.
+
+```{r, fig.width=5}
+
+AZ_enrich <- component_enrichment(AD_genes, threshold = 200)
+
+AZ_enrich[order(Component), rank := 1:100]
+AZ_enrich[rank >= 41, Type := "Meiotic"]
+AZ_enrich[rank < 41, Type := "Somatic"]
+
+AZ_enrich_plot <- ggplot(AZ_enrich, aes(Component, -log(p.value,10), label=paste0(Component," - ",name))) +
+  geom_point(aes(colour=Type)) +
+  geom_label_repel(data=AZ_enrich[p.value<0.05/100], ylim=c(5,10)) +
+  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = c(0.8,0.7),
+        legend.background = element_rect(colour="black")) +
+  scale_color_brewer(palette = "Set1") +
+  xlab("Components by Type and Pseudotime")
+
+AZ_enrich_plot
+  
+saveRDS(AZ_enrich_plot, "../data/tmp_cache/AZ_enrich_plot.rds")
+```
+
+
+

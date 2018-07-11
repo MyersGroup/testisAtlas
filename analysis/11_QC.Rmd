@@ -1,0 +1,710 @@
+---
+title: "Data exploration of scRNA data"
+author: "Daniel Wells"
+date: "`r Sys.Date()`"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+<!-- <style> -->
+<!--   .main-container { -->
+<!--     max-width: 800px !important; -->
+<!--   } -->
+<!-- </style> -->
+
+```{r warning=FALSE, message=FALSE}
+library(data.table)
+library(NMF)
+library(Matrix)
+library(ggplot2)
+library(ggforce)
+library(RColorBrewer)
+library(gridExtra)
+```
+
+
+# Global Metrics
+
+```{r, fig.width=6}
+
+sparseM <- readRDS("../data/conradV3/merged_mouse_sparseM_V3.rds")
+sparseM <- t(sparseM)
+
+# No mutants
+# sparseM <- sparseM[grep("WT|SP|mj",rownames(sparseM)),]
+
+quickTabulate <- function(data.matrix, sparce.matrix){
+histo_numers <- matrix(c(0:max(sparce.matrix), rep(0, max(sparce.matrix)+1)), ncol = 2)
+histo_numers[1:max(sparce.matrix)+1, 2] <- tabulate(data.matrix)
+histo_numers[1, 2] <- sum(sparce.matrix == 0)
+return(histo_numers)
+}
+
+hist_table <- data.table(quickTabulate(as.matrix(sparseM), sparseM))
+invisible(hist_table[, Value:= as.integer(V1)])
+invisible(hist_table[, Observed_Transcripts:= as.integer(V2)])
+invisible(hist_table[, Percent:= Value/sum(Value)])
+
+ggplot(hist_table, aes(Observed_Transcripts, Percent)) +
+  geom_bar(stat = "identity") +
+  xlab("Read count for each cell,transcript") +
+  ylab("%") +
+  xlim(-1,20)
+
+```
+
+# Cellwise Metrics
+```{r, fig.width=6}
+cell_sums <- data.table(library_size = rowSums(sparseM), genes=rowSums(sparseM > 0), barcode=rownames(sparseM), experiment=gsub("[A-Z]+\\.","",rownames(sparseM)))
+
+cell_sums[order(library_size)]
+
+setorder(cell_sums, experiment, -library_size)
+
+cell_sums[order(-library_size)]
+
+experiments <- unique(gsub("[A-Z]+\\.","",rownames(sparseM)))
+
+
+
+cell_sums_dt <- data.table(table(cell_sums$library_size))
+cell_sums_dt[,V1:=as.integer(V1)]
+ggplot(cell_sums_dt, aes(V1, N)) + geom_point() + ylab("Number of Cells") + xlab("Library Size (Total observed mRNA per cell)") + xlim(0,1000)
+
+# compare to total UMI
+ggplot(cell_sums, aes(library_size, genes)) + geom_point(alpha=0.2) + scale_y_log10() + scale_x_log10() + geom_abline(intercept=0,slope=1, colour="red")
+
+cell_sums_dt <- data.table(table(cell_sums$genes))
+cell_sums_dt[,V1:=as.integer(V1)]
+ggplot(cell_sums_dt, aes(V1, N)) + geom_point() + ylab("Number of Cells") + xlab("Number of genes expressed per cell") + xlim(0,1000)
+```
+
+```{r, fig.width=6}
+cell_sums$QC_fail <- FALSE
+
+## Library Size filtering
+cell_sums[, library_threshold := mean(log(library_size)) - sd(log(library_size)), by=experiment]
+
+ggplot(cell_sums[library_size>50], aes(seq_along(barcode), library_size, colour=log(library_size) < library_threshold)) +
+  geom_point(size=0.5) +
+  scale_y_log10() +
+  theme(legend.position = "bottom") +
+  facet_wrap(~experiment, scales="free_x") +
+  geom_hline(yintercept = 200)
+
+## Number of genes expressed filtering
+cell_sums[, genes_threshold := mean(log(genes)) - sd(log(genes)), by=experiment]
+
+ggplot(cell_sums[library_size>50][order(-genes)], aes(seq_along(barcode), genes, colour=log(genes) < genes_threshold)) +
+  geom_point() +
+  scale_y_log10() +
+  theme(legend.position = "bottom") +
+  facet_wrap(~experiment, scales="free_x") +
+  geom_hline(yintercept = 100)
+
+## Apply Filters
+cell_sums[log(library_size) < library_threshold | library_size < 200 | log(genes) < genes_threshold | genes < 100, QC_fail := TRUE, by=experiment]
+
+ggplot(cell_sums[library_size>50], aes(seq_along(barcode), library_size, colour=QC_fail)) +
+  geom_point(size=0.5) +
+  scale_y_log10() +
+  facet_wrap(~experiment, scales="free_x")
+
+cell_sums[,.(percent_fail=round(100*sum(QC_fail)/.N) ,QC_pass=sum(!QC_fail),QC_fail=sum(QC_fail)),by=c("experiment")][order(-percent_fail)]
+
+cell_sums[,.N,by=QC_fail]
+
+cell_subset <- cell_sums[QC_fail==FALSE]$barcode
+
+```
+
+
+# Genewise Metrics
+```{r, fig.width=6}
+rownames_cache <- rownames(sparseM)
+#rownames(sparseM) <- gsub("[A-Z]+\\.","",rownames_cache)
+
+sparseM <- sparseM[cell_subset,]
+
+# How expressed is Prdm9
+table(sparseM[,"Prdm9"])
+
+table(sparseM[,"Spo11"])
+
+gene_sums <- data.table(umi = colSums(sparseM), cells=colSums(sparseM > 0), gene=colnames(sparseM))
+
+setorder(gene_sums, -umi)
+
+gene_sums[,percent_of_cells := signif(cells/nrow(sparseM), 3)]
+
+plot(log(sort(gene_sums$umi)))
+plot(log(gene_sums$umi))
+
+# Highly expressed genes
+head(gene_sums[order(-umi)], 20)
+
+# Widely expressed genes
+head(gene_sums[order(-cells)], 20)
+
+head(gene_sums[order(umi)], 20)
+head(gene_sums[order(cells)], 20)
+
+# Summary Table
+gene_sums_dt <- data.table(table(gene_sums$umi))
+gene_sums_dt[,V1 := as.integer(V1)]
+ggplot(gene_sums_dt, aes(V1, N)) + ylab("Number of Genes") + xlab("Total observed mRNA per gene")+ geom_point() + scale_x_log10()
+
+# compare to total UMI
+ggplot(gene_sums, aes(umi, cells)) + geom_point(alpha=0.2) + scale_y_log10() + scale_x_log10() + geom_abline(intercept=0,slope=1, colour="red")
+
+total_cells_dt <- data.table(table(gene_sums$cells))
+total_cells_dt[,V1:=as.integer(V1)]
+ggplot(total_cells_dt, aes(V1, N)) + ylab("Number of Genes") + xlab("Number of cells with non-zero expression")+ geom_point() + scale_x_log10()
+
+
+nrow(gene_sums)
+nrow(gene_sums[umi>5])
+nrow(gene_sums[cells>5])
+nrow(gene_sums[umi>5 & cells>5])
+
+gene_subset <- gene_sums[umi>5 & cells>5][order(-umi)]$gene
+```
+
+
+I also downloaded a batch of [retinal single cell data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE63472) from Evan Macosko and Steve McCarroll's Drop-Seq paper for comparison as well as some [bipolar retinal neurons](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE81904).
+
+```{bash, eval=FALSE}
+# some processing required for extractign single batch
+#zcat GSE81904_BipolarUMICounts_Cell2016.txt.gz | cut -f1-4240 > Bipolar_neurons.digital_expression.txt
+# then manually add "gene" column to start, and delete the first Bipolar2 label
+#gzip Bipolar_neurons.digital_expression.txt
+```
+
+Summarise McCarrol DGE files & bipolar retinal
+```{r message=FALSE, warning=FALSE}
+
+dge.files <- list.files(pattern="*digital_expression\\.txt.gz", path="../data")
+
+summary <- data.table()
+for (file in dge.files){
+  
+  dge <- fread(paste0("zcat < ../data/", file))
+  
+  dge$gene <- NULL
+  new_summary <- data.table(
+    CELL_BARCODE = names(dge),
+    NUM_GENES = apply(dge, 2, function(x) sum(x > 0)),
+    NUM_TRANSCRIPTS = colSums(dge))
+
+  file <- gsub(".digital_expression.txt", "_gene_exon.dge.summary.txt", file)
+  file <- gsub(".gz", "", file)
+  
+  write.csv(new_summary[order(-NUM_TRANSCRIPTS)],
+            file = paste0("../data/", file),
+            row.names=FALSE)
+
+}
+
+```
+
+Summarise 10X genomics PBMC file
+```{r}
+library(Seurat)
+pbmc.data <- Read10X("../data/digital_gene_expression/10X_genomics/pbmc/hg19/")
+
+# create summary
+dge <- as.matrix(pbmc.data)
+new_summary <- data.table(
+    CELL_BARCODE = colnames(dge),
+    NUM_GENES = apply(dge, 2, function(x) sum(x > 0)),
+    NUM_TRANSCRIPTS = colSums(dge))
+
+write.csv(new_summary[order(-NUM_TRANSCRIPTS)],
+            file = paste0("../data/digital_gene_expression/10X_genomics/pbmc/PBMC_10X_gene_exon.dge.summary.txt"),
+            row.names=FALSE)
+
+
+
+
+hek.data <- Read10X("../data/digital_gene_expression/10X_genomics/293t/hg19/")
+
+# create summary
+dge <- as.matrix(hek.data)
+new_summary <- data.table(
+    CELL_BARCODE = colnames(dge),
+    NUM_GENES = apply(dge, 2, function(x) sum(x > 0)),
+    NUM_TRANSCRIPTS = colSums(dge))
+
+write.csv(new_summary[order(-NUM_TRANSCRIPTS)],
+            file = paste0("../data/digital_gene_expression/10X_genomics/293t/293t_10X_gene_exon.dge.summary.txt"),
+            row.names=FALSE)
+
+jurkat.data <- Read10X("../data/digital_gene_expression/10X_genomics/jurkat/hg19/")
+
+# create summary
+dge <- as.matrix(jurkat.data)
+new_summary <- data.table(
+    CELL_BARCODE = colnames(dge),
+    NUM_GENES = apply(dge, 2, function(x) sum(x > 0)),
+    NUM_TRANSCRIPTS = colSums(dge))
+
+write.csv(new_summary[order(-NUM_TRANSCRIPTS)],
+            file = paste0("../data/digital_gene_expression/10X_genomics/jurkat/jurkat_10X_gene_exon.dge.summary.txt"),
+            row.names=FALSE)
+
+theme_set(theme_gray())
+```
+
+# Experimentwise Metrics
+
+```{r, fig.width=6}
+
+stopifnot(digest::digest(sparseM[cell_subset, gene_subset]) == "bad0b808593dc87b14dc71cdc4cc140f")
+saveRDS(sparseM[cell_subset, gene_subset], "../data/conradV3/merged_mouse_QC_V3.rds")
+
+
+cell_sums <- cell_sums[order(-library_size)]
+
+# Cells per experiment
+cell_sums[, .N, by=experiment][order(-N)]
+
+cell_sums[, .(average_library_size = sum(library_size)/.N), by=experiment][order(-average_library_size)]
+
+line_type <- scale_linetype_manual(values = c(rep("solid", 13), rep("dashed", 13)))
+line_color <- scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
+
+cell_sums[, cumulative_reads := cumsum(library_size), by=experiment]
+cell_sums[, cell_index := seq_len(.N), by=experiment]
+
+
+ggplot(cell_sums, aes(cell_index, cumulative_reads, colour = experiment, linetype=experiment)) + 
+  geom_line() +
+  line_type + line_color + 
+  theme(legend.position="bottom") +
+  facet_zoom( x = cell_index < 1500, y = cumulative_reads < 1.5e6)
+
+
+# 
+# summary[, cumulative_fraction := cumsum(library_size) / sum(NUM_TRANSCRIPTS), by=experiment]
+# 
+# invisible(summary[, cell_quantile := 1:length(CELL_BARCODE) / length(CELL_BARCODE), by=batch_merge])
+# 
+# 
+# line_color <- scale_linetype_manual(values = c(rep("solid", 12), rep("dashed", 12)))
+# line_type <- scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2)))
+# 
+# # compare cumulative reads and cell numbers
+# ggplot(summary, aes(cell_index, cumulative_reads, colour = batch_merge, linetype = batch_merge)) + 
+#   geom_line() +
+#   line_color + line_type +
+#   theme(legend.position="bottom") +
+#   facet_zoom( x = cell_index < 1500, y = cumulative_reads < 1.5e6)
+# 
+# # normalised CDF
+# ggplot(summary[batch!="out"], aes(cell_quantile, cumulative_fraction, colour = batch_merge, linetype = batch_merge)) + 
+#   geom_line() +
+#   line_color + line_type +
+#   theme(legend.position="bottom")
+# 
+# # compare cumulative reads and cell numbers
+# ggplot(summary[batch_merge %in% c("293t_10X","MWT3330","MLH3KO","GSM1626798_P14Retina_6","FACS")], aes(cell_index, cumulative_reads, colour = batch_merge, linetype = batch_merge)) + 
+#   geom_line() +
+#   line_color + line_type +
+#   theme(legend.position="bottom") +
+#   facet_zoom( x = cell_index < 1500, y = cumulative_reads < 1.5e6)
+# 
+# # normalised CDF
+# ggplot(summary[batch_merge %in% c("293t_10X","MWT3330","MLH3KO","GSM1626798_P14Retina_6","FACS")], aes(cell_quantile, cumulative_fraction, colour = batch_merge, linetype = batch_merge)) + 
+#   geom_line() +
+#   line_color + line_type +
+#   theme(legend.position="bottom")
+```
+
+# Normalise
+
+```{r}
+tmp <- seq(0,100,0.1)
+plot(tmp, sqrt(tmp), type="l", ylim=c(-1,10))
+lines(tmp, asinh(tmp), col="red")
+lines(tmp, log(tmp), col="blue")
+abline(h=0)
+abline(0,1)
+
+# post lib size correction
+tmp <- sample(dge, 1e6)
+
+hist(tmp, breaks = 50000, ylim = c(0, 1e3), xlim=c(0,0.15), xlab="Expression", main="x")
+
+hist(sqrt(tmp), breaks = 1000, ylim = c(0, 1e3), xlim=c(0,0.4), xlab="Expression", main="sqrt(x)")
+hist(asinh(tmp), breaks = 50000, ylim = c(0, 1e3), xlim=c(0,0.1), xlab="Expression", main="asinh(x)")
+
+hist(10000*tmp, breaks = 50000, ylim = c(0, 1e3), xlim=c(0,1500), xlab="Expression", main="10000*x")
+
+hist(10000*asinh(tmp), breaks = 50000, ylim = c(0, 1e3), xlim=c(0,1000), xlab="Expression", main="10000*asinh(x)")
+
+hist(asinh(10000*tmp), breaks = 500, ylim = c(0, 1e3), xlim=c(0,10), xlab="Expression", main="asinh(10000*x)")
+hist(log(10000*tmp+1), breaks = 500, ylim = c(0, 1e3), xlim=c(0,10), xlab="Expression", main="log(10000*x+1)")
+hist(sqrt(10000*tmp), breaks = 5000, ylim = c(0, 1e3), xlim=c(0,50), xlab="Expression", main="sqrt(10000*x)")
+
+
+```
+
+
+```{r fig.width=6}
+# load raw data for preprocessing
+raw_data <- readRDS("merged_mouse_QC_V3.rds")
+raw_data <- t(raw_data)
+
+data <- normaliseDGE(raw_data,
+                     center = FALSE,
+                     scale = TRUE,
+                     threshold = 10,
+                     min_library_size = 200,
+                     gene_subset = (2/3))
+
+library_size <- Matrix::colSums(raw_data[,rownames(data)])
+
+# Issue warning if data changes
+stopifnot(digest::digest(data) == "a5a74d6b89e2835fad86f8a4ba342ca5")
+
+saveRDS(list(dge=data, library_size=library_size), "merged_mouse_normalised_V3.rds") # save a cache for easy reopening
+stopifnot(tools::md5sum("merged_mouse_normalised_V3.rds") == "a9556d493f27e94978d6a4ef1ae2c00a")
+
+```
+
+
+# t-SNE
+
+t-SNE enables the reduction of dimensionality of the digital gene expression matrix to 2 which enables visualisation of the component scores on a common plot.
+
+Cells with a higher library size are found towards the edges of the plot. Some "clusters" in the t-SNE plot are enriched for cells from a specific experiment. For example MLH3 KO cells are mostly in a cluster at the bottom with a few in the main cluster on the far left. SPCI (early) facs sorted cells are on the left size and SPD (late) facs sorted cells are on the right. We will see from inspecting the components loadings and scores that this is a more general pattern with cells early in the process of spermatogenesis on the left and gradually 'moving' around the outside of the plot clockwise towards the bottom right.
+
+However there is an issue here as the experimental conditions are confounnded by batch so it's hard to disentangle batch effect from biological effect.
+
+```{r, fig.width=6}
+data <- readRDS("merged_mouse_normalised_V3.rds")
+library_size <- data$library_size
+data <- data$dge
+
+# PCA
+#devtools::install_github("gabraham/flashpca/flashpcaR")
+library(flashpcaR)
+pcaresult <- flashpca(as.matrix(data), ndim=250, stan="center", verbose=T, seed=42)
+
+# tSNE
+set.seed(42)
+tsne_data <- Rtsne::Rtsne(pcaresult$projection, verbose=TRUE, pca=FALSE, perplexity = 30, max_iter=2000)
+
+set.seed(42)
+tsne_data <- Rtsne::Rtsne(pcaresult$projection, verbose=TRUE, pca=FALSE, perplexity = 100, max_iter=1000)
+
+
+save(pcaresult, file="merged_mouse_pca_full.rds")
+save(tsne_data, file="merged_mouse_tsne_full.rds")
+#load("../data/conradV3/merged_mouse_pca_full.rds") 
+```
+
+```{r, fig.width=6}
+data <- readRDS("../data/conradV3/merged_mouse_normalised_V3.rds")
+library_size <- data$library_size
+data <- data$dge
+
+load("../data/conradV3/merged_mouse_tsne_full.rds")
+
+#datat$genes_detected <- data.table(genes_detected, cell=names(genes_detected))[order(cell)]$genes_detected
+
+datat <- data.table(tsne_data$Y)
+setnames(datat, c("Tsne1","Tsne2"))
+datat$cell <- rownames(data)
+datat$experiment <- gsub("[A-Z]+\\.","",rownames(data))
+datat$group <- gsub("_.*","",datat$experiment)
+datat$library_size <- library_size # [grep("WT|SP|mj",rownames(data))]
+marker_genes <- c("Insl3", "Stra8", "Sycp2","Piwil1","Spata31", "Prss51", "Tnp1", "Prm1", "Prm2", "mt-Rnr2","Prdm9","Prss50","Dcn","Cst9","C1qb","Rpl41")
+other_genes <- c("Tex101","Hmgb2","Ddx39","Calm2","Hnrnpa2b1","Tpr","Pcgf5","Sycp2","Piwil1","Tnp1","Tnp2","Hmgb4","Tex37","Spata3","Klk1b8","Paqr5") # for GFP like plot, "Mtl5","H2afb1",
+mito_genes <- grep("mt-",colnames(data), value=T)
+expression <- data.table(as.matrix(data[,c(marker_genes, mito_genes, other_genes)])) #
+datat <- cbind(datat, expression)
+
+
+ggplot(datat, aes(Tsne1, Tsne2, color=log(library_size))) +
+  geom_point() +
+  scale_colour_distiller(palette="YlOrRd", direction=1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - library size")
+
+ggplot(datat, aes(Tsne1, Tsne2, color=experiment)) +
+  geom_point() +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
+#scale_colour_brewer(palette="Paired")
+
+ggplot(datat, aes(Tsne1, Tsne2, color=group)) +
+  geom_point() +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+
+simplify <- theme(legend.position = "none",
+              axis.title.x=element_blank(),
+              axis.title.y=element_blank(),
+              axis.text.x = element_blank(),
+              axis.text.y = element_blank(),
+              axis.ticks = element_blank())
+
+print_pca <- function(i){
+  ggplot(datat, aes(Tsne1, Tsne2, color=get(i))) +
+  geom_point(size=0.2) +
+  scale_colour_distiller(palette="YlOrRd", direction=1) +
+  theme(legend.position = "bottom") +
+  ggtitle(paste0(i," - t-SNE")) + simplify
+}
+
+grid.arrange(grobs=list(print_pca(marker_genes[1]),
+                        print_pca(marker_genes[2]),
+                        print_pca(marker_genes[3]),
+                        print_pca(marker_genes[4]),
+                        print_pca(marker_genes[5]),
+                        print_pca(marker_genes[6]),
+                        print_pca(marker_genes[7]),
+                        print_pca(marker_genes[8]),
+                        print_pca(marker_genes[9]),
+                        print_pca(marker_genes[10]),
+                        print_pca(marker_genes[11]),
+                        print_pca(marker_genes[12]),
+                        print_pca(marker_genes[13]),
+                        print_pca(marker_genes[14]),
+                        print_pca(marker_genes[15]),
+                        print_pca(marker_genes[16])),
+			nrow=4, heights = c(1,1,1,1))
+
+```
+
+
+
+# Odd cells
+
+Cells in the amorphous group tend to have lower library sizes and high mitochondrial gene expression than normal cells - suggesting poor quality cells.
+
+```{r, fig.width=6}
+# Define circle to tagg odd cells
+datat[,odd:=FALSE]
+datat[((Tsne1-(-10))^2 + (Tsne2-(+20))^2) < 23^2, odd:= TRUE]
+
+# Label Odd Cells
+ggplot(datat, aes(Tsne1, Tsne2, color=odd)) +
+  geom_point(size=0.5) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+
+datat[,.N,by=odd]
+
+datat[odd==FALSE,.N,by=group][order(-N)]
+
+# Proportion of Odd by experiment
+ggplot(datat[,.N,by=c("experiment","odd")], aes(experiment,N,  fill=odd)) +
+  geom_col(position="fill") +
+  geom_hline(yintercept = 0.5, linetype="dashed") +
+  theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
+
+ggplot(datat[,.N,by=c("experiment","odd")], aes(experiment,N,  fill=odd)) +
+  geom_col(position="stack") +
+  theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
+
+```
+
+# Corrected cells
+
+```{r, fig.width=6}
+datat[,last_bc_nt:=substr(cell, 12, 12)]
+
+# # if some barcodes different length!
+# index <- regexpr("[A-Z]\\.", datat$cell)
+# datat$last_bc_nt <- substring(datat$cell, index, index)
+# datat$last_bc_nt_2 <- substring(datat$cell, index-1, index-1)
+
+# Where are corrected cells?
+ggplot(datat, aes(Tsne1, Tsne2, color=last_bc_nt=="N")) +
+  geom_point(size=0.3) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+ggplot(datat, aes(Tsne1, Tsne2, color=last_bc_nt)) +
+  geom_point(size=0.3) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+
+# N occours less in odd cells
+ggplot(datat[,.N,by=c("odd","last_bc_nt")], aes(last_bc_nt, N, fill=odd)) + geom_col(position="fill")
+
+tmp <- datat[,.N,by=c("odd","last_bc_nt")]
+tmp[,last_bc_nt := factor(last_bc_nt, levels=c("A","G","C","T","N"))]
+ggplot(tmp, aes(odd, N, fill=last_bc_nt)) + geom_col(position="fill")
+
+# some experiments don;t have barcodes with N
+tmp <- datat[,.N,by=c("experiment","last_bc_nt")]
+tmp[,last_bc_nt := factor(last_bc_nt, levels=c("A","G","C","T","N"))]
+ggplot(tmp, aes(experiment, N, fill=last_bc_nt)) +
+  geom_col(position="fill") +
+  theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
+
+# ggplot(datat[,.N,by=c("experiment","corrected")], aes(experiment,N,  fill=corrected)) +
+#   geom_col(position="fill") +
+#   theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
+
+# second to last barcode seems fine
+datat[,bc11:=substr(cell, 11, 11)]
+tmp <- datat[,.N,by=c("experiment","bc11")]
+tmp[,bc11 := factor(bc11, levels=c("A","G","C","T","N"))]
+ggplot(tmp, aes(experiment, N, fill=bc11)) +
+  geom_col(position="fill") +
+  theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
+
+
+
+```
+
+```{r, fig.width=6}
+
+# # % ribosomal gene expression
+# raw_data <- readRDS("../data/conradV2/merged_mouse_QC_counts_2.rds")
+# 
+# datat$rnr2_percent <- raw_data[, "mt-Rnr2"] / library_size
+# # cap extream values
+# datat[rnr2_percent>0.05]$rnr2_percent <- 0.05
+
+# max_scores_bycell <- apply(results$scores, 1, max)
+# max_scores_bycell <- data.table(max_scores_bycell, cell=names(max_scores_bycell))
+# datat <- merge(datat, max_scores_bycell, all.x = TRUE)
+# diff_expression <- data.table(odd=apply(data[datat[max_scores_bycell>20 & group=="WT"]$cell,], 2, median), normal=apply(data[datat[max_scores_bycell<20 & group=="WT"]$cell,], 2, median), gene=colnames(data))
+#ggplot(datat[!is.na(max_scores_bycell)], aes(Tex101, max_scores_bycell, colour=experiment)) + geom_point() + scale_x_log10() + facet_wrap(~experiment)
+
+#datat[, is_mlh3:=FALSE]
+#datat[group %in% c("Mlh","MLHKO"), is_mlh3:=TRUE]
+# & is_mlh3==FALSE, & is_mlh3==FALSE
+
+# which genes are differnetially expressed in the odd group
+# diff_expression <- data.table(odd=colMeans(data[datat[odd==TRUE & !group %in% c("Hormad","Mlh3")]$cell,]), normal=colMeans(data[datat[odd==FALSE & !group %in% c("Hormad","Mlh3")]$cell,]), gene=colnames(data))
+# diff_expression[,ratio := (odd+0.1)/(normal+0.1)]
+# head(diff_expression[order(-ratio)], 20)
+# head(diff_expression[order(ratio)], 20)
+
+hist(datat$mt_geneset, breaks=500)
+datat$mt_geneset <- sqrt(rowSums(sparseM[datat$cell,mt_genes[-1]]) / rowSums(sparseM[datat$cell,]))
+
+# create mito-marker genes
+mt_genes <- grep("mt-",colnames(data), value=T)
+datat[, mt_geneset := Reduce(`+`, .SD), .SDcols = mt_genes ]
+
+datat[, mt_geneset := `mt-Rnr2` ]
+
+# Desnity comparisons
+ggplot(datat, aes(library_size, colour=odd)) + geom_density() + scale_x_log10() + facet_wrap(~experiment)
+ggplot(datat, aes(mt_geneset, colour=odd)) + geom_density() + scale_x_log10() + facet_wrap(~experiment)
+
+# Sina Plots - MT & LIB
+ggplot(datat, aes(odd, mt_geneset, colour=odd)) + geom_sina() + scale_y_log10() + facet_wrap(~group)
+ggplot(datat, aes(odd, library_size, colour=odd)) + geom_sina() + scale_y_log10() + facet_wrap(~group)
+
+#ggplot(datat[group %in% c("WT","Mlh")], aes(mt_geneset, group=experiment, colour=group)) + geom_density() + scale_x_log10()
+#ggplot(datat[group %in% c("WT","Mlh")], aes(mt_geneset, group=experiment, colour=group)) + geom_density() + scale_x_log10() + scale_colour_brewer(palette="Paired") + facet_wrap(~odd, ncol = 1)
+
+# Scatter plot
+#ggplot(datat, aes(mt_geneset, library_size, colour=odd)) + geom_point(alpha=0.2) + scale_y_log10() + scale_colour_brewer(palette="Paired") + facet_wrap(~group)
+
+ggplot(datat, aes(Tsne1, Tsne2, color=mt_geneset)) +
+  geom_point() +
+  theme(legend.position = "bottom") +
+  scale_colour_distiller(palette="YlOrRd", direction=1) +
+  ggtitle("t-SNE - experiment")
+
+hist(datat$mt_geneset, breaks=1000)
+
+plot(datat$mt_geneset, datat$`mt-Rnr2`)
+
+ggplot(datat, aes(Tsne1, Tsne2, color=mt_geneset)) +
+  geom_point() +
+  theme(legend.position = "bottom") +
+  scale_colour_distiller(palette="YlOrRd", direction=1) +
+  ggtitle("t-SNE - experiment")
+
+ggplot(datat, aes(Tsne1, Tsne2, color=mt_geneset<2)) +
+    geom_point(size=0.01) +
+    theme(legend.position = "bottom") +
+    ggtitle("t-SNE - experiment")
+
+ggplot(datat[mt_geneset<2], aes(Tsne1, Tsne2)) +
+    geom_point(size=0.01) +
+    theme(legend.position = "bottom") +
+    ggtitle("t-SNE - experiment")
+```
+
+
+This group also has a mixture of late and early gene expressing cells. Check for doublets+ by co-expression of early and late genes (like mouse vs human mRNA)
+```{r, fig.width=6}
+
+datat[,early_geneset := Tex101+Hmgb2+Ddx39+Calm2+Hnrnpa2b1+Tpr+Pcgf5+Sycp2+Piwil1]
+datat[,late_geneset := Prm1+Tnp1+Tnp2+Prm2+Hmgb4+Tex37+Spata3+Klk1b8+Paqr5]
+
+#ggplot(datat, aes(Tsne1, Tsne2, color=rnr2_percent>0.02 | (early_geneset>2.5 & late_geneset>2.5))) +
+#    geom_point() +
+#    theme(legend.position = "bottom") +
+#    ggtitle("t-SNE - experiment")
+
+# Early vs Late Scatter
+ggplot(datat, aes(early_geneset, late_geneset, color=odd)) +
+  geom_point(alpha=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  facet_grid(~odd, scales = "free")
+
+# cap extreme values
+datat[early_geneset > quantile(early_geneset, 0.9), early_geneset:= quantile(early_geneset, 0.9)]
+datat[late_geneset > quantile(late_geneset, 0.9), late_geneset:= quantile(late_geneset, 0.9)]
+
+# normalise to max=1
+datat[,early_geneset_scale := early_geneset / max(early_geneset)]
+datat[,late_geneset_scale := late_geneset / max(late_geneset)]
+
+# GFP like plot
+ggplot(datat, aes(Tsne1, Tsne2)) +
+  geom_point(color=rgb(red=datat$late_geneset_scale, green=0, blue=datat$early_geneset_scale), size=0.3) +
+  theme(legend.position = "none") +
+  ggtitle("t-SNE - experiment") +
+  theme_dark() + theme(panel.background = element_rect(fill = "grey20", colour = NA))
+
+ggplot(datat, aes(Sycp2, Prm2, color=odd)) +
+  geom_point(alpha=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  facet_grid(~odd)
+
+ggplot(datat, aes(Piwil1, Prm2, color=odd)) +
+  geom_point(alpha=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  facet_grid(~odd)
+
+```
+
+```{r}
+stopifnot(digest::digest(datat[odd==FALSE & mt_geneset<2]$cell) == "94a4bdfa1dfdbec834ba2c4f0d2f43c1")
+cell_subset2 <- datat[odd==FALSE & mt_geneset<2]$cell
+raw_data <- readRDS("../data/conradV3/merged_mouse_QC_V3.rds")
+str(raw_data[cell_subset2, ])
+saveRDS(raw_data[cell_subset2, ], "../data/conradV3/merged-mouse_counts_tsne-QC_low-mt.rds")
+
+```
+

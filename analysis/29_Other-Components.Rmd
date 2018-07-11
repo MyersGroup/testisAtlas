@@ -1,0 +1,313 @@
+---
+title: "Individual Components"
+output: 
+  html_notebook: 
+    code_folding: hide
+    fig_height: 6
+    fig_width: 10.5
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+```{r}
+library(DT)
+motifEnrichment_wLogo <- readRDS("../data/motifs/TFenrichment_V2.rds")
+GO_data <- readRDS("../data/GO_enrichment.rds")
+
+library(testisAtlas)
+load("../data/tmp_cache/SDA_objects.rds")
+load_component_orderings()
+```
+
+# Odd / Unassigned Components
+
+## 22 Odd
+
+```{r, fig.width=6}
+print_tsne(22, point_size = 0.5)
+print_loadings_scores(22)
+print_gene_list(22)
+
+go_volcano_plot(component = "V22N")
+head(GO_data[["V22N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V22N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 6 Mj
+
+```{r, fig.width=6}
+print_tsne(6, point_size = 0.5)
+print_loadings_scores(6)
+print_gene_list(6)
+
+go_volcano_plot(component = "V6P")
+head(GO_data[["V6P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V6P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+
+## 24 Leydig Subset
+
+Loading appears in a subset of leydig cells, but alot of the top (positive) genes are pseudogenes, and most almost all high cell scores are in Hormad1 KO so maybe a batch / KO specific effect / messed up.
+
+```{r, fig.width=6}
+print_tsne(24, point_size = 0.5)
+print_loadings_scores(24)
+print_gene_list(24)
+
+go_volcano_plot(component = "V24N")
+head(GO_data[["V24N"]][c(2,7,8,10)], 20)
+
+head(GO_data[["V24P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V24N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+
+
+
+## 29 SPG batch??
+
+Spermatogonial location, but ribosomal negative genes, and top genes all non-protein coding or mitochondrial:
+
+- Gm14513 - pseudogene
+- Rps15a-ps8 - pseudogene
+- Gm15772 - pseudogene
+- Gm14094 - pseudogene
+- Gm44067 - lincRNA
+- Gm13092 - pseudogene
+- Gm10086 - pseudogene
+- AC129329.1 - pseudogene
+
+```{r, fig.width=6}
+print_tsne(29, point_size = 0.5)
+print_loadings_scores(29)
+print_gene_list(29)
+
+go_volcano_plot(component = "V29P")
+head(GO_data[["V29P"]][c(2,7,8,10)], 20)
+head(GO_data[["V29N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V25N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+
+
+
+
+
+## 12 Batch (Hormad1)
+
+Odd tSNE pattern, cells on outside + blob in center. One set of Hormad1 KO cells have opposite cell loadings to the others so seems unlikely due to the KO of Hormad1 and more due to a batch? - but also high scores in SPG FACS. Highest gene (Gm42418) is lincRNA, mt-Rnr1 & mt-Rnr2 also high.
+
+```{r, fig.width=6}
+print_tsne(12, point_size = 0.5)
+print_loadings_scores(12)
+print_gene_list(12)
+
+go_volcano_plot(component = "V12N")
+head(GO_data[["V12N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V12N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 28 Acrosome V2 / CUl4a Batch
+
+Overlaps V30, potentially batch effect as top 15 positive genes only 2 are protein coding, the rest are either lincRNA, antisenseRNA or processes_pseudogene.
+
+```{r, fig.width=6}
+print_tsne(28, point_size = 0.5)
+print_loadings_scores(28)
+print_gene_list(28)
+
+head(GO_data[["V28P"]][c(2,7,8,10)], 20)
+head(GO_data[["V28N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V28N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 36 Spermatogenesis
+
+Small number of cells on the outside, cells at spermatogenesis stage in tsne, but negative gene loadings (matching negative cell scores) have no enrichment & a few lincRNAs
+
+```{r, fig.width=6}
+print_tsne(36, point_size = 0.5)
+print_loadings_scores(36)
+print_gene_list(36)
+
+go_volcano_plot(component = "V36P")
+head(GO_data[["V36P"]][c(2,7,8,10)], 20)
+head(GO_data[["V36N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V36P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+
+## 41 batch
+
+looks clumpy in tsne, potentially WT batch effect
+
+```{r, fig.width=6}
+print_tsne(41, point_size = 0.5)
+print_loadings_scores(41)
+print_gene_list(41)
+
+go_volcano_plot(component = "V41P")
+head(GO_data[["V41P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V41P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 9 Respiration
+
+```{r, fig.width=6}
+print_tsne(9, point_size = 0.5)
+print_loadings_scores(9)
+print_gene_list(9)
+
+go_volcano_plot(component = "V9N")
+head(GO_data[["V9N"]][c(2,7,8,10)], 20)
+
+head(GO_data[["V9P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V9N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+
+
+
+## 49 ?? Sertoli / Leydig?
+
+```{r, fig.width=6}
+print_tsne(49, point_size = 0.5)
+print_loadings_scores(49)
+print_gene_list(49)
+
+go_volcano_plot(component = "V49P")
+head(GO_data[["V49P"]][c(2,7,8,10)], 20)
+
+go_volcano_plot(component = "V49N")
+head(GO_data[["V49N"]][c(2,7,8,10)], 20)
+
+
+datatable(motifEnrichment_wLogo[geneSet=="V49P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 43 ribosomal
+
+```{r, fig.width=6}
+print_tsne(43, point_size = 0.5)
+print_loadings_scores(43)
+print_gene_list(43)
+
+go_volcano_plot(component = "V43N")
+head(GO_data[["V43N"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V43N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+
+
+Cxadr aka CAR [Coxsackie and adenovirus receptor (CAR) is a product of Sertoli and germ cells in rat testes which is localized at the Sertoli-Sertoli and Sertoli-germ cell interface](https://dx.doi.org/10.1016%2Fj.yexcr.2007.01.017)
+
+## 48 Odd clump
+
+Highest in Mlh3? Odd location on tsne.
+
+```{r, fig.width=6}
+print_tsne(48, point_size = 0.5)
+print_loadings_scores(48)
+print_gene_list(48)
+
+go_volcano_plot(component = "V48P")
+head(GO_data[["V48P"]][c(2,7,8,10)], 20)
+
+datatable(motifEnrichment_wLogo[geneSet=="V48P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 1 single
+
+A single blood cell? / bad component
+
+```{r, fig.width=6}
+print_tsne(1, point_size = 1)
+print_loadings_scores(1)
+#print_gene_list(1)
+
+#go_volcano_plot(component = "V1P")
+head(GO_data[["V1P"]][c(2,7,8,10)], 20)
+
+#datatable(motifEnrichment_wLogo[geneSet=="V1P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+```
+
+## 46 single
+
+```{r, fig.width=6}
+print_tsne(46, point_size = 1)
+print_loadings_scores(46)
+#print_gene_list(46)
+
+#go_volcano_plot(component = "V46N")
+head(GO_data[["V46N"]][c(2,7,8,10)], 20)
+
+#datatable(motifEnrichment_wLogo[geneSet=="V46N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 4 Single
+```{r, fig.width=6}
+print_tsne(4, point_size = 1)
+print_loadings_scores(4)
+#print_gene_list(4)
+
+#go_volcano_plot(component = "V4N")
+head(GO_data[["V4N"]][c(2,7,8,10)], 20)
+
+#datatable(motifEnrichment_wLogo[geneSet=="V4N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 8 Single
+```{r, fig.width=6}
+print_tsne(8, point_size = 1)
+print_loadings_scores(8)
+#print_gene_list(8)
+
+#go_volcano_plot(component = "V8N")
+head(GO_data[["V8N"]][c(2,7,8,10)], 20)
+
+#datatable(motifEnrichment_wLogo[geneSet=="V8N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```
+
+## 14 Single
+
+```{r, fig.width=6}
+print_tsne(14, point_size = 1)
+print_loadings_scores(14)
+#print_gene_list(14)
+
+#go_volcano_plot(component = "V14P")
+head(GO_data[["V14P"]][c(2,7,8,10)], 20)
+
+#datatable(motifEnrichment_wLogo[geneSet=="V14P",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+          
+```

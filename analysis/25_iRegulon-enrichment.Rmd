@@ -1,0 +1,305 @@
+---
+title: "TF Enrichment Analysis"
+output: html_notebook
+---
+
+
+
+
+# TF enrichment
+
+```{r}
+# AUCell:
+#install.packages("http://scenic.aertslab.org/downloads/Rpackages/AUCell_0.99.5.tar.gz", repos=NULL)
+# RcisTarget:
+#install.packages("http://scenic.aertslab.org/downloads/Rpackages/RcisTarget_0.99.0.tar.gz", repos=NULL)
+
+#devtools::install_github("aertslab/SCENIC", dep = FALSE)
+
+#install.packages("http://scenic.aertslab.org/downloads/databases/RcisTarget.mm9.motifDatabases.20k_0.1.1.tar.gz", repos=NULL)
+```
+
+
+```{r}
+library(SCENIC)
+library(RcisTarget.mm9.motifDatabases.20k) # mouse motif database
+library(biomaRt) # to update gene ID
+library(RcisTarget)
+library(DT) # for table with images
+library(data.table)
+library(ggplot2)
+
+data(mm9_500bpUpstream_motifRanking)
+data(mm9_10kbpAroundTss_motifRanking)
+motifRankings <- list()
+motifRankings[["500bp"]] <- mm9_500bpUpstream_motifRanking
+motifRankings[["10kbp"]] <- mm9_10kbpAroundTss_motifRanking
+rm(mm9_500bpUpstream_motifRanking)
+rm(mm9_10kbpAroundTss_motifRanking)
+
+# Motif annotation (TFs)
+data(mm9_direct_motifAnnotation)
+direct_motifAnnotation <- mm9_direct_motifAnnotation
+data(mm9_inferred_motifAnnotation) # optional
+inferred_motifAnnotation <- mm9_inferred_motifAnnotation
+    
+```
+
+```{r}
+## Correct gene IDs
+
+# get ENSEMBL ID for old names
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "http://May2012.archive.ensembl.org", dataset = "mmusculus_gene_ensembl")
+mapTab <- getBM(attributes = c("mgi_symbol",'ensembl_gene_id'),
+				filter = "mgi_symbol", values = motifRankings$`500bp`@rankings$rn, mart = ensembl, uniqueRows=TRUE)
+
+# get new names
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
+mapTab2 <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
+				filter = "ensembl_gene_id", values = mapTab$ensembl_gene_id, mart = ensembl, uniqueRows=TRUE)
+
+mapTab <- data.table(mapTab)
+setkey(mapTab, ensembl_gene_id)
+
+mapTab2 <- data.table(mapTab2)
+setkey(mapTab2, ensembl_gene_id)
+
+mapTab <- merge(mapTab, mapTab2, all.x=T)
+
+identical(motifRankings$`500bp`@rankings$rn, motifRankings$`10kbp`@rankings$rn)
+
+
+# reorder according to original rankings
+tmp <- mapTab[match(motifRankings$`500bp`@rankings$rn, mgi_symbol),]
+
+# fill in NA's with previous name
+tmp[is.na(mgi_symbol), mgi_symbol := motifRankings$`500bp`@rankings$rn[which(is.na(tmp$mgi_symbol))] ]
+
+# copy old names to new if missing
+tmp[is.na(external_gene_name), external_gene_name := mgi_symbol]
+
+# for duplicated external gene name, use the mgi symbol instead
+tmp[external_gene_name %in% tmp[duplicated(external_gene_name)]$external_gene_name, external_gene_name := mgi_symbol]
+tmp[external_gene_name %in% tmp[duplicated(external_gene_name)]$external_gene_name, external_gene_name := mgi_symbol]
+tmp[is.na(external_gene_name) | duplicated(external_gene_name)]
+
+stopifnot(nrow(tmp[is.na(external_gene_name) | duplicated(external_gene_name)])==0)
+
+# apply new names to rankings data
+motifRankings$`500bp`@rankings[, rn := tmp$external_gene_name]
+motifRankings$`10kbp`@rankings[, rn := tmp$external_gene_name]
+```
+
+# Load SDA results
+
+
+
+
+```{r}
+library(SDAtools)
+
+results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(results$loadings[[1]]) <- paste0("V",1:50)
+str(results)
+
+which_SDA_genes <- colnames(results$loadings[[1]]) %in% motifRankings$`500bp`@rankings$rn
+
+sum(which_SDA_genes)
+
+geneNumber = 500
+
+top_positive <- apply(results$loadings[[1]][,which_SDA_genes], 1, function(x) names(sort(x, decreasing=TRUE)[1:geneNumber]))
+top_negative <- apply(results$loadings[[1]][,which_SDA_genes], 1, function(x) names(sort(x, decreasing=FALSE)[1:geneNumber]))
+
+colnames(top_positive) <- paste0(colnames(top_positive),"P")
+colnames(top_negative) <- paste0(colnames(top_negative),"N")
+
+top_genes <- cbind(top_positive, top_negative)
+
+tfModules <- lapply(apply(top_genes,2,list), unlist)
+```
+
+# AUC
+
+```{r}
+## Calculate NES and add motif annotation:
+
+motifs_AUC <- lapply(motifRankings, function(ranking) calcAUC(tfModules, ranking, nCores=2, verbose=TRUE))
+
+## Calculate NES and add motif annotation:
+
+motifEnrichment <- lapply(motifs_AUC, function(aucOutput)
+{
+  addMotifAnnotation(aucOutput, nesThreshold=3.0, digits=3,
+                  motifAnnot_direct = mm9_direct_motifAnnotation,
+                  motifAnnot_inferred = mm9_inferred_motifAnnotation)
+})
+
+motifEnrichment <- do.call(rbind, lapply(names(motifEnrichment), function(dbName){
+  cbind(motifDb=dbName, motifEnrichment[[dbName]])
+}))
+
+## Add genes
+
+motifEnrichment_wGenes <- lapply(names(motifRankings), function(motifDbName){
+  addSignificantGenes(resultsTable=motifEnrichment[motifDb==motifDbName],
+                      geneSets=tfModules,
+                      rankings=motifRankings[[motifDbName]],
+                      maxRank=5000, method="aprox", nCores=2)
+  })
+
+
+motifEnrichment_wGenes <- rbindlist(motifEnrichment_wGenes)
+
+# Add logo URls
+
+motifEnrichment_wLogo <- addLogo(motifEnrichment_wGenes)
+
+saveRDS(motifEnrichment_wLogo, "../data/conradV3/TFenrichment_V2.rds")
+
+```
+
+```{r}
+
+# Summarise TFs
+anotatedTfs <- lapply(split(motifEnrichment_wGenes$TF_direct, motifEnrichment$geneSet),
+                      function(x) unique(unlist(strsplit(x, "; "))))
+
+# Diplay table with logos
+
+datatable(motifEnrichment_wLogo[geneSet=="V30N",-c("enrichedGenes"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
+
+incidenceMatrix <- getSignificantGenes(tfModules$V17,
+                                       motifRankings[[1]],
+                                       signifRankingNames=signifmotifs,
+                                       plotCurve=TRUE, maxRank=5000,
+                                       genesFormat="incidMatrix",
+                                       method="aprox")$incidMatrix
+
+library(reshape2)
+edges <- melt(incidenceMatrix)
+edges <- edges[which(edges$value==1),1:2]
+colnames(edges) <- c("from","to")
+edges$motif <- as.character(edges$from)
+
+graph <- igraph::graph_from_data_frame(edges)
+saveRDS(graph, "V17_network_graph")
+saveRDS(graph, "V30_network_graph")
+saveRDS(graph, "V42_network_graph")
+
+ggraph(graph, layout = 'nicely') + 
+    geom_edge_link(aes(colour = motif)) + 
+    geom_node_point() +
+    theme_graph()
+
+
+# graph <- graph %>%
+#   igraph::add_vertices(213)
+
+
+library(visNetwork)
+motifs <- unique(as.character(edges[,1]))
+genes <- unique(as.character(edges[,2]))
+nodes <- data.frame(id=c(motifs, genes),
+          label=c(motifs, genes),
+          title=c(motifs, genes), # tooltip
+          shape=c(rep("diamond", length(motifs)), rep("elypse", length(genes))),
+          color=c(rep("purple", length(motifs)), rep("skyblue", length(genes))))
+
+visNetwork(nodes, edges) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>%
+  visPhysics(solver = "repulsion", repulsion = list(centralGravity=0.1))
+
+
+# hist(motifs_AUC@matrix["C5",], main="hypoxia", xlab="AUC histogram",
+#      breaks=100, col="#ff000050", border="darkred")
+# nes3 <- (3*sd(motifs_AUC@matrix["C5",])) + mean(motifs_AUC@matrix["C30",])
+# abline(v=nes3, col="red")
+
+tf_motif_mapping <- lapply(mm9_direct_motifAnnotation, "[[", 1)
+which(unlist(tf_motif_mapping) == "Crem")
+str(motifRankings$`500bp`@rankings$rn[motifRankings$`500bp`@rankings$cisbp__M0319])
+
+```
+
+```{r}
+motifEnrichment_wLogo[geneSet=="V5P"][order(-NES)]
+motifEnrichment_wLogo[geneSet=="V5N"][order(-NES)]
+motifEnrichment_wLogo[geneSet=="V44P",-c("enrichedGenes","geneSet","logo"), with=FALSE][1:100,][order(-NES)]
+```
+
+
+# Gene Ontology Enrichment Analysis
+
+```{r, fig.width=6}
+
+library(AnnotationHub) # source("https://bioconductor.org/biocLite.R"); biocLite("AnnotationHub")
+library(clusterProfiler) # source("https://bioconductor.org/biocLite.R"); biocLite("clusterProfiler")
+
+hub <- AnnotationHub()
+query(hub, "Musculus")
+Musculus <- hub[["AH57974"]] #query(hub, "org.MM.eg"), AH52234, AH57184
+#AH57974 ncbi orgdb
+
+frac_to_numeric <- function(x) sapply(x, function(x) eval(parse(text=x)))
+
+GO_enrichment <- function(component, geneNumber = 250, threshold=0.01, side="N"){
+  
+  if(side=="N"){
+    top_genes <- data.table(as.matrix(results$loadings[[1]][component, ]), keep.rownames = TRUE)[order(V1)][1:geneNumber]$rn
+  }else{
+    top_genes <- data.table(as.matrix(results$loadings[[1]][component, ]), keep.rownames = TRUE)[order(-V1)][1:geneNumber]$rn
+  }
+
+gene_universe <- data.table(as.matrix(results$loadings[[1]][component,]), keep.rownames = TRUE)$rn
+
+ego <- enrichGO(gene = top_genes,
+                universe = gene_universe,
+                OrgDb = Musculus,
+                keyType = 'SYMBOL',
+                ont = "BP",
+                pAdjustMethod = "BH",
+                pvalueCutoff = 1,
+                qvalueCutoff = 1)
+
+ego@result$Enrichment <- frac_to_numeric(ego@result$GeneRatio)/frac_to_numeric(ego@result$BgRatio)
+ego@result$GeneOdds <- unlist(lapply(strsplit(ego@result$GeneRatio, "/", fixed = TRUE), function(x){ x<-as.numeric(x) ;x[1] / (x[2]-x[1])}))
+ego@result$BgOdds <- unlist(lapply(strsplit(ego@result$BgRatio, "/", fixed = TRUE), function(x){ x<-as.numeric(x) ;x[1] / (x[2]-x[1])}))
+
+return(ego@result)
+
+}
+
+
+
+
+GO_data <- list()
+
+for (i in 1:50){
+GO_data[[paste0("V",i,"N")]] <- GO_enrichment(i, side="N") 
+GO_data[[paste0("V",i,"P")]] <- GO_enrichment(i, side="P")
+}
+
+# reduce size taken up
+# lapply(names(GO_data), function(x) GO_data[[x]]@geneSets <<- list())
+
+saveRDS(GO_data, "../data/conradV3/GO_enrichment.rds")
+
+go_volcano_plot <- function(x=GO_data, component="V5N"){
+ print(
+   ggplot(data.table(x[[component]]), aes(GeneOdds/BgOdds, -log(pvalue), size=Count)) +
+     geom_point(aes(colour=p.adjust<0.05)) +
+     scale_size_area() +
+     geom_label_repel(data = data.table(x[[component]])[order(p.adjust)][1:30][p.adjust<0.7], aes(label = Description, size=0.25), size = 3, force=2) + 
+     ggtitle("Volcano plot for Gene Ontology (Biological Processes) enrichment analysis") +
+     xlab("Odds Ratio") +
+     scale_x_log10(limits=c(1,NA), breaks=c(1,2,3,4,5,6,7,8))
+ )
+}
+
+go_volcano_plot(component = "V30P")
+head(GO_data[["V30P"]][c(2,7,8,10)], 20)
+
+
+```
+

@@ -1,0 +1,959 @@
+
+# library(ggplot2)
+# library(ggrepel)
+# library(data.table)
+# library(gridExtra)
+# library(viridis)
+# library(RColorBrewer) # colour pallet for dendrogram
+# library(scales)
+# library(NMF) # devtools::install_github("renozao/NMF", "devel")
+# nmf.options(grid.patch=TRUE) # stop blank pages appearing
+# 
+
+
+
+#' Rotate a tSNE embedding about the origin
+#'
+#' @param tsne object; output of Rtsne::Rtsne()
+#' @param angle numeric; degrees to rotate the tSNE embedding by
+#'
+#' @return The Y matrix from Rtsne output, rotated by angle
+#'
+#' @export
+
+rotate_tsne <- function(tsne, angle){
+  angle <- (-angle * pi) / (-180)
+  rotm <- matrix(c(cos(angle), -sin(angle), sin(angle), cos(angle)), ncol=2)
+  tsne$Y %*% rotm
+}
+
+
+
+
+#' Print tsne based on raw expression rather than SDA scores
+#'
+#' @param gene string; gene symbol, of which expression values will be used to colour points (cells)
+#'
+#' @details requires 'datat' object to be loaded
+#'
+#' @return ggplot2 object
+#'
+#' @export
+#' @import ggplot2
+print_raw_tsne <- function(gene){
+  ggplot(merge(datat, expression_dt(gene)), aes(Tsne1, Tsne2, color=get(gene))) +
+    geom_point(size=0.2) +
+    scale_color_viridis(direction=-1) +
+    theme(legend.position = "bottom") +
+    ggtitle(paste0(gene," - t-SNE")) + simplify
+}
+
+
+
+
+#' Print PCA
+#'
+#' @param pc string; name of principal compopnent (column of datat), of which cell score values will be used to colour points (cells)
+#'
+#' @details requires PCA object to be bound to datat object and 'datat' object to be loaded
+#'
+#' @return ggplot2 object
+#'
+#' @export
+#' @import ggplot2
+print_pca <- function(pc){
+  ggplot(datat, aes(Tsne1, Tsne2, color=get(pc))) +
+    geom_point(size=0.2) +
+    scale_colour_distiller(palette="YlOrRd", direction=1) +
+    theme(legend.position = "bottom") +
+    ggtitle(paste0(pc," - t-SNE")) + simplify
+}
+
+
+
+
+#' Clustered heatmap (partially deprecated)
+#'
+#' @param data data.table; datat, subset of columns
+#' @param name string; title
+#' @param annotation.col data.table; subset of datat, passed to annCol of aheatmap
+#' @param colv_order passed to Colv of aheatmap
+#' @param col_lab passed to labCol of aheatmap
+#' @param row_text_size passed to cexRow of aheatmap
+#'
+#' @details requires PCA object to be bound to datat object and 'datat' object to be loaded
+#'
+#' @return aheatmap plot
+#'
+#' @export
+#' @import NMF
+clustered_heatmap <- function(data, name, annotation.col=NULL, colv_order=NULL, col_lab=NULL, row_text_size=0.5){
+  
+  cols3 <- colorRampPalette(brewer.pal(9, "YlOrRd"))(100)
+  #[, !c("cell", "cell_id"), with = FALSE]
+  aheatmap(t(as.matrix(data)),
+           treeheight = 100,
+           hclustfun = "ward.D",
+           breaks=-1,
+           color = "-RdBu:50",
+           cexAnn = 1.5,
+           cexRow=row_text_size,
+           annCol = annotation.col, 
+           annColors = list(Prm2=cols3, Uchl1=cols3, Sycp2=cols3, Nek2=cols3, Hemgn=cols3, Spaca1=cols3, Gapdhs=cols3, Nasp=cols3, Acrv1=cols3, Insl3=cols3, 'sqrt(library_size)'=cols3, library_size=cols3, cluster.SDA=c(brewer.pal(9, "Set1"),"#000000")),
+           sub="Cell",
+           main=paste(name,"Individual scores"),
+           Rowv = NA,
+           Colv = colv_order,
+           labCol = col_lab
+  )
+}
+
+# depreceated, use print_tsne(preditc=T) instead
+# print_marker2 <- function(gene){
+#   gene <- paste0(gene,"")
+#   ggplot(tmp[order(get(gene))], aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
+#     geom_point(size=0.05) +
+#     scale_color_viridis(direction=-1) +
+#     ggtitle(gene)
+# }
+
+# depreceated, use print_tsne(preditc=T) instead
+# print_marker2 <- function(gene){
+#   gene <- paste0(gene,"_predict")
+#   ggplot(tmp[order(get(gene))], aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
+#     geom_point(size=0.05) +
+#     scale_color_viridis(direction=-1) +
+#     ggtitle(gene)
+# }
+
+# depreceated, use print_tsne() instead
+# print_marker <- function(gene){
+#   
+#   if(!gene %in% colnames(data)){
+#     return("Gene not found")
+#   }
+#   
+#   tmp <- merge(datat, expression_dt(gene))[order(get(gene))]
+#   
+#   ggplot(tmp, aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
+#     geom_point(size=0.05) +
+#     scale_color_viridis(direction=-1) +
+#     ggtitle(gene)
+# }
+
+
+
+
+#' Plot tSNE
+#'
+#' @param i ; either a numeric value corresponding to the component to plot, a gene name,
+#' or the name of a variable stored in datat such as "group", "PseudoTime", or "library_size"
+#' @param flip logical; should the cell scores be multiplied by -1 (score/gene loading sign combination are arbitrary like PCA scores).
+#' @param predict logical; Should gene expression be the predicted (imputed) values or raw normalised
+#' @param curve logical; Should principal curve (pseudotime) by plotted on top of the tSNE plot
+#' @param point_size numeric; size of point
+#' @param principal_curve string; name of list entry in principal_curves object, to use for pseudotime line
+#'
+#' @return The Y matrix from Rtsne output, rotated by angle
+#' 
+#' @export
+#' 
+#' @import ggplot2 data.table viridis
+
+print_tsne <- function(i, flip=FALSE, predict=FALSE, curve=FALSE, point_size=0.25, log=FALSE, principal_curve="df_9", curve_width=0.5){
+  
+  if(i %in% colnames(datat)){ # plot feature in datat
+    
+    tmp <- datat[,c(i,"Tsne1_QC1", "Tsne2_QC1"),with=FALSE]
+    names(tmp)[1] <- "feature"
+    
+    if(log){
+      tmp$feature <- log(tmp$feature)
+    }
+    
+    p <- ggplot(tmp[order(feature)], aes(Tsne1_QC1, Tsne2_QC1, color = feature)) +
+      geom_point(size=point_size) +
+      ggtitle(paste(i))
+    
+    if(is.numeric(tmp$feature)){
+      p <- p + scale_color_viridis(guide = guide_colourbar(i))
+    }else{
+      p <- p + scale_color_brewer(palette = "Paired") +
+        guides(colour = guide_legend(override.aes = list(size=3, alpha=1), title = i))
+    }
+    
+  }else if(mode(i)=="numeric"){# plot component not gene, could do this for any cell attribute in datat - future TODO
+    
+    tmp <- datat[,c(paste0("V",i),"Tsne1_QC1", "Tsne2_QC1"),with=FALSE]
+    names(tmp)[1] <- "score"
+    
+    if(flip){
+      tmp[, score := score * (-1)]
+    }
+    
+    if(tmp[,score][tmp[,which.max(abs(score))]] < 0 ){
+      invert = 1
+    }else{
+      invert = -1
+    }
+    
+    p <- ggplot(tmp[order(score)], aes(Tsne1_QC1, Tsne2_QC1, color = score)) +
+      geom_point(size=point_size) +
+      scale_color_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score (Component ",i,")"))) +
+      ggtitle(paste(i,component_order_dt[component_number==i]$name))
+    
+  }else{ # plot gene not component
+    gene = i
+    
+    if(!gene %in% colnames(data)){
+      return("Gene not found")
+    }
+    
+    if(predict){
+      tmp <- merge(datat, sda_predict(gene))[order(get(gene))]
+    }else{
+      tmp <- merge(datat, expression_dt(gene))[order(get(gene))]  
+    }
+
+    p <- ggplot(tmp, aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
+      geom_point(size=point_size) +
+      scale_color_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"))) +
+      ggtitle(gene)
+  }
+  
+  if(curve){
+    curve_data <- data.frame(Tsne1_QC1 = principal_curves[[principal_curve]]$s[principal_curves[[principal_curve]]$tag, 1],
+                             Tsne2_QC1 = principal_curves[[principal_curve]]$s[principal_curves[[principal_curve]]$tag, 2])
+    
+    p <- p + geom_path(data = curve_data,
+                       size = curve_width,
+                       colour="Black",
+                       alpha=0.5,
+                       arrow = arrow(angle = 15, ends = "first", type = "closed"))
+  }
+  
+  p <- p + theme_minimal() +
+    theme(legend.position = "bottom") +
+    labs(x="t-SNE 1", y="t-SNE 2")
+  
+  return(p)
+
+}
+
+
+# for plotting mutliple tsne plots, remove duplicated extra axes
+simplify <- ggplot2::theme(legend.position = "none",
+                  axis.title.x=element_blank(),
+                  axis.title.y=element_blank(),
+                  axis.text.x = element_blank(),
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank())
+
+
+
+#' Compute Imputed Expression values
+#'
+#' @param genes character vector; Gene Symbols of the genes to compute imputed expression for
+#' @param name_extension string; will be appended to any gene names given (so resulting table could be joined with original values)
+#'
+#' @details 
+#' This function also requires the SDA results object to be loaded
+#'
+#' @return A data.table with variables cell (the cell barcode) and a column for each gene containing the imputed expression values
+#' 
+#' @export
+#' 
+#' @import data.table
+
+sda_predict <- function(genes, name_extension=""){
+  # use SDA parameters to create posterior prediction kind of
+  
+  predictions <- results$scores %*% results$loadings[[1]][, genes,drop=FALSE]
+  predictions <- data.table(predictions, keep.rownames = T)
+  setnames(predictions, c("cell",paste0(names(predictions)[-1],name_extension)))
+  setkey(predictions, cell)
+  return(predictions)
+}
+
+
+
+
+
+#' Create data table of gene expression for a subset of genes
+#'
+#' @param genes character vector; Gene Symbols of the genes to compute imputed expression for
+#'
+#' @details 
+#' This functions requires the data matrix to be loaded
+#' 
+#' @return A data.table with variables cell (the cell barcode) and a column for each gene containing the raw normalised expression values
+#' 
+#' @export
+#' 
+#' @import data.table
+
+expression_dt <- function(genes){
+  if(sum(!genes %in% colnames(data))>0){return("Gene(s) not found")}
+  expression <- data.table(as.matrix(data[,genes,drop=FALSE]), keep.rownames = T)
+  setnames(expression, "rn", "cell")
+  setkey(expression, cell)
+  return(expression)
+}
+
+
+
+
+
+#' Create list of grobs from a function and input
+#'
+#' @details 
+#' Maybe this is redundant with lapply?
+#' 
+#' @export
+
+create_grob_list <- function(fn=print_marker2, input=hist_subset){
+  tmp <- list()
+  
+  for(i in seq_along(input)){
+    tmp[[i]] <- fn(input[i]) + simplify
+  }
+  
+  return(tmp)
+}
+
+
+
+
+
+#' Create long data table of gene expression for a subset of genes with pseudotimes
+#'
+#' @param genes character vector; Gene Symbols of the genes to compute imputed expression for
+#'
+#' @details 
+#' This functions requires the datat data.table and the data matrix to be loaded
+#' 
+#' @return A data.table with variables cell (the cell barcode), PseudoTime, Tsne coordinates,
+#' value (containing imputed expression values), and Gene (a string indicator for which gene each value is for)
+#' 
+#' @export
+#' 
+#' @import data.table
+
+gene_expression_pseudotime <- function(genes){
+  tmp <- merge(datat[somatic4==FALSE, c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), with=FALSE],
+               sda_predict(genes, name_extension = ""))
+  tmp <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), variable.name = "Gene")
+  tmp$Gene = factor(tmp$Gene, levels=genes)
+  #tmp$variable = factor(tmp$variable, levels = sort(as.character(unique(tmp$variable))))
+  return(tmp)
+}
+
+
+
+
+
+#' Plot pseudotime expression panel
+#'
+#' @param data character vector; vector of gene symbols, of which expression values will be plotted over pseudotime
+#' @param ncol numeric; number of columns to use for faceting
+#' @param title string; Title to be used in plot
+#' @param gam_k numeric; passed to gam formula, controls smoothing
+#' @param point_size numeric; size of each cell (point) in plot
+#' @param highlight_reigon numeric vector; vector of size two with min and max pseudotime values between which to highlight in the plot
+#'
+#' @details requires 'datat' object to be loaded
+#'
+#' @return ggplot2 object
+#'
+#' @export
+#' @import ggplot2
+plot_pseudotime_expression_panel <- function(data, ncol=7, title="Histone Genes", gam_k=5, point_size=0.2, highlight_reigon=NULL){
+  
+  if(mode(data)=="character"){
+    data <- gene_expression_pseudotime(data)
+  }
+  
+  p <-  ggplot(data, aes(-PseudoTime, value, colour=Gene)) +
+      geom_point(alpha=0.2, size=point_size) +
+      geom_smooth(method = "gam", formula = y ~ s(x, k = 50), se=FALSE, colour="black") +
+      ylab("Predicted Gene Expression") + xlab("Pseudotime") +
+      ggtitle(title) +
+      facet_wrap(~Gene, scales="free_y", ncol = ncol) +
+      theme(legend.position = "none")
+  
+  if(!is.null(highlight_reigon)){
+    p <- p + geom_rect(data=data.frame(xmin=highlight_reigon[1], xmax=highlight_reigon[2], ymin=-Inf, ymax=Inf),
+                aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax),
+                fill="grey20",
+                colour=NA,
+                alpha=0.2,
+                inherit.aes = FALSE)
+  }
+
+  return(p)
+  
+}
+
+
+
+
+
+#' Create long table combining gene expression and cell metadata
+#'
+#' @param genes character vector; vector of gene symbols, of which expression values will be plotted over pseudotime
+#' @param predict logical; if TRUE (default FALSE) imputed/predicted gene expression is used
+#'
+#' @details requires 'datat' object to be loaded
+#'
+#' @return data.table with columns 'cell', 'PsuedoTime', 'Tsne1_QC1', 'Tsne2_QC1', 'Gene', and 'Expression'
+#'
+#' @export
+#' @import data.table
+#' 
+melt_genes <- function(genes, predict=FALSE){
+  # generate melted version of datat on the fly for subset of genes
+  # rather than keeping two 7Gb data.tables in memory
+  #saveRDS(merge_sda3_melt2, "PseudoTime_Shiny/data_V3.rds")
+  
+  genes <- genes[genes %in% colnames(data)]
+  
+  if(!all(genes %in% colnames(data))){
+    return("Gene not found")
+  }
+  
+  if(predict){
+    tmp <- merge(datat, sda_predict(genes))
+  }else{
+    tmp <- merge(datat, expression_dt(genes))
+  }
+
+  id_colums <- c("cell", "PseudoTime", "Tsne1_QC1", "Tsne2_QC1")
+  
+  merge_sda3_melt2 <- melt(tmp[,c(id_colums, genes), with=FALSE], id.vars = id_colums, value.name="Expression", variable.name="Gene")
+  merge_sda3_melt2[,cell:=as.factor(cell)]
+  return(merge_sda3_melt2)
+}
+
+
+
+
+
+#' Find the top x genes for a component
+#'
+#' @param component integer or string; number or name of component in 'results' object
+#' @param n integer; number of gene symbols to retrieve
+#' @param values logical; if TRUE (default FALSE) named gene loadings are returned
+#'
+#' @details requires 'results' object to be loaded
+#'
+#' @return charachter vector of gene symbols, or named gene loadings are returned if values=TRUE
+#'
+#' @export
+#'
+get_top_genes <- function(component, n=20, values=FALSE){
+  
+  # first decide which side we want
+  highest_cell <- names(sort(-abs(results$scores[,component]))[1])
+  direction <- sign(results$scores[highest_cell,component])
+  
+  top <- names(head(sort(-direction * results$loadings[[1]][component, ]), n))
+  
+  if(values){
+    top <- results$loadings[[1]][component, top]
+  }
+  return(top)
+}
+
+
+
+
+
+#' Plot gene loadings with cell scores underneath
+#'
+#' @param i integer or string; number or name of component in 'results' object
+#' @param max.items integer; number of genes to label in loadings plot
+#'
+#' @details requires 'results' and 'rna_locations' objects to be loaded
+#'
+#' @return ggplot2 object
+#'
+#' @export
+#' 
+#' @import ggplot2 gridExtra
+print_loadings_scores <- function(i, max.items=30){
+  grid.arrange(grobs=list(genome_loadings(results$loadings[[1]][i,], label_both = FALSE, max.items = max.items, gene_locations = rna_locations) + ggtitle(i),
+                          ggplot(data.table(cell_index=1:nrow(results$scores), score=results$scores[,paste0("V",i)],
+                                            experiment=gsub("_.*","",gsub("[A-Z]+\\.","",rownames(results$scores)))),
+                                 aes(cell_index, score, colour=experiment)) +
+                            geom_point(size=0.5) + xlab("Cell Index (by Library Size)") +
+                            ylab("Score") +
+                            scale_color_brewer(palette = "Paired")),
+               nrow=2, heights = c(5,2))
+}
+
+
+
+
+
+#' Print list of genes in component and their annotations
+#'
+#' @param i integer or string; number or name of component in 'results' object
+#'
+#' @details requires 'results', 'fantom_summary_subset', 'gtex_summary' and 'infertility_genes' objects to be loaded
+#'
+#' @return print of data.table
+#'
+#' @export
+#' 
+#' @import data.table
+print_gene_list <- function(i) {
+  tmp <- data.table(as.matrix(results$loadings[[1]][i,]), keep.rownames = TRUE)[order(-abs(V1))][1:100]
+  setnames(tmp, c("Gene.Name","Loading"))
+  setkey(tmp, Gene.Name)
+  
+  # Add is testis enriched annotations
+  tmp <- merge(tmp, fantom_summary_subset, all.x = TRUE)
+  tmp <- merge(tmp, gtex_summary[,.(Gene.Name, Human_Orthologue, fold_difference_gtex = signif(fold_difference,3))], all.x = TRUE)
+  tmp$Testis_Enriched <- gsub("FALSE","",tmp$fold_difference_gtex > 2 | tmp$fold_difference > 2)
+  
+  # Add infertility gene annotations
+  tmp$Infertility_Gene <- gsub("FALSE","",tmp$Gene.Name %in% infertility_genes)
+  
+  setcolorder(tmp, c("Gene.Name","Human_Orthologue", "Loading", "Infertility_Gene", "Testis_Enriched", "fold_difference_gtex",  "fold_difference"))
+  
+  # Display Result
+  print(tmp[order(-abs(Loading))])
+}
+
+
+
+
+#' Volcano plot of gene ontology enrichment resultd
+#'
+#' @param x R object; GO results
+#' @param component string; name of component e.g. "V5N" (N meaning negative size loadings)
+#' @param top_n integer; how many GO terms to label
+#' @param OR_threshold numeric; threshold on odds ratio of GO terms to label (applied after top_n)
+#' @param label_size numeric; size of GO term labels
+#'
+#' @return ggplot2 object
+#'
+#' @export
+#' 
+#' @import ggplot2 data.table
+go_volcano_plot <- function(x=GO_data, component="V5N", top_n=30, label_size=3, OR_threshold=1){
+  print(
+    ggplot(data.table(x[[component]]), aes(GeneOdds/BgOdds, -log(pvalue,10), size=Count)) +
+      geom_point(aes(colour=p.adjust<0.05)) +
+      scale_size_area() +
+      geom_label_repel(data = data.table(x[[component]])[order(p.adjust)][1:top_n][p.adjust<0.7][GeneOdds/BgOdds > OR_threshold], aes(label = Description), size = label_size, force=5) + 
+      ggtitle("Volcano plot for Gene Ontology (Biological Processes) enrichment analysis") +
+      xlab("Odds Ratio") +
+      scale_x_log10(limits=c(1,NA), breaks=c(1,2,5,10,15,20))
+  )
+}
+
+
+
+
+
+#' Plot gene expression through pseudotime (Raw & Imputed)
+#'
+#' @param genes character vector; Gene Symbols of the genes to compute imputed expression for
+#' @param facet logical; if TRUE (default) each column is a faceted plot,
+#' if FALSE just two plots are returned imputed & raw
+#'
+#' @details 
+#' This functions requires the datat data.table and the data matrix to be loaded
+#' 
+#' @return A ggplot2 object
+#' 
+#' @export
+#' 
+#' @import ggplot2 data.table cowplot
+
+imputed_vs_raw <- function(genes_tmp, facet=T){
+  library(scales)
+  
+  tmp <- merge(datat[somatic4==FALSE], expression_dt(genes_tmp))[,c(genes_tmp,"cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
+  tmp$Type = "Raw (Normalised)"
+  tmp <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1", "Type"))
+  
+  predicted_genes <- sda_predict(genes_tmp)
+  predicted_genes$Type = "Imputed"
+  predicted_genes <- merge(datat[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1","Tsne2_QC1"), with=FALSE], predicted_genes)
+  predicted_genes <- melt(predicted_genes, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1", "Type"))
+  
+  #scale_y_continuous(trans = 'asinh', breaks=c(0,2,5,10)) +
+  #scale_y_continuous(trans = 'asinh', breaks=c(0,1,2,5,10)) +
+  
+  # Two columns - raw vs imputed
+  if(facet==TRUE){
+    return(
+      plot_grid(
+        ggplot(tmp, aes(-PseudoTime, value)) +
+          scale_color_brewer(palette = "Set1") +
+          geom_point(alpha=0.3, size=0.5, shape=20, stroke=0, colour=RColorBrewer::brewer.pal(3, name="Set1")[1]) +
+          ylab("Gene Expression") + xlab("Pseudotime") +
+          facet_wrap(~variable, scales = "free_y", ncol=1,strip.position = "right") +
+          ggtitle("Raw (Normalised)") +
+          
+          theme_minimal() +
+          theme(strip.background = element_blank(), strip.text.y = element_blank())
+        ,
+        ggplot(predicted_genes, aes(-PseudoTime, value)) +
+          scale_color_brewer(palette = "Set1") +
+          geom_point(alpha=0.3, size=0.5, shape=20, stroke=0, colour=RColorBrewer::brewer.pal(3, name="Set1")[2]) +
+          xlab("Pseudotime") + ylab("") +
+          facet_wrap(~variable, scales = "free_y", ncol=1, strip.position = "right") +
+          ggtitle("Imputed") +
+          
+          theme_minimal()
+      , ncol=2)
+    )
+  }else{
+    
+    # print(
+    # ggplot(rbind(tmp,predicted_genes), aes(-PseudoTime, asinh(value), colour=Type)) +
+    #   scale_color_brewer(palette = "Set1") +
+    #   geom_point(alpha=0.3, size=0.1) +
+    #   ylab("Gene Expression") + xlab("Pseudotime") +
+    #   facet_grid(variable~Type, scales = "free_y") +
+    #   ggtitle("Raw vs Imputed Gene Expression") +
+    #   theme_minimal() +
+    #   theme(legend.position = "none")
+    # )
+    
+    # two rows (genes overplotted) - raw vs imputed
+    return(
+      ggplot(rbind(tmp, predicted_genes), aes(-PseudoTime, asinh(value), colour=Type)) +
+        geom_point(alpha=0.5, size=0.3) +
+        ylab("Gene Expression") + xlab("Pseudotime") +
+        facet_wrap(~Type, scales = "free_y", ncol = 1) +
+        ggtitle("Raw vs Imputed Gene Expression") +
+        scale_color_brewer(palette = "Set1") +
+        theme_minimal()
+    )
+  }
+}
+
+asinh_trans <- function() {
+  trans_new("asinh",
+            transform = asinh,
+            inverse   = sinh)
+}
+
+
+
+
+
+#' Find pairs of cells that are close in tSNE space
+#'
+#' @param test_groups string; type of cell to pair cell to
+#' @param cell_subset character vector; cell barcodes of cells to consider pairing, e.g. only cells with a certian component score >2
+#' @param swap_groups logical; control cells and test_group cells are swapped.
+#' As this is a greedy algorithm, it can be better to swap the groups when there are few control cells
+#'
+#' @details 
+#' For a given cell type, find the closest cells of a different type. e.g. find pairs of wt and Hormad1 mutatnt cells close together on tSNE.
+#' This is useful for performing differentiall expression analysis whilst accounting for developmental stage of cells
+#' The default control cells are genetically WT cells (WT,mj,SPG,SPD,SPCII,SPCI)
+#' 
+#' @return
+#' 
+#' @export
+#' 
+#' @import data.table
+
+match_cells2 <- function(test_groups=NULL, cell_subset=NULL, swap_groups=F){
+  
+  if(!is.null(cell_subset)){
+    datat <- datat[cell %in% cell_subset]
+    print(nrow(datat))
+  }
+  
+  control_groups <- c("WT","mj","SPG","SPD","SPCII","SPCI")
+  
+  if(is.null(test_groups)){
+    test_groups <- c("Cul4a","Hormad1","CNP","Mlh3")
+  }
+  
+  if(swap_groups){
+    a <- control_groups
+    b <- test_groups
+    test_groups <- a
+    control_groups <- b
+  }
+  
+  test_cells <- datat[group %in% test_groups]$cell
+  
+  matched_cells <- matrix(nrow=length(test_cells), ncol=3)
+  
+  matched_cells[,1] <- test_cells
+  
+  colnames(matched_cells) <- c("Mutant","WT","distance")
+  
+  for(i in seq_along(test_cells)){
+    
+    Tsne1_cell_coord <- datat[cell==test_cells[i]]$Tsne1_QC1
+    Tsne2_cell_coord <- datat[cell==test_cells[i]]$Tsne2_QC1
+    
+    tmp <- datat[Tsne1_QC1 < (Tsne1_cell_coord + 3) & Tsne1_QC1 > (Tsne1_cell_coord - 3)][Tsne2_QC1 < (Tsne2_cell_coord + 3) & Tsne2_QC1 > (Tsne2_cell_coord - 3)]
+    
+    # calculate distance to WT cells
+    distances <- rowSums(cbind(Tsne1_cell_coord - tmp[group %in% control_groups]$Tsne1_QC1,
+                               Tsne2_cell_coord - tmp[group %in% control_groups]$Tsne2_QC1)^2)
+    
+    names(distances) <- tmp[group %in% control_groups]$cell
+    
+    # remove WT cells already assigned neighbours
+    distances <- distances[which(!tmp[group %in% control_groups]$cell %in% matched_cells[,2])]
+    
+    # assign closest cell is avaliable
+    if (sum(!is.na(distances))==0){
+      matched_cells[i,3] <- matched_cells[i,2] <- NA
+    }else if(distances[which.min(distances)] > 3){
+      matched_cells[i,3] <- matched_cells[i,2] <- NA
+    }else{
+      matched_cells[i,3] <- distances[which.min(distances)]
+      matched_cells[i,2] <- names(which.min(distances))
+    }
+  }
+  
+  return(matched_cells)
+}
+
+
+
+
+
+#' Calculate enrichment for a set of genes in a single component
+#'
+#' @param component number or name of component
+#' @param genes character vector of gene set to look for enrichment for
+#' @param pos logical; if TRUE (default) the positive gene loadings are ranked highest
+#' @param return_genes logical; if TRUE (default: FALSE) ranking of genes in this component is returned,
+#' if false, output of fisher.test is returned
+#' @param threshold numeric; how many genes should be included in the top genes list used to calculate enrichment
+#' @param bg_genes which genes to use as the 'background' default uses all genes in the results object from SDA
+#'
+#' @details 
+#' Calculate p value of enrichemnt (fishers test) in a component, given a set of genes
+#' requires the results object from SDA to be loaded
+#' 
+#' @return
+#' 
+#' @export
+
+single_component_enrichment <- function(component, genes = Mybl1_genes, pos=T, return_genes=F, threshold=200, bg_genes=NULL){
+  
+  if(is.null(bg_genes)){
+    bg_genes <- names(results$loadings[[1]][1,])
+  }
+  
+  if(pos){
+    tmp <- rank(-results$loadings[[1]][component, bg_genes])
+  }else{
+    tmp <- rank(results$loadings[[1]][component, bg_genes])
+  }
+  
+  names(tmp) <- bg_genes
+  
+  yes <- sum(tmp[genes] < threshold)
+  
+  if(return_genes){
+    return(tmp[genes])
+  }else{
+    return(fisher.test(matrix(c(yes,
+                                length(genes) - yes,
+                                threshold - yes,
+                                length(tmp) - (threshold - length(genes) + yes)),
+                              nrow=2,ncol=2),alternative="greater"))   
+  }
+  
+}
+
+
+
+
+
+
+#' Calculate enrichment for a set of genes for each component
+#'
+#' @param genes character vector of gene set to look for enrichment for
+#' @param threshold numeric; how many genes should be included in the top genes list used to calculate enrichment
+#' @param bg_genes which genes to use as the 'background' default uses all genes in the results object from SDA
+#'
+#' @details 
+#' for each component (P&N seperately), calculate p value enrichemnt (fishers test) for a set of genes
+#' This is a multi-component wrapper to AZ_pvalue
+#' requires the results object from SDA to be loaded as well as the component_order_all object from 'R/functions_ordering.R'
+#' 
+#' @return A data.table with a row for each component (+ve & -ve seperately) with columns giving the p.value of enrichment,
+#' Odds Ratio, Component number and name, component type (Somatic or Meiotic), and component order
+#' 
+#' @export
+#' 
+#' @import data.table
+
+component_enrichment <- function(genes, threshold=500, bg_genes=NULL){
+  pos_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, pos = T, threshold = threshold, bg_genes=bg_genes))
+  neg_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, pos = F, threshold = threshold, bg_genes=bg_genes))
+  
+  pval <- c(sapply(pos_ad_e, function(x) x$p.value),
+            sapply(neg_ad_e, function(x) x$p.value))
+  names(pval) <- c(paste0(1:50,"P"),paste0(1:50,"N"))
+  
+  odds <- c(sapply(pos_ad_e, function(x) x$estimate),
+            sapply(neg_ad_e, function(x) x$estimate))
+  
+  tmp <- data.table(p.value=pval, OR=odds, Component = factor(names(pval), levels=names(pval)[c(rbind(component_order_all,component_order_all+50))]))
+  
+  tmp$name <- rep(component_order_dt$name,2)
+  
+  tmp[order(Component), rank := 1:100]
+  tmp[rank >= 41, Type := "Meiotic"]
+  tmp[rank < 41, Type := "Somatic"]
+  
+  return(tmp)
+}
+
+
+
+
+#' Calculate 2D density
+#'
+#' @param x numeric vector;
+#' @param y numeric vector;
+#' @param n integer; number of grid points in each direction
+#' @param kern numeric; size of kernal to use for smoothing
+#'
+#' @details for colouring points in plot by the density of points, from http://slowkow.com/notes/ggplot2-color-by-density/
+#' 
+#' @return numeric vector of density at each point
+#' 
+#' @export
+#' 
+#' @importFrom MASS kde2d
+get_density <- function(x, y, n = 1000, kern=0.02){
+  dens <- MASS::kde2d(x = x, y = y, n = n, h=c(kern,kern))
+  ix <- findInterval(x, dens$x)
+  iy <- findInterval(y, dens$y)
+  ii <- cbind(ix, iy)
+  return(dens$z[ii])
+}
+
+
+
+#' Vectorised multionimial distribution
+#'
+#' @param counts numeric matrix; matrix of K columns of integers in 0:size. each sample is a row
+#' @param prob numeric non-negative matrix with K columns, specifying the probability for the K classes; is internally normalized to sum 1. Infinite and missing values are not allowed. Each sample is a row.
+#'
+#' @details vectorised version of R base dmultinom
+#' 
+#' @return LOG probability density / likelihood of the data counts given the parameters in prob
+#' 
+#' @export
+#' 
+dmultinom_v <- function(counts, prob){
+  lgamma(rowSums(counts)+1) + rowSums(counts * log(prob/rowSums(prob)) - lgamma(counts+1))
+}
+
+
+#' Reverse DGE Normalisation
+#'
+#' @param dge numeric matrix; rows are cells, columns are genes
+#' @param sign logical; if TRUE (default) the sign of the values is retained (negatives are still negative)
+#' @param cells character vector; strings corresponding to cell names to include
+#' @param lib_correction numeric vector; size correction factor used for each cell
+#' @param standard_dev numeric vector; standard deviations used to scale each gene
+#'
+#' @details Reverses the transformation of dropsim::normaliseDGE() to get back to a counts scale
+#' 
+#' @return Matrix of cells by genes, with values on the count scale
+#' 
+#' @export
+#' 
+reverse_normalisation <- function(dge, sign=TRUE, cells=cell_subset, lib_correction=lib_size_correction_factor, standard_dev=sds){
+  if(sign){
+    tmp <- t(((t(dge)*standard_dev)^2 * sign(t(dge))) / 10000) * lib_correction[cells]  
+  }else{
+    tmp <- t((t(dge)*standard_dev)^2 / 10000) * lib_correction[cells]
+  }
+  
+  if(class(tmp)!="matrix"){
+    names(tmp@x) <- NULL  
+  }
+  
+  return(tmp)
+}
+
+
+
+
+
+#' Plot ROC curve for imputation rankings
+#'
+#' @param i integer or string; number or name of cell
+#'
+#' @details ! nb this function requires the objects cumsum_predict, cumsum_train, and cumsum_mean to be loaded.
+#' 
+#' @return ggplot2 object
+#' 
+#' @export
+#' @import ggplot2
+#' 
+plotCellAUC <- function(i){
+  
+  aucg <- data.table(frac_genes = seq(1,length(cumsum_predict[,i]),1)/length(cumsum_predict[,i]),
+                     Imputed = cumsum_predict[,i],
+                     Training = cumsum_train[,i],
+                     Average = cumsum_mean[,i])
+  
+  aucg <- melt(aucg, id.vars = "frac_genes", variable.name = "Source of Expression Ranking", value.name = "Cumulative Test data reads")
+  
+  return(
+    ggplot(aucg, aes(frac_genes, `Cumulative Test data reads`, colour=`Source of Expression Ranking`)) + 
+      geom_line() + 
+      xlab("Fraction of Genes (Ranked high to low)") + 
+      theme_minimal() +
+      theme(legend.position = "bottom") +
+      scale_color_brewer(palette = "Set1") +
+      annotate("label",
+               label = paste0("Imputed AUC: ",signif(sum(cumsum_predict[,i])/ length(cumsum_mean[,i]),3),
+                              "\nTraining AUC: ",signif(sum(cumsum_train[,i])/ length(cumsum_mean[,i]),3),
+                              "\nAverage AUC: ",signif(sum(cumsum_mean[,i])/ length(cumsum_mean[,i]),3)),
+               x = 0.85, y = 0.5)
+  )
+}
+
+# deprecated
+# e.g. a=sample(1:20000,1);cellAUC_old(a);print(a)
+cellAUC_old=function(i){
+  predvec=predicted_train_counts_0[i,]
+  trainvec=raw_data_train[i,]
+  testvec=raw_data_test[i,]
+  set.seed(42)
+  reorder=sample(1:length(predvec))
+  predvec=predvec[reorder]
+  trainvec=trainvec[reorder]
+  testvec=testvec[reorder]
+  order1=order(predvec,decreasing=T)
+  order2=order(trainvec,decreasing=T)
+  
+  c4=cumsum(predvec[order1]/sum(predvec))
+  c1=cumsum(testvec[order1])/sum(testvec)
+  c2=cumsum(testvec[order2])/sum(testvec)
+  c3=cumsum(testvec[av_exp_order])/sum(testvec) #order(reorder)
+  frac1=seq(1,length(testvec),1)/length(testvec)
+  
+  plot(frac1,c1,type="l",xlim=c(0,1),ylim=c(0,1))
+  lines(frac1,c2,type="l",col=2)
+  lines(frac1,c3,lty="dotted",col="grey")
+  lines(frac1,c4,lty="dotted",col="blue")
+  
+  
+  fracs=c(sum(c1),sum(c2),sum(c3))/length(c1)
+  return(fracs)
+}

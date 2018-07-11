@@ -1,0 +1,496 @@
+---
+title: "Systematic Denovo Motif Finding"
+output: 
+  html_notebook: 
+    code_folding: hide
+    results: hold
+    fig_show: hold
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: spacelab
+---
+
+# Automode
+
+Find denovo motifs for every component, using varying parameters -> 9000 potential motifs total.
+
+Setup
+```{r}
+library(MotifFinder)
+library(SDAtools)
+library(ggplot2)
+library(ggseqlogo)
+nmf.options(grid.patch=TRUE) # stop blank pages appearing
+
+library(testisAtlas)
+
+tss_seqs <- seqinr::read.fasta("../data/extracted_seqs/all_genes_tss_500.fasta", forceDNAtolower = FALSE, as.string = TRUE)
+
+tss_seqs_s <- gsub("a|t|c|g|n","N",as.character(tss_seqs))
+names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs))
+
+str(tss_seqs_s)
+
+results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(results$loadings[[1]]) <- paste0("V",1:50)
+
+```
+
+Run in parallel
+
+```{r}
+# test on a single component
+#test <- get_component_motifs(20,F, random=T)
+
+results_positive <- mclapply(1:50, function(x) get_component_motifs(x, TRUE), mc.cores = 7, mc.silent=TRUE, mc.preschedule = FALSE)
+
+results_negative <- mclapply(1:50, function(x) get_component_motifs(x, FALSE), mc.cores = 7, mc.silent=TRUE, mc.preschedule = FALSE)
+
+results_random <- mclapply(1:50, function(x) get_component_motifs(x, positive=FALSE, random=TRUE), mc.cores = 15, mc.silent=TRUE, mc.preschedule = FALSE)
+
+# a couple errored due to NA in creating seqs regs e.g. 14? / a single cell one
+
+saveRDS(results_negative, "motifFinder_denovo_results_negative.rds")
+
+saveRDS(results_positive, "motifFinder_denovo_results_positive.rds")
+
+saveRDS(results_random, "motifFinder_denovo_results_random.rds")
+
+```
+
+
+Clean up & Combine results.
+
+```{r}
+
+# # correct wrong/uneven number of items per list in negatives
+
+# for(i in which(unlist(lapply(results_negative, length))!=90)){
+#   results_negative[[i]][[91]] <- "tmp"
+#   results_negative[[i]][[91]] <- NULL
+# }
+
+table(unlist(lapply(results_negative, length)))
+
+# # correct wrong/uneven number of items per list in positives
+# 
+# which(unlist(lapply(results_positive, length))!=90)
+# # 6 & 28 - try error : sum(is.na(regs_spermio)) == 0 is not TRUE
+# 
+# for(i in c(11,37,50)){
+#   results_positive[[i]][[91]] <- "tmp"
+#   results_positive[[i]][[91]] <- NULL
+# }
+# 
+#   results_positive[[6]] <- vector("list", 90)
+#   results_positive[[28]] <- vector("list", 90)
+
+table(unlist(lapply(results_positive, length)))
+
+table(unlist(lapply(results_random, length)))
+
+# Add names to each motif found
+
+names(results_positive) <- paste0("C",1:50,"P")
+names(results_negative) <- paste0("C",1:50,"N")
+names(results_random) <- paste0("C",1:50,"R")
+
+for(i in 1:50){
+  names(results_positive[[i]]) <- paste0("I",1:90)
+  names(results_negative[[i]]) <- paste0("I",1:90)
+  names(results_random[[i]]) <- paste0("I",1:90)
+}
+
+results_all <- c(unlist(results_positive, recursive = FALSE),
+                 unlist(results_negative, recursive = FALSE))
+
+saveRDS(results_all, "motifFinder_denovo_results_all_clean.rds")
+
+
+results_all_random <- unlist(results_random, recursive = FALSE)
+
+saveRDS(results_all_random, "motifFinder_denovo_results_all_random_clean.rds")
+```
+
+# Find motif matches in HOCOMOCO using TOMTOM
+
+Export denovo motifs in MEME format to input to TomTom to match to known motifs
+
+```{r}
+
+export_all_pwms(results_all, "all_denovo_pwms.meme")
+
+export_all_pwms(results_all_random, "random_pwms.meme")
+
+```
+
+Run tomtom
+
+```{bash, eval=FALSE}
+# SDA results
+~/meme/bin/tomtom -no-ssc -oc all_denovo_PWM_tomtom -verbosity 1 -min-overlap 5 -dist pearson -evalue -thresh 10.0 code/all_denovo_pwms.meme motif_databases/MOUSE/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme
+
+# motif_databases/JASPAR/JASPAR2018_CORE_vertebrates_non-redundant.meme
+
+# random (null) results
+
+~/meme/bin/tomtom -no-ssc -oc random_PWM_tomtom -verbosity 1 -min-overlap 5 -dist pearson -evalue -thresh 10.0 code/random_pwms.meme motif_databases/MOUSE/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme
+```
+
+
+load tomtom results
+
+```{r, fig.width=4}
+#load results
+
+results_all <- readRDS("../data/motifs/motifFinder_denovo_results_all_clean.rds")
+
+tomtom_summary <- fread("../data/motifs/all_denovo_PWM_tomtom/tomtom.txt")
+
+names(tomtom_summary) <- make.names(names(tomtom_summary))
+
+results_all_random <- readRDS("../data/motifs/motifFinder_denovo_results_all_random_clean.rds")
+
+tomtom_summary_random <- fread("../data/motifs/random_PWM_tomtom/tomtom.txt")
+
+names(tomtom_summary_random) <- make.names(names(tomtom_summary_random))
+
+```
+
+
+```{r}
+
+# Calculate and add Information Content values
+
+IC_values <- unlist(lapply(1:9000, information_content))
+
+IC_values <- data.table(IC_values, X.Query.ID=names(results_all))
+setkey(IC_values,X.Query.ID)
+setkey(tomtom_summary,X.Query.ID)
+
+tomtom_summary <- merge(tomtom_summary, IC_values, all.x=T)
+
+# extract / format transcription factor name
+tomtom_summary[,Target.Name := sapply(strsplit(Target.ID,"_"), function(x) x[[1]][[1]])]
+tomtom_summary_random[,Target.Name := sapply(strsplit(Target.ID,"_"), function(x) x[[1]][[1]])]
+
+# extract / format component name
+tomtom_summary[,Component := sapply(strsplit(X.Query.ID,"\\."), function(x) x[[1]][[1]])]
+tomtom_summary_random[,Component := sapply(strsplit(X.Query.ID,"\\."), function(x) x[[1]][[1]])]
+
+# calculate GC statistics from consensus
+tomtom_summary[,GC_count := nchar(gsub("[AT]","",Query.consensus))]
+tomtom_summary[,AT_count := nchar(gsub("[GC]","",Query.consensus))]
+tomtom_summary[,GC_percent := (GC_count)/(AT_count+GC_count)]
+
+# remove old JASPAR hits
+tomtom_summary <- tomtom_summary[!grepl("^MA",Target.Name)]
+
+# for each denovo motif, use best tomtom match
+tomtom_summary_byquery <- tomtom_summary[,.SD[which.min(E.value)],by=X.Query.ID]
+
+```
+
+
+```{r}
+# many with 100% GC bases in consensus of query
+hist(tomtom_summary_byquery$GC_percent, breaks=200)
+
+# what's found most frequently
+tomtom_summary_byquery[,.N,by=Target.Name][order(-N)][1:20]
+```
+
+For each motif group, plot the denovo motifs
+
+```{r, fig.width=6}
+# Which motifs have best matches
+# best_denovo <- tomtom_summary[,.SD[which.min(p.value)],by=Target.ID][order(E.value)][1:400]
+# tomtom_summary_byquery[,min(E.value),by=Target.Name][order(V1)][1:20]
+
+
+# for each TF, select the best matching denovo motif, for those with min q of 0.001
+
+motif_matches <- tomtom_summary[q.value<0.001][, .SD[which.min(q.value)], by = Target.Name][order(E.value)]
+
+motif_matches_random <- tomtom_summary_random[q.value<0.001][, .SD[which.min(q.value)], by = Target.Name][order(E.value)]
+
+print(paste(nrow(motif_matches), "different matches"))
+# 124 matches
+print(paste(length(unique(motif_matches$X.Query.ID)),"different motifs"))
+# from 92 motifs
+
+# load motif match groupings
+motif_groups <- read.table("../data/motifs/motif_results_groups.csv", fill=T, sep = ",", stringsAsFactors=F)
+motif_groups$group <- c(NA,1:(nrow(motif_groups)-1))
+motif_groups <- data.table(melt(motif_groups, id.vars="group"))[value!=""]
+
+print(paste("Groups:",paste(unique(motif_groups$group), collapse = " ")))
+
+# check all the matches are present
+sum(!motif_groups$value %in% motif_matches$Target.Name)
+sum(!motif_matches$Target.Name %in% motif_groups$value)
+
+# for each group of motifs plot the matches
+
+pdf("../results/Denovo_motifs_grouped.pdf", width = 9)
+for(class in 1:max(unique(motif_groups$group), na.rm = T)){
+  tmp <- motif_groups[group==class]$value
+  print(plot_grid(plotlist = plot_motif_matches(motif_matches[Target.Name %in% tmp], titles = T)))
+}
+dev.off()
+
+```
+
+see results/Denovo_motifs_grouped.pdf for plots of grouped motifs
+
+
+In which components are the motifs found
+
+```{r, fig.width=6}
+
+#best_matches <- c("THA11","SP2","NFYB","RFX2","NRF1","GABPA","SPIB","MYB","ATF2","ETS1","ETV5","TBP","CREB1","THAP1","TYY1")
+
+ordering <- c(rbind(paste0("C",component_labels,"P"),paste0("C",component_labels,"N")))
+
+#lapply(ordering, function(x) tomtom_summary_byquery[Component==x][Target.Name %in% best_matches, min(E.value), by=Target.Name])
+
+# For each TF - component combo, get min E.Value
+
+motif_which_component <- tomtom_summary[Target.Name %in% motif_groups[!is.na(group)]$value, min(E.value), by=.(Component,Target.Name)][order(Target.Name)]
+
+motif_which_component <- dcast(motif_which_component, formula= Component ~ Target.Name, value.var="V1")
+
+motif_which_component_m <- as.matrix(motif_which_component[,-"Component", with=F])
+rownames(motif_which_component_m) <- motif_which_component$Component
+
+ordering2 <- ordering[ordering %in% motif_which_component$Component][1:75] #46
+
+motif_which_component_m[is.na(motif_which_component_m)] <- 12
+
+motif_which_component_m <- -log(motif_which_component_m[ordering2,],10)
+
+aheatmap(motif_which_component_m, Rowv = NA, cexRow = 1, scale = "col", hclustfun = "ward.D2")
+
+motif_which_component_m[motif_which_component_m>10] <- 10
+
+aheatmap(motif_which_component_m, Rowv = NA, cexRow = 1, hclustfun = "ward.D2")
+
+```
+
+# Look for novel motifs
+
+Look for motifs with high information content but low match to currently known motifs
+
+Most good motifs have an IC value of 7+
+```{r, fig.width=6}
+
+summary(IC_values)
+best_denovo[,.(X.Query.ID, Target.ID, IC_values)][order(-IC_values)]
+```
+
+Most high IC are GC rich - probably SP1 etc.
+
+```{r, fig.width=6}
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=GC_count)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") +
+  scale_colour_gradientn(colours = viridis(100), limits=c(1, 15))
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=GC_percent)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") +
+  scale_colour_gradientn(colours = viridis(100, direction = -1))
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=Target.Name %in% c("SP2","SP1","SP3","SP4"))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+```
+
+If we look at motifs with GC of between 10% and 90%, there's a lump of motifs with relatively high IC and low E value.
+
+```{r, fig.width=6}
+
+ggplot(tomtom_summary_byquery[GC_percent<0.9 & GC_percent>0.1], aes(E.value, IC_values, colour=GC_percent)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") +
+  scale_colour_gradientn(colours = viridis(100))
+
+ggplot(tomtom_summary_byquery[GC_percent<0.9 & GC_percent>0.1], aes(E.value, IC_values, colour=GC_percent<0.8 & GC_percent>0.2 & E.value>1e-4 & IC_values>10)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+```
+
+They mostly match (badly) with ATF1 and are from the late components 17, 18, 36, 41, and 34.
+
+```{r, fig.width=6}
+
+tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][,.N,by=Target.Name]
+
+tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][,.N,by=Component][order(-N)][1:10]
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=Target.Name %in% c("ATF1"))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+```
+
+Looking at a few examples they all look pretty much the same, part of an ATF1 motif, plus CACAA. The ATF1 motif itself is quite weak also.
+
+Perhaps the most interesting part of these motifs, is that the CpG part of them is much reduced or absent compared to the currently accepted Crem motif.
+
+```{r, fig.width=6}
+
+set.seed(42)
+
+cowplot::plot_grid(plotlist =  list(
+plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]])
+)
+
+plot_motif_matches(tomtom_summary_byquery[X.Query.ID=="C18P.I53"], yaxis = T)
+
+# export_PWM(results_all[["C18P.I53"]],"C18P.I53", file="C18P.I53.motif")
+
+```
+
+Maybe we're biasing towards small amount of CpG by conditioning on (poor) match with ATF1, try using generic consensus motif pattern instead: there are some others not matching ATF1, there are 14, and they are in the top 15 motifs ordered by E.value. They (poorly) match ATF7, RXRB, and CREB1.
+
+```{r, fig.width=6}
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=IC_values>10 & E.value>1e-4 & Target.Name!="ATF1" & grepl("TGTGA|TCACA", Query.consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+cowplot::plot_grid(plotlist =  list(
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][1], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][2], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][4], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][5], yaxis = T)[[1]])
+)
+
+```
+
+## GGCGGC
+
+Anything else after excluding all matched to the ATF1 like motif? Mostly long GGCGGCGG like motifs. TF motif or some kind of CpG island?
+
+```{r, fig.width=6}
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][4], yaxis = T)
+plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][6], yaxis = T)
+plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][7], yaxis = T)
+plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][8], yaxis = T)
+
+```
+
+These motifs mostly match (poorly) with TAF1 & SP1,2,3. Diverse components, a bit batchy.
+
+```{r, fig.width=6}
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=grepl("CCGCC|GGCGG", Query.consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=grepl("GCCGCCG|CGGCGGC", Query.consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consensus)][E.value>1e-4 & IC_values>10][,.N,by=Target.Name][order(-N)][1:10]
+
+tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consensus)][E.value>1e-4 & IC_values>10][,.N,by=Component][order(-N)][1:10]
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=Target.Name %in% c("TAF1"))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+plot_motif_matches(tomtom_summary_byquery[Target.Name %in% c("TAF1")][order(-IC_values)][1], yaxis = T)
+
+tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consensus) & nchar(Query.consensus)<20][order(-IC_values)][1:20]
+
+cowplot::plot_grid(plotlist =  list(
+plot_motif_matches(tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consensus) & nchar(Query.consensus)<20][order(-IC_values)][1], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consensus) & nchar(Query.consensus)<20][order(-IC_values)][2], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consensus) & nchar(Query.consensus)<20][order(-IC_values)][3], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consensus) & nchar(Query.consensus)<20][order(-IC_values)][4], yaxis = T)[[1]])
+)
+
+```
+
+# Plot best Motif per group
+
+```{r, fig.asp=0.5}
+# print best matches in grid
+
+best_matches <- character()
+
+for(class in 1:max(unique(motif_groups$group), na.rm = T)){
+  best_matches <- c(best_matches,motif_matches[Target.Name %in% motif_groups[group==class]$value][1]$Target.Name)
+}
+
+best_matches
+
+# swap some
+
+best_matches <- c("SP2", "NFYA", "ZN143", "RFX2", "NRF1", "GABPA", "SPI1", "CREM", "ETV5", "ZFP42", "MLX", "STAT1", "TBP", "MYBA") #, "OSR2", "PO2F3" - taken out to fit novel ones in
+
+best_denovo <- data.table()
+for (i in best_matches){
+  best_denovo <- rbind(best_denovo, tomtom_summary[grepl(i,Target.ID)][order(E.value)][1]) #[!grepl("D$",Target.ID)]
+}
+
+# Add novel
+best_denovo <- rbind(best_denovo, tomtom_summary_byquery[X.Query.ID %in% c("C7N.I82","C18P.I53")])
+
+
+matched_pwms <- plot_motif_matches(best_denovo,
+                                   titles=c("Sp2","Nfya","Zfp143","Rfx2","Nrf1","Gabpa","Spi1","Crem","Etv5","Zfp42","Mlx","Stat1","Tbp","Mybl1","Atf1*","Taf1*"))
+
+
+plot_grid(plotlist=matched_pwms, ncol=4)
+
+# Add icon annotations
+
+x_pos = 0.45
+y_pos = 0.82
+wh <- 0.16
+#icons <- c("TI","N","TL","TI","I","N","I","T2I","TI","T","TL","TL","N","I","N")
+icons <- c("NW","TL","TI","TI","IW","NW","MW","TI","IW","TW","IW","NW","TL","T2I","NW","NW")
+tmp <- list()
+
+for(i in seq_along(matched_pwms)){
+  tmp[[i]] <- ggdraw() +
+    draw_plot(matched_pwms[[i]], 0, 0, 1, 1) +
+    draw_image(paste0("../results/icons/",icons[i],".png"), x=x_pos, y=y_pos, width=wh, height=wh)
+}
+
+# pdf(height=12, width=15, file="../results/motifs_test.pdf")
+# plot_grid(NULL, NULL, NULL, plot_grid(plotlist=tmp, ncol=3), labels = c("", "C", "D", "E"), ncol = 2, label_size=16, rel_heights = c(1.1,1))
+# dev.off()
+
+pdf(height=5, width=10, file="../results/motifs_fig_A.pdf")
+plot_grid(plotlist=tmp, ncol=4)
+dev.off()
+
+plot_grid(plotlist=tmp, ncol=4)
+
+saveRDS(tmp,"../data/tmp_cache/denovo_summary_trimmed.rds")
+```
+
+
