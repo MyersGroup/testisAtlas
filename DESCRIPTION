@@ -7,6 +7,7 @@ Authors@R: c(
 	person("Daniel", "Wells", email = "wells@stats.ox.ac.uk", role = c("aut", "cre")))
 Description: This is an R package R functions and analysis scripts used in the analysis of testis single cell RNAseq
 License: MIT + file LICENSE
+BioViews:
 Imports:
 	data.table,
 	ggplot2,

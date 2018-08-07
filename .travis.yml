@@ -3,6 +3,7 @@
 language: R
 sudo: false
 cache: packages
+bioc_packages: biomaRt
 
 r_packages:
   - remotes
