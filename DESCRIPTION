@@ -14,9 +14,18 @@ Imports:
 	cowplot,
 	mltools,
 	RColorBrewer,
-	fitdistrplus
-Remotes: marchinilab/SDAtools,
-	myersgroup/MotifFinder
+	fitdistrplus,
+	NMF,
+	biomaRt,
+	ggseqlogo,
+	gridExtra,
+	MASS,
+	princurve,
+	stringr,
+	viridis
+Remotes:
+	github::marchinilab/SDAtools,
+	github::myersgroup/MotifFinder
 RoxygenNote: 6.0.1
 Suggests:
 	knitr,
