@@ -1,4 +1,6 @@
+[![Travis-CI Build Status](https://travis-ci.org/MyersGroup/testisAtlas.svg?branch=master)](https://travis-ci.org/MyersGroup/MtestisAtlas)
 [![DOI](https://zenodo.org/badge/140632831.svg)](https://zenodo.org/badge/latestdoi/140632831)
+
 # Single Cell RNAseq Testis Atlas
 
 This repository contains the code used to analyse the data for the paper "".
