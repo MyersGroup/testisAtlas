@@ -5,5 +5,7 @@ sudo: false
 cache: packages
 bioc_packages: biomaRt
 
+warnings_are_errors: false
+
 r_packages:
   - remotes
