@@ -157,7 +157,7 @@ server {
 update the shiny-server to block unauthenticated requests via port 3838
 
 ```{bash}
-sudo stop shiny-server
+sudo systemctl stop shiny-server
 sudo nano /etc/shiny-server/shiny-server.conf
 
 #add /testisAtlas to site_dir
