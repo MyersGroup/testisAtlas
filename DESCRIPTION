@@ -22,11 +22,12 @@ Imports:
 	stringr,
 	viridis
 Remotes:
-	github::marchinilab/SDAtools,
-	github::myersgroup/MotifFinder
+	marchinilab/SDAtools,
+	myersgroup/MotifFinder
 RoxygenNote: 6.0.1
 Suggests:
 	knitr,
 	rmarkdown,
-	testthat
+	testthat,
+	MotifFinder
 VignetteBuilder: knitr
