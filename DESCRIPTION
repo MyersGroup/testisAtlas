@@ -25,9 +25,10 @@ Remotes:
 	marchinilab/SDAtools,
 	myersgroup/MotifFinder
 RoxygenNote: 6.0.1
+Depends:
+	MotifFinder
 Suggests:
 	knitr,
 	rmarkdown,
-	testthat,
-	MotifFinder
+	testthat
 VignetteBuilder: knitr
