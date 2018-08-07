@@ -3,7 +3,7 @@
 
 # Single Cell RNAseq Testis Atlas
 
-This repository contains the code used to analyse the data for the paper "".
+This repository contains the code used to analyse the data for the paper "Unified single-cell analysis of testis gene regulation and pathology in 5 mouse strains".
 
 The repository is structured as an R package. Generic functions that are used multiple times are in the R/ directory, other analysis scripts are in the analysis/ directory.
 
