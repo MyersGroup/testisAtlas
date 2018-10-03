@@ -1,4 +1,4 @@
-[![Travis-CI Build Status](https://travis-ci.org/MyersGroup/testisAtlas.svg?branch=master)](https://travis-ci.org/MyersGroup/MtestisAtlas)
+[![Travis-CI Build Status](https://travis-ci.org/MyersGroup/testisAtlas.svg?branch=master)](https://travis-ci.org/MyersGroup/testisAtlas)
 [![DOI](https://zenodo.org/badge/140632831.svg)](https://zenodo.org/badge/latestdoi/140632831)
 
 # Single Cell RNAseq Testis Atlas
