@@ -6,11 +6,20 @@ output: html_notebook
 # Annotations
 ## Enriched expression in testis
 Using FANTOM5 data from https://www.ebi.ac.uk/gxa/experiments/E-MTAB-3579/Downloads generate a list of genes with testis enriched expression for the purpose of annotating component gene loadings
-```{r, fig.width=6}
-# # Which genes have testis specific expression?
-# https://www.ebi.ac.uk/gxa/experiments-content/E-MTAB-3579/resources/BaselineProfilesWriterService.RnaSeq/tsv
 
-fantom <- fread("../data/E-MTAB-3579-query-results.tsv")
+```{bash}
+curl 'https://www.ebi.ac.uk/gxa/experiments-content/E-MTAB-3579/resources/ExperimentDownloadSupplier.RnaSeqBaseline/tpms.tsv' -o ../data/gene_annotations/FANTOM5_MTAB_3579.tsv
+```
+
+
+```{r, fig.width=6}
+# Which genes have testis specific expression?
+
+fantom <- fread("../data/gene_annotations/FANTOM5_MTAB_3579.tsv")
+
+# replace NA with 0
+for (i in names(fantom))
+  fantom[is.na(get(i)), (i):=0]
 
 # select only adult expression
 fantom <- fantom[,c(1:2,grep(", adult",colnames(fantom))), with=FALSE]
@@ -18,6 +27,7 @@ fantom <- fantom[,c(1:2,grep(", adult",colnames(fantom))), with=FALSE]
 # remove aldult from name
 setnames(fantom, make.names(gsub(", adult","",colnames(fantom))))
 
+# check which names have changed
 library(biomaRt)
 ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
 mapTab <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
@@ -51,24 +61,39 @@ setkey(fantom_summary_subset, Gene.Name)
 
 enriched_genes <- fantom_summary[fold_difference>10][Gene.Name %in% colnames(results$loadings[[1]])]$Gene.Name
 
-aheatmap(t(results$loadings[[1]][-QC_fail_components,enriched_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes")
+NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,enriched_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes")
 
 ```
 
 The FANTOM5 data isn't very good (low number of replicates), so map genes to human orthologues and calculate enrichment in gtex instead.
 
-```{r, fig.width=6}
-gtex <- fread('../data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct')
-gtex[,ensembl_gene_id := substr(gene_id, 1, 15)]
+```{bash}
+# https://gtexportal.org/home/datasets
+curl 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct.gz' -o ../data/gene_annotations/GTEx_median_expression.tsv.gz
 
 # from mgi (http://www.informatics.jax.org/downloads/reports/index.html#homology) get mouse ID to HNCG ID pairing
-mgi <- fread('../data/HGNC_homologene.rpt.txt')
+curl http://www.informatics.jax.org/downloads/reports/HGNC_homologene.rpt -o ../data/gene_annotations/HGNC_homologene.tsv
+
+# from HGNC get HGNC to ensembl ID/Symbol pairing
+curl ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt -o ../data/gene_annotations/HGNC_prot_genes.tsv
+
+```
+
+
+```{r, fig.width=6}
+
+gtex <- fread('zcat < ../data/gene_annotations/GTEx_median_expression.tsv.gz')
+gtex[,ensembl_gene_id := substr(gene_id, 1, 15)]
+
+# invalid file - need to add an extra tab and column name after the last one / skip first row
+mgi <- fread('../data/gene_annotations/HGNC_homologene.tsv', skip=1)
+
 # NB sometimes two hgnc for 1 mouse gene mgi[V2=="Lyzl1"] -> "HGNC:30502|HGNC:29613", choose the first arbitrarily
 mgi$V21 <- unlist(lapply(strsplit(mgi$V21,"|",fixed = T), "[[", 1))
 mgi <- mgi[,.(hgnc_id=V21,ensembl_mouse_id=V10)]
 
-# from HGNC get HGNC to ensembl ID/Symbol pairing
-hgnc <- fread('../data/gene_with_protein_product.tsv')
+
+hgnc <- fread('../data/gene_annotations/HGNC_prot_genes.tsv')
 hgnc <- hgnc[,c("ensembl_gene_id", "hgnc_id", "symbol")]
 
 setkey(hgnc, hgnc_id)
@@ -115,7 +140,7 @@ qplot(gtex_summary$fold_difference, geom="density", bw=0.05) + scale_x_log10(bre
 
 enriched_genes_gtex <- gtex_summary[fold_difference>10][Gene.Name %in% colnames(results$loadings[[1]])]$Gene.Name
 
-aheatmap(t(results$loadings[[1]][-QC_fail_components,enriched_genes_gtex]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes", scale="row")
+NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,enriched_genes_gtex]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes", scale="row")
 
 # Compare Fantom vs gtex
 enrich_merge <- merge(gtex_summary, fantom_summary_subset)
@@ -137,20 +162,26 @@ abline(0,1)
 
 ## Genes causing infertility in KO
 Load genes with infertility phenotype from MGI for the purposes of annotating component gene loadings
+
+```{bash}
+# (Infertility & abnormal gametogenesis http://www.informatics.jax.org/vocab/mp_ontology/MP:0001929) #MP0001925_OR_MP0001930.tsv (male infertility & abnormal meiosis)
+# http://www.informatics.jax.org/marker/summary?phenotype=MP%3A0001924+OR+MP%3A0001929&mcv=6238161
+curl 'http://www.informatics.jax.org/marker/report.txt?phenotype=MP%3A0001924+OR+MP%3A0001929&mcv=6238161' -o ../data/gene_annotations/MP0001924_OR_MP0001929.tsv
+```
+
+
 ```{r, fig.width=6}
 # Load Infertility Gene Annotations
-# (Infertility & abnormal gametogenesis http://www.informatics.jax.org/vocab/mp_ontology/MP:0001929) #MP0001925_OR_MP0001930.tsv (male infertility & abnormal meiosis)
-
-# http://www.informatics.jax.org/marker/summary?phenotype=MP%3A0001924+OR+MP%3A0001929&mcv=6238161
-# http://www.informatics.jax.org/marker/report.txt?phenotype=MP%3A0001924+OR+MP%3A0001929&mcv=6238161
 # add underscores to strand_GRCm38	MGI_ID	Feature_Type, and add V10 to last column
-flagged <- fread("../data/MP0001924_OR_MP0001929.tsv")
+flagged <- fread("../data/gene_annotations/MP0001924_OR_MP0001929.tsv")
+
+names(flagged) <- make.names(names(flagged))
 
 library(biomaRt)
 ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
 #data.table(listAttributes(ensembl))[grepl(pattern = "Mouse",x = description)]
 flagged_map <- getBM(attributes = c('mgi_id','external_gene_name'),
-				filter = "mgi_id", values = flagged$MGI_ID, mart = ensembl, uniqueRows=TRUE)
+				filter = "mgi_id", values = flagged$MGI.ID, mart = ensembl, uniqueRows=TRUE)
 
 infertility_genes <- data.table(flagged_map)[external_gene_name %in% colnames(results$loadings[[1]])]$external_gene_name
 
@@ -158,5 +189,11 @@ infertility_genes <- data.table(flagged_map)[external_gene_name %in% colnames(re
 #infertility_genes <- flagged$Symbol[flagged$Symbol %in% colnames(results$loadings[[1]])]
 str(infertility_genes)
 
-aheatmap(t(results$loadings[[1]][-QC_fail_components,infertility_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Infertility Genes", scale="row")
+NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,infertility_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Infertility Genes", scale="row")
 ```
+
+
+```{r}
+save(fantom_summary_subset, gtex_summary, infertility_genes, file = "../data/gene_annotations/gene_annotations.rds")
+```
+
