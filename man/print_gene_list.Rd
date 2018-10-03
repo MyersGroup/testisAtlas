@@ -4,17 +4,24 @@
 \alias{print_gene_list}
 \title{Print list of genes in component and their annotations}
 \usage{
-print_gene_list(i)
+print_gene_list(i, n = 100, factorisation = results,
+  infertility = infertility_genes, fantom = fantom_subset_summary,
+  gtex = gtex_summary)
 }
 \arguments{
 \item{i}{integer or string; number or name of component in 'results' object}
+
+\item{n}{integer; number of genes to include in the list, default=100}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
+
+\item{fantom}{data.table with columns Gene.Name and fold_difference from FANTOM dataset}
+
+\item{gtex}{data.table with column Gene.Name, Human_Orthologue, and fold_difference_gtex}
 }
 \value{
 print of data.table
 }
 \description{
 Print list of genes in component and their annotations
-}
-\details{
-requires 'results', 'fantom_summary_subset', 'gtex_summary' and 'infertility_genes' objects to be loaded
 }

@@ -4,12 +4,15 @@
 \alias{component_enrichment}
 \title{Calculate enrichment for a set of genes for each component}
 \usage{
-component_enrichment(genes, threshold = 500, bg_genes = NULL)
+component_enrichment(genes, threshold = 500, factorisation = results,
+  bg_genes = NULL)
 }
 \arguments{
 \item{genes}{character vector of gene set to look for enrichment for}
 
 \item{threshold}{numeric; how many genes should be included in the top genes list used to calculate enrichment}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
 \item{bg_genes}{which genes to use as the 'background' default uses all genes in the results object from SDA}
 }

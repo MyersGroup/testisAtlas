@@ -4,13 +4,22 @@
 \alias{print_tsne}
 \title{Plot tSNE}
 \usage{
-print_tsne(i, flip = FALSE, predict = FALSE, curve = FALSE,
-  point_size = 0.25, log = FALSE, principal_curve = "df_9",
-  curve_width = 0.5)
+print_tsne(i, factorisation = results, cell_metadata = datat,
+  expression_matrix = data, princurves = principal_curves, flip = FALSE,
+  predict = FALSE, curve = FALSE, point_size = 0.25, log = FALSE,
+  principal_curve = "df_9", curve_width = 0.5)
 }
 \arguments{
 \item{i}{; either a numeric value corresponding to the component to plot, a gene name,
 or the name of a variable stored in datat such as "group", "PseudoTime", or "library_size"}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
+
+\item{cell_metadata}{data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.}
+
+\item{expression_matrix}{cell by gene matrix of expression values}
+
+\item{princurves}{list of outputs of princurve()}
 
 \item{flip}{logical; should the cell scores be multiplied by -1 (score/gene loading sign combination are arbitrary like PCA scores).}
 
@@ -27,4 +36,7 @@ The Y matrix from Rtsne output, rotated by angle
 }
 \description{
 Plot tSNE
+}
+\details{
+will add titles if you run load_component_orderings()
 }

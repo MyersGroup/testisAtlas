@@ -4,10 +4,12 @@
 \alias{sda_predict}
 \title{Compute Imputed Expression values}
 \usage{
-sda_predict(genes, name_extension = "")
+sda_predict(genes, factorisation = results, name_extension = "")
 }
 \arguments{
 \item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
 \item{name_extension}{string; will be appended to any gene names given (so resulting table could be joined with original values)}
 }
@@ -16,7 +18,4 @@ A data.table with variables cell (the cell barcode) and a column for each gene c
 }
 \description{
 Compute Imputed Expression values
-}
-\details{
-This function also requires the SDA results object to be loaded
 }

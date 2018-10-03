@@ -4,11 +4,16 @@
 \alias{plot_pseudotime_expression_panel}
 \title{Plot pseudotime expression panel}
 \usage{
-plot_pseudotime_expression_panel(data, ncol = 7, title = "Histone Genes",
-  gam_k = 5, point_size = 0.2, highlight_reigon = NULL)
+plot_pseudotime_expression_panel(genes, factorisation = results,
+  cell_metadata = datat, ncol = 7, title = "Histone Genes", gam_k = 5,
+  point_size = 0.2, highlight_reigon = NULL)
 }
 \arguments{
-\item{data}{character vector; vector of gene symbols, of which expression values will be plotted over pseudotime}
+\item{genes}{character vector; vector of gene symbols, of which expression values will be plotted over pseudotime}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
+
+\item{cell_metadata}{data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.}
 
 \item{ncol}{numeric; number of columns to use for faceting}
 
@@ -25,7 +30,4 @@ ggplot2 object
 }
 \description{
 Plot pseudotime expression panel
-}
-\details{
-requires 'datat' object to be loaded
 }

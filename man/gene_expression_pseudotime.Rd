@@ -4,10 +4,15 @@
 \alias{gene_expression_pseudotime}
 \title{Create long data table of gene expression for a subset of genes with pseudotimes}
 \usage{
-gene_expression_pseudotime(genes)
+gene_expression_pseudotime(genes, factorisation = results,
+  cell_metadata = datat)
 }
 \arguments{
 \item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
+
+\item{cell_metadata}{data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.}
 }
 \value{
 A data.table with variables cell (the cell barcode), PseudoTime, Tsne coordinates,
@@ -15,7 +20,4 @@ value (containing imputed expression values), and Gene (a string indicator for w
 }
 \description{
 Create long data table of gene expression for a subset of genes with pseudotimes
-}
-\details{
-This functions requires the datat data.table and the data matrix to be loaded
 }

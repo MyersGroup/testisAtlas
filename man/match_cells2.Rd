@@ -4,12 +4,15 @@
 \alias{match_cells2}
 \title{Find pairs of cells that are close in tSNE space}
 \usage{
-match_cells2(test_groups = NULL, cell_subset = NULL, swap_groups = F)
+match_cells2(test_groups = NULL, cell_subset = NULL,
+  cell_metadata = datat, swap_groups = F)
 }
 \arguments{
 \item{test_groups}{string; type of cell to pair cell to}
 
 \item{cell_subset}{character vector; cell barcodes of cells to consider pairing, e.g. only cells with a certian component score >2}
+
+\item{cell_metadata}{data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.}
 
 \item{swap_groups}{logical; control cells and test_group cells are swapped.
 As this is a greedy algorithm, it can be better to swap the groups when there are few control cells}

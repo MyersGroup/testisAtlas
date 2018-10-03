@@ -4,10 +4,12 @@
 \alias{get_top_genes}
 \title{Find the top x genes for a component}
 \usage{
-get_top_genes(component, n = 20, values = FALSE)
+get_top_genes(component, factorisation = results, n = 20, values = FALSE)
 }
 \arguments{
 \item{component}{integer or string; number or name of component in 'results' object}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
 \item{n}{integer; number of gene symbols to retrieve}
 
@@ -18,7 +20,4 @@ charachter vector of gene symbols, or named gene loadings are returned if values
 }
 \description{
 Find the top x genes for a component
-}
-\details{
-requires 'results' object to be loaded
 }

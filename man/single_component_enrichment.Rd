@@ -4,13 +4,16 @@
 \alias{single_component_enrichment}
 \title{Calculate enrichment for a set of genes in a single component}
 \usage{
-single_component_enrichment(component, genes = Mybl1_genes, pos = T,
-  return_genes = F, threshold = 200, bg_genes = NULL)
+single_component_enrichment(component, genes = Mybl1_genes,
+  factorisation = results, pos = T, return_genes = F, threshold = 200,
+  bg_genes = NULL)
 }
 \arguments{
 \item{component}{number or name of component}
 
 \item{genes}{character vector of gene set to look for enrichment for}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
 \item{pos}{logical; if TRUE (default) the positive gene loadings are ranked highest}
 

@@ -4,7 +4,7 @@
 \alias{ptorder}
 \title{Order Components by PseudoTime}
 \usage{
-ptorder(component, threshold = 2)
+ptorder(component, cell_metadata = datat, threshold = 2)
 }
 \arguments{
 \item{component}{string; Component name as in datat}
@@ -18,5 +18,4 @@ Order Components by PseudoTime
 \details{
 The order is determined by using a weighted mean of the pseudotime values, where the weights are the cell scores of 
 the component. Only cells with an absolute cell score of greater than 2 contribute to the mean.
-Required datat data.frame to be loaded
 }

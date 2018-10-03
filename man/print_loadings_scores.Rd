@@ -4,19 +4,21 @@
 \alias{print_loadings_scores}
 \title{Plot gene loadings with cell scores underneath}
 \usage{
-print_loadings_scores(i, max.items = 30)
+print_loadings_scores(i, factorisation = results,
+  gene_locations = rna_locations, max.items = 30)
 }
 \arguments{
 \item{i}{integer or string; number or name of component in 'results' object}
 
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
+
 \item{max.items}{integer; number of genes to label in loadings plot}
+
+\item{rna_locations}{ouput of SDAtools::load_gene_locations()}
 }
 \value{
 ggplot2 object
 }
 \description{
 Plot gene loadings with cell scores underneath
-}
-\details{
-requires 'results' and 'rna_locations' objects to be loaded
 }

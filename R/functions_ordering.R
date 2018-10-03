@@ -6,13 +6,12 @@
 #' @details 
 #' The order is determined by using a weighted mean of the pseudotime values, where the weights are the cell scores of 
 #' the component. Only cells with an absolute cell score of greater than 2 contribute to the mean.
-#' Required datat data.frame to be loaded
 #' 
 #' @return weighted mean of pseudotime for a given component
 #' @export
 
-ptorder <- function(component, threshold=2){
-  tmp <- datat[!is.na(PseudoTime)][abs(get(component)) > threshold][,.(PseudoTime, abs(get(component)))]
+ptorder <- function(component, cell_metadata=datat, threshold=2){
+  tmp <- cell_metadata[!is.na(PseudoTime)][abs(get(component)) > threshold][,.(PseudoTime, abs(get(component)))]
   return(weighted.mean(tmp$PseudoTime, tmp$V2))
 }
 

@@ -4,10 +4,12 @@
 \alias{expression_dt}
 \title{Create data table of gene expression for a subset of genes}
 \usage{
-expression_dt(genes)
+expression_dt(genes, expression_matrix = data)
 }
 \arguments{
 \item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}
+
+\item{expression_matrix}{cell by gene matrix of expression values}
 }
 \value{
 A data.table with variables cell (the cell barcode) and a column for each gene containing the raw normalised expression values

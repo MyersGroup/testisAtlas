@@ -4,17 +4,18 @@
 \alias{print_raw_tsne}
 \title{Print tsne based on raw expression rather than SDA scores}
 \usage{
-print_raw_tsne(gene)
+print_raw_tsne(gene, expression_matrix = data, cell_metadata = datat)
 }
 \arguments{
 \item{gene}{string; gene symbol, of which expression values will be used to colour points (cells)}
+
+\item{expression_matrix}{cell by gene expressionn matrix}
+
+\item{cell_metadata}{data.table with columns Tsne1, Tsne2, and PCs}
 }
 \value{
 ggplot2 object
 }
 \description{
 Print tsne based on raw expression rather than SDA scores
-}
-\details{
-requires 'datat' object to be loaded
 }

@@ -4,11 +4,11 @@
 \alias{clustered_heatmap}
 \title{Clustered heatmap (partially deprecated)}
 \usage{
-clustered_heatmap(data, name, annotation.col = NULL, colv_order = NULL,
-  col_lab = NULL, row_text_size = 0.5)
+clustered_heatmap(cell_metadata = datat, name, annotation.col = NULL,
+  colv_order = NULL, col_lab = NULL, row_text_size = 0.5)
 }
 \arguments{
-\item{data}{data.table; datat, subset of columns}
+\item{cell_metadata}{data.table; datat, with subset of gene columns}
 
 \item{name}{string; title}
 
@@ -27,5 +27,5 @@ aheatmap plot
 Clustered heatmap (partially deprecated)
 }
 \details{
-requires PCA object to be bound to datat object and 'datat' object to be loaded
+requires PCA object to be bound to cell_metadata
 }
