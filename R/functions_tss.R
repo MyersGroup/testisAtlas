@@ -70,6 +70,9 @@ download_tss <- function(host="http://Apr2018.archive.ensembl.org", filter="", f
   # remove lower ranked duplicate transcripts
   tss <- tss[!duplicated(tss, by="external_gene_name")]
   
+  # so consistent with bed format
+  tss[, strand := gsub("1","+",gsub("-1","-",strand))]
+  
   return(tss)
 }
 
