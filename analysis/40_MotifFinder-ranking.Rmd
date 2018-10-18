@@ -43,11 +43,10 @@ tss <- download_tss()
 tss <- readRDS("../data/motifs/promoter_sequences/transcription_start_sites.rds")
 str(tss)
 
-tss[, strand := gsub("1","+",gsub("-1","-",strand))]
-
-# wget ftp://ftp.ensembl.org/pub/release-91/fasta/mus_musculus/dna/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz
-# gunzip < Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz
-# samtools faidx Mus_musculus.GRCm38.dna_sm.primary_assembly.fa
+# sm = soft masked (i.e. repeats in lowercase)
+download.file("ftp://ftp.ensembl.org/pub/release-92/fasta/mus_musculus/dna/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz","../data/motifs/promoter_sequences/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz")
+system("gunzip ../data/motifs/promoter_sequences/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz")
+system("samtools faidx ../data/motifs/promoter_sequences/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa")
 
 # +- 1,000bp
 
