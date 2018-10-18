@@ -37,7 +37,7 @@ rownames(results$loadings[[1]]) <- paste0("V",1:50)
 
 library(testisAtlas)
 
-tss <- download_tss(colnames(results$loadings[[1]]))
+tss <- download_tss()
 #saveRDS(tss, "../data/motifs/promoter_sequences/transcription_start_sites.rds")
 
 tss <- readRDS("../data/motifs/promoter_sequences/transcription_start_sites.rds")
@@ -50,6 +50,8 @@ tss[, strand := gsub("1","+",gsub("-1","-",strand))]
 # samtools faidx Mus_musculus.GRCm38.dna_sm.primary_assembly.fa
 
 # +- 1,000bp
+
+tss <- tss[transcription_start_site-1000>0]
 
 fwrite(tss[,.(chromosome_name, transcription_start_site-1000, transcription_start_site+1000, external_gene_name, 0, strand)], 
        "../data/motifs/promoter_sequences/all_genes_tss.bed", col.names = FALSE, sep = "\t")
