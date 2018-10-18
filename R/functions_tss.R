@@ -28,6 +28,9 @@ download_flank_sequences <- function(gene_names, length, flank_type="gene_flank"
 #' Download location of Transcripion Start Sites from Ensembl Biomart
 #'
 #' @param gene_names charachter vector; vector of gene names (symbols) to download TSS for
+#' @param host url; to specify which version of Ensembl to use, see biomaRt::listEnsemblArchives()
+#' @param filter charachter vector; specifies which filters to use e.g. c("external_gene_name","transcript_biotype")
+#' @param filter_values list; corresponding values of the filter e.g. list(gene_names,"protein_coding")
 #'
 #' @details 
 #' Uses ensembl biomart to download location of Transcripion Start Sites
@@ -39,14 +42,14 @@ download_flank_sequences <- function(gene_names, length, flank_type="gene_flank"
 #' 
 #' @import biomaRt data.table
 
-download_tss <- function(gene_names){
+download_tss <- function(host="http://Apr2018.archive.ensembl.org", filter="", filter_values=""){
   # Download Sequences
-  ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
+  ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = host, dataset = "mmusculus_gene_ensembl")
   #data.table(listAttributes(ensembl))[grepl(pattern = "Flank",x = description)]
   
-  tss <- getBM(attributes = c("external_gene_name","strand","transcript_tsl","transcription_start_site","transcript_appris","transcript_length","ensembl_transcript_id","chromosome_name"),
-               filter = c("external_gene_name","transcript_biotype"),
-               values = list(gene_names,"protein_coding"),
+  tss <- getBM(attributes = c("external_gene_name","strand","transcript_tsl","transcription_start_site","transcript_appris","transcript_length","transcript_biotype","ensembl_transcript_id","chromosome_name"),
+               filters = filter,
+               values = filter_values,
                mart = ensembl, uniqueRows=TRUE, checkFilters = FALSE)
   
   tss <- data.table(tss)
