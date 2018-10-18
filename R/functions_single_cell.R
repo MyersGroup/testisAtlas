@@ -152,18 +152,18 @@ clustered_heatmap <- function(cell_metadata=datat, name, annotation.col=NULL, co
 #' 
 #' @import ggplot2 data.table viridis
 
-print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression_matrix=data, princurves=principal_curves, flip=FALSE, predict=FALSE, curve=FALSE, point_size=0.25, log=FALSE, principal_curve="df_9", curve_width=0.5){
+print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, point_size=0.25, log=FALSE, principal_curve="df_9", curve_width=0.5){
   
   if(i %in% colnames(cell_metadata)){ # plot feature in datat
     
-    tmp <- cell_metadata[,c(i,"Tsne1_QC1", "Tsne2_QC1"),with=FALSE]
+    tmp <- cell_metadata[,c(i,dim1, dim2),with=FALSE]
     names(tmp)[1] <- "feature"
     
     if(log){
       tmp$feature <- log(tmp$feature)
     }
     
-    p <- ggplot(tmp[order(feature)], aes(Tsne1_QC1, Tsne2_QC1, color = feature)) +
+    p <- ggplot(tmp[order(feature)], aes(get(dim1), get(dim2), color = feature)) +
       geom_point(size=point_size) +
       ggtitle(paste(i))
     
@@ -176,7 +176,7 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
     
   }else if(mode(i)=="numeric"){# plot component not gene, could do this for any cell attribute in datat - future TODO
     
-    tmp <- cell_metadata[,c(paste0("V",i),"Tsne1_QC1", "Tsne2_QC1"),with=FALSE]
+    tmp <- cell_metadata[,c(paste0("V",i), dim1, dim2),with=FALSE]
     names(tmp)[1] <- "score"
     
     if(flip){
@@ -189,7 +189,7 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       invert = -1
     }
     
-    p <- ggplot(tmp[order(score)], aes(Tsne1_QC1, Tsne2_QC1, color = score)) +
+    p <- ggplot(tmp[order(score)], aes(get(dim1), get(dim2), color = score)) +
       geom_point(size=point_size) +
       scale_color_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score (Component ",i,")"))) +
       ggtitle(paste(i,ifelse(exists("component_order_dt"),component_order_dt[component_number==i]$name,"")))
@@ -207,15 +207,17 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       tmp <- merge(cell_metadata, expression_dt(gene, expression_matrix))[order(get(gene))]  
     }
 
-    p <- ggplot(tmp, aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
+    p <- ggplot(tmp, aes(get(dim1), get(dim2), color=get(gene))) +
       geom_point(size=point_size) +
       scale_color_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"))) +
       ggtitle(gene)
   }
   
   if(curve){
-    curve_data <- data.frame(Tsne1_QC1 = princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 1],
-                             Tsne2_QC1 = princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 2])
+    curve_data <- data.frame(princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 1],
+                             princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 2])
+    
+    colnames(curve_data) <- c(dim1,dim2)
     
     p <- p + geom_path(data = curve_data,
                        size = curve_width,
@@ -225,8 +227,13 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
   }
   
   p <- p + theme_minimal() +
-    theme(legend.position = "bottom") +
-    labs(x="t-SNE 1", y="t-SNE 2")
+    theme(legend.position = "bottom")
+  
+  if(dim1=="Tsne1_QC1"){
+    p <- p + labs(x="t-SNE 1", y="t-SNE 2")
+  }else{
+    p <- p + labs(x="Umap 1", y="Umap 2")
+  }
   
   return(p)
 
@@ -630,7 +637,7 @@ imputed_vs_raw <- function(genes_tmp, cell_metadata=datat, factorisation=results
 }
 
 asinh_trans <- function() {
-  trans_new("asinh",
+  scales::trans_new("asinh",
             transform = asinh,
             inverse   = sinh)
 }
