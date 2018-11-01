@@ -5,6 +5,9 @@ output: html_notebook
 
 ```{r}
 library(SDAtools)
+library(testisAtlas)
+
+#load("../data/tmp_cache/SDA_objects.rds")
 
 results <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
 rownames(results$loadings[[1]]) <- paste0("V",1:50)
@@ -17,43 +20,14 @@ str(results)
 library(AnnotationHub) # source("https://bioconductor.org/biocLite.R"); biocLite("AnnotationHub")
 library(clusterProfiler) # source("https://bioconductor.org/biocLite.R"); biocLite("clusterProfiler")
 
+# load GO database
 hub <- AnnotationHub()
 query(hub, "Musculus")
 Musculus <- hub[["AH57974"]] #query(hub, "org.MM.eg"), AH52234, AH57184
 #AH57974 ncbi orgdb
 
-frac_to_numeric <- function(x) sapply(x, function(x) eval(parse(text=x)))
 
-GO_enrichment <- function(component, geneNumber = 250, threshold=0.01, side="N"){
-  
-  if(side=="N"){
-    top_genes <- data.table(as.matrix(results$loadings[[1]][component, ]), keep.rownames = TRUE)[order(V1)][1:geneNumber]$rn
-  }else{
-    top_genes <- data.table(as.matrix(results$loadings[[1]][component, ]), keep.rownames = TRUE)[order(-V1)][1:geneNumber]$rn
-  }
-
-gene_universe <- data.table(as.matrix(results$loadings[[1]][component,]), keep.rownames = TRUE)$rn
-
-ego <- enrichGO(gene = top_genes,
-                universe = gene_universe,
-                OrgDb = Musculus,
-                keyType = 'SYMBOL',
-                ont = "BP",
-                pAdjustMethod = "BH",
-                pvalueCutoff = 1,
-                qvalueCutoff = 1)
-
-ego@result$Enrichment <- frac_to_numeric(ego@result$GeneRatio)/frac_to_numeric(ego@result$BgRatio)
-ego@result$GeneOdds <- unlist(lapply(strsplit(ego@result$GeneRatio, "/", fixed = TRUE), function(x){ x<-as.numeric(x) ;x[1] / (x[2]-x[1])}))
-ego@result$BgOdds <- unlist(lapply(strsplit(ego@result$BgRatio, "/", fixed = TRUE), function(x){ x<-as.numeric(x) ;x[1] / (x[2]-x[1])}))
-
-return(ego@result)
-
-}
-
-
-
-
+# perform GO enrichment for each component (+ & - seperately)
 GO_data <- list()
 
 for (i in 1:50){
@@ -66,19 +40,19 @@ GO_data[[paste0("V",i,"P")]] <- GO_enrichment(i, side="P")
 
 saveRDS(GO_data, "../data/GO_enrichment.rds")
 
-go_volcano_plot <- function(x=GO_data, component="V5N"){
- print(
-   ggplot(data.table(x[[component]]), aes(GeneOdds/BgOdds, -log(pvalue), size=Count)) +
-     geom_point(aes(colour=p.adjust<0.05)) +
-     scale_size_area() +
-     geom_label_repel(data = data.table(x[[component]])[order(p.adjust)][1:30][p.adjust<0.7], aes(label = Description, size=0.25), size = 3, force=2) + 
-     ggtitle("Volcano plot for Gene Ontology (Biological Processes) enrichment analysis") +
-     xlab("Odds Ratio") +
-     scale_x_log10(limits=c(1,NA), breaks=c(1,2,3,4,5,6,7,8))
- )
+# Convert to single data.table
+
+for(i in names(GO_data)){
+  GO_data[[i]]$Component <- i
 }
 
-go_volcano_plot(component = "V30P")
+GO_data_dt <- data.table(do.call("rbind", GO_data))
+
+saveRDS(GO_data_dt, "../data/GO_enrichment_dt.rds")
+
+# plot example result
+
+go_volcano_plot(GO_data_dt, component = "V30P")
 head(GO_data[["V30P"]][c(2,7,8,10)], 20)
 
 

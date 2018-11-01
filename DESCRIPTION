@@ -15,6 +15,7 @@ Imports:
 	RColorBrewer,
 	NMF,
 	biomaRt,
+	clusterProfiler,
 	ggseqlogo,
 	gridExtra,
 	MASS,

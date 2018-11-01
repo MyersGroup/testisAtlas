@@ -4,12 +4,10 @@
 \alias{go_volcano_plot}
 \title{Volcano plot of gene ontology enrichment resultd}
 \usage{
-go_volcano_plot(x = GO_data, component = "V5N", top_n = 30,
+go_volcano_plot(data = GO_data, component = "V5N", top_n = 30,
   label_size = 3, OR_threshold = 1)
 }
 \arguments{
-\item{x}{R object; GO results}
-
 \item{component}{string; name of component e.g. "V5N" (N meaning negative size loadings)}
 
 \item{top_n}{integer; how many GO terms to label}
@@ -17,6 +15,8 @@ go_volcano_plot(x = GO_data, component = "V5N", top_n = 30,
 \item{label_size}{numeric; size of GO term labels}
 
 \item{OR_threshold}{numeric; threshold on odds ratio of GO terms to label (applied after top_n)}
+
+\item{x}{R object; GO results}
 }
 \value{
 ggplot2 object

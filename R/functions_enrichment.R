@@ -1,4 +1,48 @@
 
+
+#' Perform Gene Ontology (Biological Process) enrichment analysis of components
+#'
+#' @param component string; name of component e.g. "V5N" (N meaning negative size loadings)
+#' @param geneNumber integer; number of top genes to include
+#' @param side char; should negative of positive values be considered the top
+#' @param database OrgDb; object of class OrgDb from the package AnnotationDbi
+#'
+#' @return data.frame with each row a GO term, columns Description, pvalue, Enrichment, etc
+#'
+#' @export
+#' 
+#' @import clusterProfiler
+GO_enrichment <- function(component, geneNumber = 250, side="N", factorisation=results, database=Musculus){
+  
+  if(side=="N"){
+    top_genes <- data.table(as.matrix(factorisation$loadings[[1]][component, ]), keep.rownames = TRUE)[order(V1)][1:geneNumber]$rn
+  }else{
+    top_genes <- data.table(as.matrix(factorisation$loadings[[1]][component, ]), keep.rownames = TRUE)[order(-V1)][1:geneNumber]$rn
+  }
+  
+  gene_universe <- data.table(as.matrix(factorisation$loadings[[1]][component,]), keep.rownames = TRUE)$rn
+  
+  ego <- enrichGO(gene = top_genes,
+                  universe = gene_universe,
+                  OrgDb = database,
+                  keyType = 'SYMBOL',
+                  ont = "BP",
+                  pAdjustMethod = "BH",
+                  pvalueCutoff = 1,
+                  qvalueCutoff = 1)
+  
+  frac_to_numeric <- function(x) sapply(x, function(x) eval(parse(text=x)))
+  
+  ego@result$Enrichment <- frac_to_numeric(ego@result$GeneRatio)/frac_to_numeric(ego@result$BgRatio)
+  ego@result$GeneOdds <- unlist(lapply(strsplit(ego@result$GeneRatio, "/", fixed = TRUE), function(x){ x<-as.numeric(x) ;x[1] / (x[2]-x[1])}))
+  ego@result$BgOdds <- unlist(lapply(strsplit(ego@result$BgRatio, "/", fixed = TRUE), function(x){ x<-as.numeric(x) ;x[1] / (x[2]-x[1])}))
+  
+  return(ego@result)
+  
+}
+
+
+
 motifGenes <- function(motif){
   motifRankings[[1]]@rankings$rn[order(motifRankings[[1]]@rankings[,motif,with=FALSE])]
   

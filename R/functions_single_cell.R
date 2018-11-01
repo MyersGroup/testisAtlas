@@ -541,13 +541,23 @@ print_gene_list <- function(i, n=100, factorisation=results, infertility=inferti
 #' @export
 #' 
 #' @import ggplot2 data.table
-go_volcano_plot <- function(x=GO_data, component="V5N", top_n=30, label_size=3, OR_threshold=1){
-  print(
-    ggplot(data.table(x[[component]]), aes(GeneOdds/BgOdds, -log(pvalue,10), size=Count)) +
+go_volcano_plot <- function(data=GO_data, component="V5N", top_n=30, label_size=3, OR_threshold=1){
+  
+  if(class(data)[1]=="data.table"){
+    tmp <- data[Component==component]
+  }else{
+    tmp <- data.table(data[[component]])
+  }
+  
+  return(
+    ggplot(tmp, aes(GeneOdds/BgOdds, -log(pvalue,10), size=Count)) +
       geom_point(aes(colour=p.adjust<0.05)) +
       scale_size_area() +
-      geom_label_repel(data = data.table(x[[component]])[order(p.adjust)][1:top_n][p.adjust<0.7][GeneOdds/BgOdds > OR_threshold], aes(label = Description), size = label_size, force=5) + 
-      ggtitle("Volcano plot for Gene Ontology (Biological Processes) enrichment analysis") +
+      geom_label_repel(data = tmp[order(p.adjust)][1:top_n][p.adjust<0.7][GeneOdds/BgOdds > OR_threshold],
+                       aes(label = Description),
+                       size = label_size,
+                       force=5) + 
+      ggtitle(paste0(component," Volcano plot for Gene Ontology (Biological Processes) enrichment analysis")) +
       xlab("Odds Ratio") +
       scale_x_log10(limits=c(1,NA), breaks=c(1,2,5,10,15,20))
   )
