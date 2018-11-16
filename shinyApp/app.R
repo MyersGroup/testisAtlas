@@ -63,6 +63,7 @@ server <- function(input, output) {
     p <- print_tsne(tmp,
                predict = input$show_predict,
                curve = input$show_arrow,
+               stages = input$show_stages,
                point_size = input$decimal) +
       coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = T)
     }else{
@@ -123,6 +124,8 @@ ui <- fluidPage(
       helpText("To Zoom, select a reigon and double click, to reset double click."),
       checkboxInput("show_predict", "Show imputed expression?"),
       checkboxInput("show_arrow", "Display Pseudotime Arrow?"),
+      checkboxInput("show_stages", "Annotate Stages?", value=TRUE),
+      checkboxInput("umap", "Umap Projection?"),
       sliderInput("decimal", "Point size:",
                   min = 0.1, max = 2, value = 1, step = 0.05),
       tags$hr(),
