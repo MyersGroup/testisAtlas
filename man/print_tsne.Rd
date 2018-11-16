@@ -7,7 +7,7 @@
 print_tsne(i, factorisation = results, cell_metadata = datat,
   expression_matrix = data, princurves = principal_curves,
   dim1 = "Tsne1_QC1", dim2 = "Tsne2_QC1", flip = FALSE, predict = FALSE,
-  curve = FALSE, point_size = 0.25, log = FALSE,
+  curve = FALSE, stages = FALSE, point_size = 1, log = FALSE,
   principal_curve = "df_9", curve_width = 0.5)
 }
 \arguments{
@@ -27,6 +27,8 @@ or the name of a variable stored in datat such as "group", "PseudoTime", or "lib
 \item{predict}{logical; Should gene expression be the predicted (imputed) values or raw normalised}
 
 \item{curve}{logical; Should principal curve (pseudotime) by plotted on top of the tSNE plot}
+
+\item{stages}{logical; Should the stages be annotated}
 
 \item{point_size}{numeric; size of point}
 

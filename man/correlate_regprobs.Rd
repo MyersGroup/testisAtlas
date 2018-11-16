@@ -4,15 +4,12 @@
 \alias{correlate_regprobs}
 \title{For a matrix of genes by motifs, calculate correlations}
 \usage{
-correlate_regprobs(regprobs = regprobs_matrix, factorisation = results,
-  ncomp = 50)
+correlate_regprobs(regprobs = regprobs_matrix, factorisation = results)
 }
 \arguments{
 \item{regprobs}{matrix; a matrix of genes by motifs}
 
 \item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
-
-\item{ncomp}{int; number of components in factorisation}
 }
 \value{
 Matrix of components by motifs, with entries for the test statistic t for each combination

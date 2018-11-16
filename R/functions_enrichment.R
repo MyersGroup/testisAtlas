@@ -10,9 +10,13 @@
 #' @return data.frame with each row a GO term, columns Description, pvalue, Enrichment, etc
 #'
 #' @export
-#' 
-#' @import clusterProfiler
+
 GO_enrichment <- function(component, geneNumber = 250, side="N", factorisation=results, database=Musculus){
+  
+  if (!requireNamespace("clusterProfiler", quietly = TRUE)) {
+    stop("Package \"clusterProfiler\" needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
   
   if(side=="N"){
     top_genes <- data.table(as.matrix(factorisation$loadings[[1]][component, ]), keep.rownames = TRUE)[order(V1)][1:geneNumber]$rn
