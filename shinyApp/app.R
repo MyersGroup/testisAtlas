@@ -74,7 +74,7 @@ server <- function(input, output) {
         coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = T)
     }
     
-    p <- p + annotate("text", x=-Inf, y=-Inf, hjust=0, vjust=-1, label="Jung & Wells et. al.", colour='grey')
+    p <- p + annotate("text", x=-Inf, y=-Inf, hjust=0, vjust=-1, label="Jung & Wells et. al. 2018", colour='grey')
     
     if(input$diverging_colour){
       return(p + scale_fill_gradient2())
@@ -139,7 +139,7 @@ ui <- fluidPage(
       tags$head(tags$style("#distPlot{height:88vh !important;}")),
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("About:")),
-      tags$div(p(HTML(paste0('For more information see our ',a(href = 'https://doi.org/10.1101/393769', 'paper')))))
+      tags$div(p(HTML(paste0('For more information see our ',a(target="_blank", href = 'https://doi.org/10.1101/393769', 'paper')))))
     ),
     mainPanel(
       tabsetPanel(type = "tabs",
