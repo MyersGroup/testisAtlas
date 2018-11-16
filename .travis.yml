@@ -3,7 +3,9 @@
 language: R
 sudo: false
 cache: packages
-bioc_packages: biomaRt
+bioc_packages:
+	- biomaRt
+	- clusterProfiler
 
 warnings_are_errors: false
 
