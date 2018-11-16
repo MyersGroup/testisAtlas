@@ -7,6 +7,14 @@ Reanalysis of http://www.cell.com/cell/fulltext/S0092-8674(18)30116-8
 
 Based on http://satijalab.org/seurat/mca
 
+NB This analysis is run on a large RAM server as the PCA takes 128GB of RAM, to run on a laptop reduce the number of hv.genes as in the seurat tutorial
+
+```{bash}
+wget -O ../data/previous_studies/MCA/MCA.zip https://www.dropbox.com/s/dl/8d8t4od38oojs6i/MCA.zip
+unzip ../data/previous_studies/MCA/MCA.zip -d ../data/previous_studies/
+```
+
+
 ```{r}
 library(Matrix)
 library(Seurat)
@@ -27,7 +35,7 @@ mca <- NormalizeData(object = mca, normalization.method = "LogNormalize", scale.
 
 mca <- FindVariableGenes(object = mca, mean.function = ExpMean, dispersion.function = LogVMR, 
     do.plot = FALSE)
-hv.genes <- head(rownames(mca@hvg.info), 3000)
+hv.genes <- head(rownames(mca@hvg.info), 10000)
 ```
 
 ```{r}
@@ -35,92 +43,70 @@ hv.genes <- head(rownames(mca@hvg.info), 3000)
 # percent.mito <- Matrix::colSums(mca@raw.data[mito.genes, ])/Matrix::colSums(mca@raw.data)
 # mca <- AddMetaData(object = mca, metadata = percent.mito, col.name = "percent.mito")
 
-mca <- ScaleData(object = mca, genes.use = hv.genes, display.progress = TRUE, do.par = FALSE, num.cores = 2)
+mca <- ScaleData(object = mca, genes.use = hv.genes, display.progress = TRUE)
 ```
+
+## PCA: Warning this step requires 125GB of RAM!
 
 ```{r}
-mca <- RunPCA(object = mca, pcs.compute = 4, do.print = TRUE, 
-    pcs.print = 1:5, genes.print = 25)
+mca <- RunPCA(object = mca, pcs.compute = 3, do.print = TRUE, 
+    pcs.print = 1:3, genes.print = 25, pc.genes = hv.genes)
 ```
 
-```{r, fig.width=10}
-
-c1 <- RColorBrewer::brewer.pal(9, "Set1")
-
-# names(c1) <- c("Bladder", "Bone-Marrow", "Brain","Embryonic","Intestine/Stomach","Kidney","Lung","Liver","Mammary","Muscle","Skin","Ovary","Pancreas","Blood","Placenta","Prostate",
-
-tissue_cols <- c("black",c1[7],rep("black",12),c1[9],rep("black",7),c1[1],rep("black",1),c1[6],c1[2],rep("black",2),c1[8],rep("black",3),c1[3],"black",c1[4],c1[5],rep("black",3))
-
-PCAPlot(mca,
-        group.by="Tissue",
-        cols.use=tissue_cols,
-        pt.size=0.2,
-        do.return=TRUE)
-    
-# geom_point(alpha=0.3, size=0.2)
-
-PCAPlot(mca, group.by="Tissue",
-        cols.use=c(rep(c1,4)[1:35],"black",c1[1:3]),
-        pt.size=0.05)
-```
-
-```{r, fig.width=10}
-tmp <- PCAPlot(mca,
-               group.by="Tissue",
-               cols.use=tissue_cols,
-               pt.size=0.2,
-               do.return=TRUE)
-
-plot <- ggplot(tmp$data, aes(PC1, PC2, colour=ident)) +
-    geom_point(size=0.2, alpha=0.3) +
-    scale_color_manual(values = tissue_cols) +
-    theme(legend.text = element_text(size=7)) +
-    guides(colour = guide_legend(override.aes = list(size=3, alpha=1),
-                                 title = "Tissue"))
-
-plot
-
-pdf("../results/pca.pdf", width = 10)
-plot
-dev.off()
-```
-
+## Plot PCA
 
 ```{r, fig.width=10}
 
 library(data.table)
-tmp <- data.table(mca@dr$pca@cell.embeddings, keep.rownames=T)
-tmp$Tissue <- mca@meta.data$Tissue
+mca_pca <- data.table(mca@dr$pca@cell.embeddings, keep.rownames=T)
+mca_pca$Tissue <- mca@meta.data$Tissue
+saveRDS(mca_pca, "../data/mca_pca2.rds")
 
-ggplot(tmp, aes(PC1,PC2, colour=Tissue=="Testis")) + geom_point(size=0.1) + facet_wrap(~Tissue) + theme_grey()
+tissue_cols <- rep("black", nlevels(mca_pca$Tissue))
+names(tissue_cols) <- levels(mca_pca$Tissue)
 
-ggplot(tmp, aes(PC2,PC3, colour=Tissue=="Testis")) + geom_point(size=0.1) + facet_wrap(~Tissue) + theme_grey()
+c1 <- RColorBrewer::brewer.pal(9, "Set1")
+tissue_cols["Testis"] <- c1[1]
+tissue_cols["Thymus"] <- c1[2]
+tissue_cols[grep("Stem-Cell", levels(mca_pca$Tissue))] <- c1[3]
+tissue_cols[grep("Lactation", levels(mca_pca$Tissue))] <- c1[4]
+tissue_cols[grep("Blood", levels(mca_pca$Tissue))] <- c1[5]
+tissue_cols["Prostate"] <- c1[6]
+tissue_cols["Small-Intestine"] <- c1[7]
+tissue_cols["Fetal_Brain"] <- c1[8]
+tissue_cols["Uterus"] <- c1[9]
 
-FeaturePlot(mca, c("Prm2"), reduction.use = "pca")
-FeaturePlot(mca, c("Lyar"), reduction.use = "pca")
+
+#devtools::install_github('VPetukhov/ggrastr')
+library(ggrastr)
+plot <- ggplot(mca_pca, aes(PC1, PC2, colour=Tissue)) +
+    geom_point_rast(size=1, alpha=0.3, stroke=0) +
+    scale_color_manual(values = tissue_cols) +
+    theme(legend.text = element_text(size=8), legend.position = "bottom") +
+    guides(colour = guide_legend(override.aes = list(size=4, alpha=1),
+                                 title = "Tissue", ncol=6))
+
+pdf("../results/MCA_PCA.pdf", height=6, width = 10.5)
+plot
+dev.off()
+
+pdf("../results/MCA_PCA_by_tissue.pdf", width = 20)
+ggplot(tmp, aes(PC1,PC2, colour=Tissue=="Testis")) +
+    geom_point_rast(data=mca_pca[,-"Tissue", with=F], size=1, alpha=0.3, stroke=0, colour="grey") +
+    geom_point_rast(size=1, alpha=0.3, stroke=0) +
+    facet_wrap(~Tissue) +
+    theme_grey()
+dev.off()
 ```
 
-```{r}
-tmp <- data.table(mca@meta.data)[,cell := paste0(Batch,".",Cell.Barcode)]
 
-head(sort(rowMeans(mca@scale.data[,tmp[ClusterID=="Testis_16"]$cell]),T),100)
-
-head(sort(rowMeans(mca@raw.data[,tmp[ClusterID=="Testis_16"]$cell]),T),100)
-```
-
-```{r}
-SDA_mq <- names(which(results$scores[,"V11"]>2))
-head(sort(colSums(data[SDA_mq,]),T),100)
-rank(sort(colSums(data[SDA_mq,]),T))["Prm1"]
-```
-
+# Analyse only Testis Cells
 
 ```{r, fig.width=10}
 
 mca_t <- CreateSeuratObject(raw.data = mca.matrix, meta.data = mca.metadata, project = "MouseCellAtlas")
 # Only keep annotated cells
 mca_t <- SubsetData(mca, cells.use = rownames(mca@meta.data[!is.na(mca@meta.data$ClusterID),][mca@meta.data$Tissue=="Testis",]), do.clean = TRUE)
-# Leaves us with 242k cells
 mca_t
 
 mca_t <- NormalizeData(object = mca_t, normalization.method = "LogNormalize", scale.factor = 10000)
@@ -131,29 +117,43 @@ hv.genes_t <- head(rownames(mca_t@hvg.info), 3000)
 
 mca_t <- ScaleData(object = mca_t, genes.use = hv.genes_t, display.progress = TRUE, do.par = FALSE, num.cores = 2)
 
-mca_t <- RunPCA(object = mca_t, pcs.compute = 25, do.print = TRUE, 
+mca_t <- RunPCA(object = mca_t, pcs.compute = 10, do.print = TRUE, 
     pcs.print = 1:5, genes.print = 25)
 
+pdf()
 FeaturePlot(mca_t, c("Prm2"), reduction.use = "pca")
+FeaturePlot(mca_t, c("Prm2"), reduction.use = "pca", dim.1 = 1, dim.2 = 2)
+FeaturePlot(mca_t, c("Prm2"), reduction.use = "pca", dim.1 = 2, dim.2 = 3)
+FeaturePlot(mca_t, c("Prm2"), reduction.use = "pca", dim.1 = 1, dim.2 = 4)
+FeaturePlot(mca_t, c("Prm2"), reduction.use = "pca", dim.1 = 2, dim.2 = 4)
+FeaturePlot(mca_t, c("Prm2"), reduction.use = "pca", dim.1 = 3, dim.2 = 4)
+dev.off()
+
+pdf()
 FeaturePlot(mca_t, c("Smcp"), reduction.use = "pca")
 FeaturePlot(mca_t, c("Insl3"), reduction.use = "pca", dim.1 = 3, dim.2 = 4)
 FeaturePlot(mca_t, c("Tyrobp"), reduction.use = "pca", dim.1 = 3, dim.2 = 4)
 FeaturePlot(mca_t, c("Dcn"), reduction.use = "pca", dim.1 = 3, dim.2 = 4)
+dev.off()
 
+
+```
+
+## t-SNE
+
+```{r, fig.width=10}
 mca_t <- RunTSNE(object = mca_t, reduction.use = "pca", dims.use = 1:10,
     nthreads = 2, max_iter = 1000, perplexity=60)
 
+pdf()
 DimPlot(object = mca_t, reduction.use = "tsne", do.return = TRUE, group.by ="ClusterID", pt.size = 0.5) + ggtitle("Cluster ID") + scale_color_manual(values = c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Set2"),"black","red"))
-```
+dev.off()
 
-
-```{r, fig.width=10}
-library(viridis)
 
 tmp <- DimPlot(object = mca_t, reduction.use = "tsne", do.return = TRUE, group.by ="ClusterID")$data
 ggplot(tmp, aes(tSNE_1, tSNE_2, colour=ident=="Testis_16")) + geom_point()
 
-
+pdf()
 FeaturePlot(mca_t, c("Prm2"), reduction.use = "tsne", no.legend = FALSE)
 FeaturePlot(mca_t, c("Aard"), reduction.use = "tsne", no.legend = FALSE)
 FeaturePlot(mca_t, c("Dcn"), reduction.use = "tsne", no.legend = FALSE)
@@ -164,35 +164,6 @@ FeaturePlot(mca_t, c("Tyrobp"), reduction.use = "tsne", no.legend = FALSE)
 FeaturePlot(mca_t, c("Prdm9"), reduction.use = "tsne", no.legend = FALSE)
 FeaturePlot(mca_t, c("Ssxb1"), reduction.use = "tsne", no.legend = FALSE)
 FeaturePlot(mca_t, c("Hmgb4"), reduction.use = "tsne", no.legend = FALSE)
-
-# FeaturePlot(mca_t, c("Gapdhs"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Smcp"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Sall4"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Aard"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Dcn"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Insl3"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Lyz2"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Apoe"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Tyrobp"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("mt-Rnr2"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Prdm9"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Ssxb1"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Piwil1"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Acrv1"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# 
-# FeaturePlot(mca_t, c("Hmgb4"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Cst9"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# 
-# FeaturePlot(mca_t, c("1700001F09Rik"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# 
-# FeaturePlot(mca_t, c("Cabs1"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# 
-# FeaturePlot(mca_t, c("Dazl"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Uchl1"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# FeaturePlot(mca_t, c("Fmr1nb"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# 
-# FeaturePlot(mca_t, c("Mesp1"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
-# 
-# FeaturePlot(mca_t, c("Tex101"), reduction.use = "tsne", do.return = T, no.legend = FALSE)[[1]] + scale_colour_viridis(direction = -1)
+dev.off()
 ```
 
