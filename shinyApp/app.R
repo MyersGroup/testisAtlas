@@ -118,7 +118,7 @@ server <- function(input, output) {
 }
 
 ui <- fluidPage(
-  titlePanel("Testis Single Cell RNAseq Explorer"),
+  titlePanel("Mouse Testis Single Cell RNAseq Explorer"),
   sidebarLayout(
     sidebarPanel(
       textInput("genes", "Input gene name or component number:", placeholder = "Prdm9"),
