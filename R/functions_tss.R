@@ -522,7 +522,7 @@ binned_mean_regprob <- function(regprobs=regprobs_matrix_custom, nbins=50, facto
 }
 
 
-#' For a given component, display binned associations
+#' plot regprobs within binned components
 #'
 #' @param component numeric or string; rowname of `results$loadings[[1]]` corresponding to a component name or number
 #'
@@ -535,26 +535,139 @@ binned_mean_regprob <- function(regprobs=regprobs_matrix_custom, nbins=50, facto
 #' @export
 #' @import ggplot2
 
-print_binned_meanprob <- function(component){
-  tmp <- names(sort(results$loadings[[1]][component,]))
-  tmp <- tmp[tmp %in% rownames(regprobs_matrix)]
+plot_component_regprobs <- function(component, binned_meanprob, facet_scales="free_y"){
   
-  # for each motif, calculate binned mean regprob
-  bin_factor <- cut(seq_along(regprobs_matrix[,1]), 50)
-  binned_meanprob <- matrix(unlist(lapply(1:ncol(regprobs_matrix),
-                                          function(i) tapply(regprobs_matrix[,i][tmp], bin_factor, function(x) mean(x,na.rm=T)))),
-                            ncol=ncol(regprobs_matrix))
-  colnames(binned_meanprob) <- colnames(regprobs_matrix)
-  binned_meanprob <- data.table(binned_meanprob)
-  binned_meanprob$bin <- seq_along(levels(bin_factor))
-  binned_meanprob <- melt(binned_meanprob, id.vars = "bin", variable.name = "TF", value.name = "mean_regprob")
+  binned_meanprob <- data.table(t(binned_meanprob[,,component]), keep.rownames = T)
+  setnames(binned_meanprob, "rn", "bin")
+  binned_meanprob[,bin := as.numeric(bin)]
+  binned_meanprob <- melt(binned_meanprob, id.vars = "bin", variable.name = "Motif", value.name = "mean_regprob")
   
   return(
-    ggplot(binned_meanprob, aes(bin, mean_regprob)) + geom_point() + geom_line() + facet_wrap(~TF, scales = "free_y") + xlab("Bin of SDA Gene Loading")
+    ggplot(binned_meanprob, aes(bin, mean_regprob)) +
+      geom_point() +
+      geom_line() +
+      facet_wrap(~Motif, scales = facet_scales) +
+      xlab("Bin of SDA Gene Loading") +
+      ggtitle(paste("Component", component))
   )
 }
 
 
+#' Plot meanprob over components
+#'
+#' @param regprobs matrix; rows = genes, columns = motif/transcription factors
+#' @param plot logical; should results be plotted (default), or return matrix?
+#' @param n int; top n loadings will be used in the calculation of the mean
+#' @param factorisation list; output from SDAtools::load_results()
+#'
+#' @details 
+#' 
+#' @return ggplot2 object / matrix (depending on plot parameter)
+#' 
+#' @export
+#' @import ggplot2
+
+plot_meanprob_bycomp <- function(binned_meanprob, plot=TRUE, facet_scales="free_y", highlight=NULL){
+  
+  # get min & max bins
+  binned_meanprobA <- binned_meanprob[,1,]
+  colnames(binned_meanprobA) <- paste0(colnames(binned_meanprobA),"N")
+  
+  binned_meanprobB <- binned_meanprob[,50,]
+  colnames(binned_meanprobB) <- paste0(colnames(binned_meanprobB),"P")
+  
+  binned_meanprob <- cbind(binned_meanprobA, binned_meanprobB)
+  
+  mean_prob_matrix <- t(binned_meanprob)[ordering[-half_exclusions],]
+  rownames(mean_prob_matrix) <- paste(rownames(mean_prob_matrix), component_names[-half_exclusions])
+  
+  if(plot){
+    mean_prob_dt <- melt(data.table(c=substr(rownames(mean_prob_matrix), 1,4), mean_prob_matrix, keep.rownames = T), id.vars = c("rn","c")) #[1:66,]
+    
+    return(
+      ggplot(mean_prob_dt, aes(factor(c, levels=substr(rownames(mean_prob_matrix), 1,4)), value)) +
+        geom_point(aes(colour=c %in% highlight)) +
+        facet_wrap(~variable, scales = facet_scales) +
+        xlab("Pseudotime-Ordered Components") +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1),
+              legend.position = "bottom")
+    )
+    
+  }else{
+    return(mean_prob_matrix)
+  }
+  
+}
+
+
+#' DEPRECATED, only use if you want custom number of n, For a given component, display binned associations
+#'
+#' @param regprobs matrix; rows = genes, columns = motif/transcription factors
+#' @param plot logical; should results be plotted (default), or return matrix?
+#' @param n int; top n loadings will be used in the calculation of the mean
+#' @param factorisation list; output from SDAtools::load_results()
+#'
+#' @details 
+#' 
+#' @return ggplot2 object / matrix (depending on plot parameter)
+#' 
+#' @export
+#' @import ggplot2
+
+mean_prob_bycomp <- function(regprobs=regprobs_matrix_custom, plot=TRUE, n=100, factorisation=results, facet_scales="free_y"){
+  
+  mean_prob_matrix <- matrix(nrow=100, ncol=ncol(regprobs))
+  rownames(mean_prob_matrix) <- colnames(factorisation$loadings_split)
+  colnames(mean_prob_matrix) <- colnames(regprobs)
+  
+  # mean of top n loadings
+  for (i in seq_along(colnames(factorisation$loadings_split))){
+    tmp <- names(sort(abs(factorisation$loadings_split[,i]),T)) #[1:1000]
+    tmp <- tmp[tmp %in% rownames(regprobs)][1:n]
+    mean_prob_matrix[i,] <- colMeans(regprobs[tmp,])
+  }
+  
+  mean_prob_matrix <- mean_prob_matrix[ordering[-half_exclusions],]
+  rownames(mean_prob_matrix) <- paste(rownames(mean_prob_matrix), component_names[-half_exclusions])
+  
+  if(plot){
+    mean_prob_dt <- melt(data.table(c=substr(rownames(mean_prob_matrix), 1,4), mean_prob_matrix, keep.rownames = T), id.vars = c("rn","c")) #[1:66,]
+    
+    return(
+      ggplot(mean_prob_dt, aes(factor(c, levels=substr(rownames(mean_prob_matrix), 1,4)), value)) +
+      geom_point() +
+      facet_wrap(~variable, scales = facet_scales) +
+      xlab("Pseudotime-Ordered Components") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    )
+    
+  }else{
+    return(mean_prob_matrix)
+  }
+  
+}
+
+
+#' Split SDA components into positive and negative components
+#'
+#' @param loadings numeric matrix; components vs gene matrix of loadings, e.g. `SDAtools::load_results()$loadings[[1]]`
+#'
+#' @details 
+#' 
+#' @return loadings numeric matrix, with twice as many columns
+#' 
+#' @export
+
+split_loadings <- function(loadings=results$loadings[[1]]){
+  pos = t(loadings * (loadings>0) )
+  colnames(pos) <- paste0(colnames(pos),"P")
+  
+  neg = t(loadings * (loadings<0) )
+  colnames(neg) <- paste0(colnames(neg),"N")
+  
+  pred = cbind(pos,neg)
+  return(pred)
+}
 
 
 #' For a matrix of genes by motifs, calculate correlations
