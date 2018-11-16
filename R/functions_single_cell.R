@@ -14,7 +14,21 @@ rotate_tsne <- function(tsne, angle){
   tsne$Y %*% rotm
 }
 
+#' Generate rotation matrix / rotate a matrix
+#'
+#' @param object matrix; matrix with two columns
+#' @param angle numeric; degrees to rotate the tSNE/UMAP/PCA embedding by
+#' @param rotation logical; if TRUE returns rotation matrix instead of the rotated matrix (default: FALSE)
+#'
+#' @return Rotated matrix
+#'
+#' @export
 
+rotate_matrix <- function(object, angle, rotation=FALSE){
+  angle <- (-angle * pi) / (-180)
+  rotm <- matrix(c(cos(angle), -sin(angle), sin(angle), cos(angle)), ncol=2)
+  object %*% rotm
+}
 
 
 #' Print tsne based on raw expression rather than SDA scores
