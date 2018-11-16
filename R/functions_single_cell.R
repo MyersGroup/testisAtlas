@@ -625,22 +625,20 @@ imputed_vs_raw <- function(genes_tmp, cell_metadata=datat, factorisation=results
       plot_grid(
         ggplot(tmp, aes(-PseudoTime, value)) +
           scale_color_brewer(palette = "Set1") +
-          geom_point(alpha=0.3, size=0.5, shape=20, stroke=0, colour=RColorBrewer::brewer.pal(3, name="Set1")[1]) +
-          ylab("Gene Expression") + xlab("Pseudotime") +
-          facet_wrap(~variable, scales = "free_y", ncol=1,strip.position = "right") +
-          ggtitle("Raw (Normalised)") +
-          
+          geom_point(alpha=0.5, size=0.7, shape=20, stroke=0, colour=RColorBrewer::brewer.pal(3, name="Set1")[1]) +
+          ylab("Normalised Gene Expression") + xlab("Pseudotime") +
+          facet_wrap(~variable, scales = "free_y", ncol=1, strip.position = "left") +
+          ggtitle("Unimputed") +
           theme_minimal() +
-          theme(strip.background = element_blank(), strip.text.y = element_blank())
+          theme(strip.background = element_blank(), strip.text.y = element_text(size=12), strip.placement = "outside")
         ,
         ggplot(predicted_genes, aes(-PseudoTime, value)) +
           scale_color_brewer(palette = "Set1") +
-          geom_point(alpha=0.3, size=0.5, shape=20, stroke=0, colour=RColorBrewer::brewer.pal(3, name="Set1")[2]) +
+          geom_point(alpha=0.5, size=0.7, shape=20, stroke=0, colour=RColorBrewer::brewer.pal(3, name="Set1")[2]) +
           xlab("Pseudotime") + ylab("") +
           facet_wrap(~variable, scales = "free_y", ncol=1, strip.position = "right") +
           ggtitle("Imputed") +
-          
-          theme_minimal()
+          theme_minimal()  + theme(strip.text.y = element_blank())
       , ncol=2)
     )
   }else{
@@ -960,7 +958,7 @@ plotCellAUC <- function(i, cumsum_predict, cumsum_train, cumsum_mean){
                label = paste0("Imputed AUC: ",signif(sum(cumsum_predict[,i])/ length(cumsum_mean[,i]),3),
                               "\nTraining AUC: ",signif(sum(cumsum_train[,i])/ length(cumsum_mean[,i]),3),
                               "\nAverage AUC: ",signif(sum(cumsum_mean[,i])/ length(cumsum_mean[,i]),3)),
-               x = 0.85, y = 0.5)
+               x = 0.6, y = 0.25)
   )
 }
 
