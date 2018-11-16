@@ -5,6 +5,8 @@ data.big
 data.big.desc
 SDA_objects_small.rds
 SDA_objects.rds
+cached_objects_small.rds
+cached_objects.rds
 
 shinyappAWS.sh
 
