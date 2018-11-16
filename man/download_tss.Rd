@@ -4,9 +4,16 @@
 \alias{download_tss}
 \title{Download location of Transcripion Start Sites from Ensembl Biomart}
 \usage{
-download_tss(gene_names)
+download_tss(host = "http://Apr2018.archive.ensembl.org", filter = "",
+  filter_values = "")
 }
 \arguments{
+\item{host}{url; to specify which version of Ensembl to use, see biomaRt::listEnsemblArchives()}
+
+\item{filter}{charachter vector; specifies which filters to use e.g. c("external_gene_name","transcript_biotype")}
+
+\item{filter_values}{list; corresponding values of the filter e.g. list(gene_names,"protein_coding")}
+
 \item{gene_names}{charachter vector; vector of gene names (symbols) to download TSS for}
 }
 \value{
