@@ -226,27 +226,30 @@ saveRDS(cellAUCs, file = "../data/tmp_cache/cellAUCs.rds")
 
 save(cumsum_predict, cumsum_train, cumsum_mean, file = "../data/tmp_cache/imputed_ranks.rds")
 
+cellAUCs <- readRDS("../data/tmp_cache/cellAUCs.rds")
+load("../data/tmp_cache/imputed_ranks.rds")
+
 density_auc <- get_density(cellAUCs$mean, cellAUCs$predict, kern=0.025)
 density_auc_t <- get_density(cellAUCs$train, cellAUCs$predict, kern=0.025)
 
-a <- ggplot(cbind(cellAUCs, density_auc), aes(train, predict, color=density_auc_t)) +
+plot_train <- ggplot(cbind(cellAUCs, density_auc), aes(train, predict, color=density_auc_t)) +
   geom_point(size=0.1) +
   geom_abline(colour="red") +
-  scale_colour_viridis() + 
+  scale_colour_viridis(option="inferno") + 
   theme_minimal() +
   theme(legend.position = "none") +
   labs(colour="Cell density", x="Cellwise Training Expression AUC", y="Imputed Expression AUC")
 
-b <- ggplot(cbind(cellAUCs, density_auc), aes(mean, predict, color=density_auc)) +
+plot_mean <- ggplot(cbind(cellAUCs, density_auc), aes(mean, predict, color=density_auc)) +
   geom_point(size=0.1) +
   geom_abline(colour="red") +
-  scale_colour_viridis() +
+  scale_colour_viridis(option="inferno") +
   theme_minimal() +
   theme(legend.position = "none") +
   labs(colour="Cell density", x="Average Training Expression AUC", y="Imputed Expression AUC")
 
-a
-b
+plot_train
+plot_mean
 
 ```
 
@@ -254,11 +257,11 @@ b
 
 ```{r}
 
-a=sample(1:20000,1);plotCellAUC(a);print(a)
-a=sample(1:20000,1);plotCellAUC(a);print(a)
-a=sample(1:20000,1);plotCellAUC(a);print(a)
-a=sample(1:20000,1);plotCellAUC(a);print(a)
-a=sample(1:20000,1);plotCellAUC(a);print(a)
+a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
+a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
+a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
+a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
+a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
 
 ```
 
@@ -320,6 +323,37 @@ e <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=log(library
 
 ```
 
+```{r}
+density_lib <- get_density(log(merge(datat, cellAUCs)$library_size), merge(datat, cellAUCs)[,predict/train], kern=0.07)
+
+ggplot(merge(datat, cellAUCs), aes(log(library_size), predict/train, colour=density_lib)) +
+  geom_point(size=0.1)+
+  scale_colour_viridis() +
+  theme_minimal() +
+  geom_hline(yintercept = 1, colour="red") +
+  labs(y="Ratio of Imputed Expression AUC\n to Cellwise Training Data AUC", x="Log Library Size (Total UMI Counts)")
+
+lib_size_plot <- ggplot(merge(datat, cellAUCs), aes(log10(library_size), predict/train, colour=-PseudoTime)) +
+  geom_point(size=0.1)+
+  scale_colour_viridis(guide_colorbar(title="PseudoTime")) +
+  theme_minimal() +
+  scale_y_continuous(breaks=c(1.0,1.4,1.8,2.2))+
+  guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
+  theme(legend.position = "bottom") +
+  geom_hline(yintercept = 1, colour="black") +
+  labs(y="Ratio of Imputed Expression AUC\n to Cellwise Training Data AUC", x="Log10 Library Size (Total UMI Counts)")
+
+lib_size_plot
+```
+
+```{r, fig.width=6}
+genes_tmp <- c("Zbtb16","Prdm9","Piwil1","Ccna1","Ssxb1","Lrrd1","Gapdhs")
+
+imputation_plot <- imputed_vs_raw(genes_tmp)
+imputation_plot
+
+```
+
 ## 80:20
 
 ```{r}
@@ -353,8 +387,15 @@ ggplot(cbind(cellAUCs, density_frac80), aes(mean80, predict80, color=density_fra
 save figure
 
 ```{r}
-pdf(width = 18, height = 12, file = "../results/imputationAUC.pdf")
-plot_grid(plotCellAUCg(5749), a, b, e, d, c, ncol = 3, labels = "AUTO")
+
+right_panel <- plot_grid(plotCellAUC(5749, cumsum_predict, cumsum_train, cumsum_mean),
+                         plot_train,
+                         lib_size_plot,
+                         plot_mean,
+                         ncol = 2, labels = c("B","C","D","E"))
+
+png(width = 4250, height = 2500, res = 300, file = "../results/imputation/imputationAUC.png")
+plot_grid(imputation_plot,right_panel, labels = c("A"), rel_widths = c(2,3))
 dev.off()
 ```
 
