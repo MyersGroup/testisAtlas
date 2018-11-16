@@ -141,6 +141,7 @@ clustered_heatmap <- function(cell_metadata=datat, name, annotation.col=NULL, co
 #' @param flip logical; should the cell scores be multiplied by -1 (score/gene loading sign combination are arbitrary like PCA scores).
 #' @param predict logical; Should gene expression be the predicted (imputed) values or raw normalised
 #' @param curve logical; Should principal curve (pseudotime) by plotted on top of the tSNE plot
+#' @param stages logical; Should the stages be annotated
 #' @param point_size numeric; size of point
 #' @param principal_curve string; name of list entry in principal_curves object, to use for pseudotime line
 #'
@@ -152,7 +153,7 @@ clustered_heatmap <- function(cell_metadata=datat, name, annotation.col=NULL, co
 #' 
 #' @import ggplot2 data.table viridis
 
-print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, point_size=0.25, log=FALSE, principal_curve="df_9", curve_width=0.5){
+print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
   
   if(i %in% colnames(cell_metadata)){ # plot feature in datat
     
@@ -163,15 +164,15 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       tmp$feature <- log(tmp$feature)
     }
     
-    p <- ggplot(tmp[order(feature)], aes(get(dim1), get(dim2), color = feature)) +
-      geom_point(size=point_size) +
+    p <- ggplot(tmp[order(feature)], aes(get(dim1), get(dim2))) +
+      geom_point(size=point_size, shape=21, stroke=0, aes(fill=feature)) +
       ggtitle(paste(i))
     
     if(is.numeric(tmp$feature)){
-      p <- p + scale_color_viridis(guide = guide_colourbar(i))
+      p <- p + scale_fill_viridis(guide = guide_colourbar(i))
     }else{
-      p <- p + scale_color_brewer(palette = "Paired") +
-        guides(colour = guide_legend(override.aes = list(size=3, alpha=1), title = i))
+      p <- p + scale_fill_brewer(palette = "Paired") +
+        guides(fill = guide_legend(override.aes = list(size=3, alpha=1), title = i))
     }
     
   }else if(mode(i)=="numeric"){# plot component not gene, could do this for any cell attribute in datat - future TODO
@@ -189,9 +190,9 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       invert = -1
     }
     
-    p <- ggplot(tmp[order(score)], aes(get(dim1), get(dim2), color = score)) +
-      geom_point(size=point_size) +
-      scale_color_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score (Component ",i,")"))) +
+    p <- ggplot(tmp[order(score)], aes(get(dim1), get(dim2))) +
+      geom_point(size=point_size, shape=21, stroke=0, aes(fill=score)) +
+      scale_fill_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = "top")) +
       ggtitle(paste(i,ifelse(exists("component_order_dt"),component_order_dt[component_number==i]$name,"")))
     
   }else{ # plot gene not component
@@ -207,23 +208,45 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       tmp <- merge(cell_metadata, expression_dt(gene, expression_matrix))[order(get(gene))]  
     }
 
-    p <- ggplot(tmp, aes(get(dim1), get(dim2), color=get(gene))) +
-      geom_point(size=point_size) +
-      scale_color_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"))) +
+    p <- ggplot(tmp, aes(get(dim1), get(dim2))) +
+      geom_point(size=point_size, shape=21, stroke=0, aes(fill=get(gene))) +
+      scale_fill_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"), title.position = "top")) +
       ggtitle(gene)
   }
   
+  curve_data <- data.table(princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 1],
+                           princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 2])
+  
+  colnames(curve_data) <- c(dim1,dim2)
+  
   if(curve){
-    curve_data <- data.frame(princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 1],
-                             princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 2])
-    
-    colnames(curve_data) <- c(dim1,dim2)
-    
     p <- p + geom_path(data = curve_data,
                        size = curve_width,
-                       colour="Black",
-                       alpha=0.5,
-                       arrow = arrow(angle = 15, ends = "first", type = "closed"))
+                       #aes(colour=Stage),
+                       alpha=0.7,
+                       arrow = arrow(angle = 12.5, ends = "first", type = "closed")) +
+      scale_colour_brewer(palette = "Set1")
+  }
+  
+  if(stages){
+    m <- nrow(curve_data)
+    
+    curve_data[m:(m*0.975),Stage := "Spermatogonia"]
+    curve_data[(m*0.975):(m*0.96),Stage := "Leptotene"]
+    curve_data[(m*0.96):(m*0.93),Stage := "Zygotene"]
+    curve_data[(m*0.93):(m*0.62),Stage := "Pachytene"]
+    curve_data[(m*0.62):(m*0.5),Stage := "Division II"]
+    curve_data[(m*0.5):(m*0.2),Stage := "Round Spermatid"]
+    curve_data[(m*0.2):0,Stage := "Elongating \nSpermatid"]
+    
+    curve_data[,Stage := factor(Stage, levels=c("Spermatogonia","Leptotene","Zygotene","Pachytene","Division II","Round Spermatid","Elongating \nSpermatid"))]
+    
+    p <- p + geom_path(data = curve_data[-c(1:290)],
+              size = 4,
+              aes(get(dim1)*1.7+3, get(dim2)*1.35-5, colour=Stage),
+              alpha=0.5) +
+      scale_colour_brewer(palette = "Set1")+
+      guides(colour = guide_legend(ncol = 3, title.position = "top"))
   }
   
   p <- p + theme_minimal() +
