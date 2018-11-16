@@ -529,6 +529,7 @@ print_binned_meanprob <- function(component){
 #' For a matrix of genes by motifs, calculate correlations
 #'
 #' @param regprobs matrix; a matrix of genes by motifs
+#' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #'
 #' @details 
 #' Calculates two-sided Pearson's product-moment correlation test. Positive and negative loadings are split and calculated seperately.
@@ -538,20 +539,25 @@ print_binned_meanprob <- function(component){
 #'
 #' @export
 
-correlate_regprobs <- function(regprobs=regprobs_matrix){
+correlate_regprobs <- function(regprobs=regprobs_matrix, factorisation=results){
   
-  pred2 <- t(results$loadings[[1]][,rownames(regprobs_matrix)])
+  pred2 <- t(factorisation$loadings[[1]][,rownames(regprobs)])
+  pred2 <- pred2[]
   
-  vvv2 = matrix(nrow=100, ncol=ncol(regprobs))
+  ncomp = ncol(factorisation$scores)
+  
+  vvv2 = matrix(nrow=ncomp*2, ncol=ncol(regprobs))
   for(j in 1:ncol(pred2)){
     # positive side
     vvv2[j,] = unlist(lapply(1:ncol(regprobs), function(i) cor.test(regprobs[which(pred2[,j]>0),i],pred2[which(pred2[,j]>0),j])$statistic))
     
     # negative side
-    vvv2[j+50,] = unlist(lapply(1:ncol(regprobs), function(i) cor.test(regprobs[which(pred2[,j]<0),i],abs(pred2[which(pred2[,j]<0),j]))$statistic))
+    vvv2[j+ncomp,] = unlist(lapply(1:ncol(regprobs), function(i) cor.test(regprobs[which(pred2[,j]<0),i],abs(pred2[which(pred2[,j]<0),j]))$statistic))
   }
   
-  dimnames(vvv2) <- dimnames(t(cor(regprobs,pred)))
+  #dimnames(vvv2) <- dimnames(t(cor(regprobs,factorisation$loadings_split)))
+  rownames(vvv2) <- colnames(factorisation$loadings_split)
+  colnames(vvv2) <- colnames(regprobs)
   colnames(vvv2) <- sapply(strsplit(colnames(vvv2), "_"),function(x) x[1])
   
   return(vvv2)
