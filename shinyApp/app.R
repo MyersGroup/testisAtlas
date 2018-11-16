@@ -127,7 +127,7 @@ ui <- fluidPage(
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("tSNE Settings:")),
       helpText("To Zoom, select a reigon and double click, to reset double click."),
-      checkboxInput("show_predict", "Show imputed expression?"),
+      checkboxInput("show_predict", "Show imputed expression?", value=TRUE),
       checkboxInput("show_arrow", "Display Pseudotime Arrow?"),
       checkboxInput("show_stages", "Annotate Stages?", value=TRUE),
       checkboxInput("diverging_colour", "Diverging Colour Scale?"),
