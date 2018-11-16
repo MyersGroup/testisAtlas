@@ -119,7 +119,7 @@ ui <- fluidPage(
       tags$head(tags$style("#distPlot{height:90vh !important;}")),
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("About:")),
-      tags$div(p(HTML(paste0('For more information see our ',a(href = 'http://doi.org/', 'paper')))))
+      tags$div(p(HTML(paste0('For more information see our ',a(href = 'https://doi.org/10.1101/393769', 'paper')))))
     ),
     mainPanel(
       tabsetPanel(type = "tabs",
