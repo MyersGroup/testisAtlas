@@ -59,13 +59,21 @@ server <- function(input, output) {
       }
     }
     
-    
-    print_tsne(tmp,
+    if(!input$umap){
     p <- print_tsne(tmp,
                predict = input$show_predict,
                curve = input$show_arrow,
                point_size = input$decimal) +
       coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = T)
+    }else{
+      p <- print_tsne(tmp,
+                      dim1="Umap1", dim2="Umap2",
+                      predict = input$show_predict,
+                      curve = FALSE,
+                      stages = FALSE,
+                      point_size = input$decimal) +
+        coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = T)
+    }
     
     p <- p + annotate("text", x=-Inf, y=-Inf, hjust=0, vjust=-1, label="Jung & Wells et. al.", colour='grey')
     
