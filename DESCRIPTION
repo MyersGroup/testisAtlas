@@ -15,7 +15,6 @@ Imports:
 	RColorBrewer,
 	NMF,
 	biomaRt,
-	clusterProfiler,
 	ggseqlogo,
 	gridExtra,
 	MASS,
@@ -31,5 +30,6 @@ Depends:
 Suggests:
 	knitr,
 	rmarkdown,
-	testthat
+	testthat,
+	clusterProfiler
 VignetteBuilder: knitr
