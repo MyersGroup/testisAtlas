@@ -1,4 +1,4 @@
-load("SDA_objects.rds", envir = .GlobalEnv)
+load("cached_objects.rds", envir = .GlobalEnv)
 library(bigmemory)
 options(bigmemory.allow.dimnames=TRUE)
 data <- as.matrix(data)
@@ -42,6 +42,5 @@ str(principal_curves[["df_9"]])
 library(data.table)
 library(testisAtlas)
 load_component_orderings()
-#source("functions_ordering.R", local = TRUE)
 
-save(chromosome.lengths, datat, principal_curves, results, rna_locations, component_order_dt, file = "SDA_objects_small.rds")
+save(chromosome.lengths, datat, principal_curves, results, rna_locations, component_order_dt, file = "cached_objects_small.rds")

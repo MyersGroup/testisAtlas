@@ -19,16 +19,14 @@ if(low_memory_mode){
   library(bigmemory)
   options(bigmemory.allow.dimnames=TRUE)
 
-  load("SDA_objects_small.rds", envir = .GlobalEnv)
+  load("cached_objects_small.rds", envir = .GlobalEnv)
   assign('data', attach.big.matrix("data.big.desc"), envir=.GlobalEnv)
   #data <- attach.big.matrix("data.big.desc")
 
 }else{
-  load("SDA_objects.rds", envir = .GlobalEnv)
+  load("cached_objects.rds", envir = .GlobalEnv)
   load_component_orderings()
 }
-
-#source("functions_single_cell.R", local = TRUE)
 
 gene_symbols <- readRDS("Ensembl_92_gene_symbols.rds")
 
