@@ -64,7 +64,7 @@ server <- function(input, output) {
                predict = input$show_predict,
                curve = input$show_arrow,
                point_size = input$decimal) +
-      coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = FALSE)
+      coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = T)
     
   })
   
