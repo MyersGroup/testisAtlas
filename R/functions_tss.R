@@ -489,6 +489,37 @@ find_motifs_parallel <- function(motif, database="hocomoco", custom=F, seqs=tss_
 }
 
 
+#' Calculate mean regulation probabilities for binned genes for each component
+#'
+#' @param regprobs matrix; rows = genes, columns = motif/transcription factors
+#' @param nbins integer; number of bins to put gene loadings into (equal number of genes in each)
+#' @param factorisation list; output from SDAtools::load_results()
+#' 
+#' @return 3d Array / Tensor, of motif by bin by component
+
+binned_mean_regprob <- function(regprobs=regprobs_matrix_custom, nbins=50, factorisation=results){
+  
+  gene_subset <- colnames(factorisation$loadings[[1]])
+  gene_subset <- gene_subset[gene_subset %in% rownames(regprobs)]
+  
+  ncomp <- nrow(factorisation$loadings[[1]])
+  
+  ordered_gene_names <- sapply(1:ncomp, function(x) names(sort(factorisation$loadings[[1]][x,gene_subset])))
+  
+  # for component, calculate binned mean regprob
+  bin_factor <- cut(seq_along(regprobs[,1]), nbins)
+  
+  binned_meanprob <- array(NA, dim=c(ncol(regprobs),nbins,ncomp))
+  
+  for(motif in seq_along(regprobs[1,])){
+    binned_meanprob[motif,,] <- sapply(1:ncomp,
+                                       function(i) tapply(regprobs[ordered_gene_names[,i], motif], bin_factor, function(x) mean(x,na.rm=T)))
+  }
+  
+  dimnames(binned_meanprob) <- list(colnames(regprobs), seq(nbins), rownames(factorisation$loadings[[1]]))
+  
+  return(binned_meanprob)
+}
 
 
 #' For a given component, display binned associations
