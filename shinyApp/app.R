@@ -13,6 +13,7 @@ library(ggplot2)
 library(viridis)
 library(SDAtools)
 library(testisAtlas)
+library(shinycssloaders)
 
 
 if(low_memory_mode){
@@ -144,13 +145,13 @@ ui <- fluidPage(
     mainPanel(
       tabsetPanel(type = "tabs",
                   tabPanel("tSNE",
-                           plotOutput("distPlot",
+                           withSpinner(plotOutput("distPlot",
                                       height = "auto",
                                       dblclick = "distPlot_dblclick",
                                       brush = brushOpts(
                                         id = "distPlot_brush",
                                         resetOnNew = TRUE)
-                           )
+                           ))
                   ),
                   tabPanel("Gene Loadings",
                            plotOutput("loadings"))

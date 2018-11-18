@@ -115,7 +115,7 @@ sudo apt-get --yes --force-yes update -qq
 sudo apt-get install -y libudunits2-dev libgeos++-dev
 
 # install github hosted packages
-sudo su - -c "R -e \"remotes::install_github('myersgroup/testisAtlas')\""
+sudo su - -c "R -e \"remotes::install_github(c('myersgroup/testisAtlas', 'andrewsali/shinycssloaders'))\""
 ```
 
 ## Upload the shiny app files
