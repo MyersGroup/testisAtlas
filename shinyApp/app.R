@@ -33,7 +33,7 @@ gene_symbols <- readRDS("Ensembl_92_gene_symbols.rds")
 
 options(shiny.sanitize.errors = FALSE)
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   library(testisAtlas)
   
@@ -99,6 +99,22 @@ server <- function(input, output) {
     }
   })
   
+  # select (pseudo)random gene
+  observeEvent(input$rand_gene, {
+    # Exclude boring components
+    #dput(component_order_dt[QC_fail==FALSE]$component_number)
+    good_components <- c(2, 3, 5, 7, 10, 11, 13, 15, 16, 17, 18, 19, 20, 21, 23, 24, 
+                         26, 27, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 44, 45, 
+                         47, 48, 49, 50)
+    # weight component choice by mean cell score of component
+    c <- sample(good_components, size = 1,
+                prob = results$component_statistics[good_components]$mean_score /
+                  sum(results$component_statistics[good_components]$mean_score))
+    new_gene <- names(sort(abs(results$loadings[[1]][c,]), T)[sample(1:200,1)])
+
+    updateTextInput(session, inputId="genes", value = new_gene)
+  })
+  
   output$loadings <- renderPlot({
     
     tmp <- input$genes
@@ -122,7 +138,9 @@ ui <- fluidPage(
   titlePanel("Mouse Testis Single Cell RNAseq Explorer"),
   sidebarLayout(
     sidebarPanel(
-      textInput("genes", "Input gene name or component number:", placeholder = "Prdm9"),
+      textInput("genes", "Input gene name / component number:", placeholder = "Prdm9"),
+      tags$div(class="label", style="text-align:centered; color:black; font-size:100%;", checked=NA, tags$strong("OR")),
+      actionButton("rand_gene", "Show me a random gene!"),
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("tSNE Settings:")),
       helpText("To Zoom, select a reigon and double click, to reset double click."),
