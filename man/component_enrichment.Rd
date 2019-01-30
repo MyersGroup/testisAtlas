@@ -5,7 +5,7 @@
 \title{Calculate enrichment for a set of genes for each component}
 \usage{
 component_enrichment(genes, threshold = 500, factorisation = results,
-  bg_genes = NULL)
+  bg_genes = NULL, test = "fisher")
 }
 \arguments{
 \item{genes}{character vector of gene set to look for enrichment for}

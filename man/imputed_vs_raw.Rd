@@ -4,8 +4,8 @@
 \alias{imputed_vs_raw}
 \title{Plot gene expression through pseudotime (Raw & Imputed)}
 \usage{
-imputed_vs_raw(genes_tmp, cell_metadata = datat, factorisation = results,
-  expression_matrix = data, facet = T)
+imputed_vs_raw(genes_tmp, cell_metadata = datat,
+  factorisation = results, expression_matrix = data, facet = T)
 }
 \arguments{
 \item{cell_metadata}{data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.}

@@ -5,8 +5,8 @@
 \title{Calculate enrichment for a set of genes in a single component}
 \usage{
 single_component_enrichment(component, genes = Mybl1_genes,
-  factorisation = results, pos = T, return_genes = F, threshold = 200,
-  bg_genes = NULL)
+  factorisation = results, pos = T, threshold = 200,
+  bg_genes = NULL, test = "fisher")
 }
 \arguments{
 \item{component}{number or name of component}
@@ -17,12 +17,11 @@ single_component_enrichment(component, genes = Mybl1_genes,
 
 \item{pos}{logical; if TRUE (default) the positive gene loadings are ranked highest}
 
-\item{return_genes}{logical; if TRUE (default: FALSE) ranking of genes in this component is returned,
-if false, output of fisher.test is returned}
-
 \item{threshold}{numeric; how many genes should be included in the top genes list used to calculate enrichment}
 
 \item{bg_genes}{which genes to use as the 'background' default uses all genes in the results object from SDA}
+
+\item{test}{string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)}
 }
 \value{
 
@@ -32,5 +31,4 @@ Calculate enrichment for a set of genes in a single component
 }
 \details{
 Calculate p value of enrichemnt (fishers test) in a component, given a set of genes
-requires the results object from SDA to be loaded
 }

@@ -4,8 +4,8 @@
 \alias{plot_meanprob_bycomp}
 \title{Plot meanprob over components}
 \usage{
-plot_meanprob_bycomp(binned_meanprob, plot = TRUE, facet_scales = "free_y",
-  highlight = NULL)
+plot_meanprob_bycomp(binned_meanprob, plot = TRUE,
+  facet_scales = "free_y", highlight = NULL)
 }
 \arguments{
 \item{plot}{logical; should results be plotted (default), or return matrix?}

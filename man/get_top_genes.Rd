@@ -4,7 +4,8 @@
 \alias{get_top_genes}
 \title{Find the top x genes for a component}
 \usage{
-get_top_genes(component, factorisation = results, n = 20, values = FALSE)
+get_top_genes(component, factorisation = results, n = 20,
+  values = FALSE)
 }
 \arguments{
 \item{component}{integer or string; number or name of component in 'results' object}

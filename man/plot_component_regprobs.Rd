@@ -4,7 +4,8 @@
 \alias{plot_component_regprobs}
 \title{plot regprobs within binned components}
 \usage{
-plot_component_regprobs(component, binned_meanprob, facet_scales = "free_y")
+plot_component_regprobs(component, binned_meanprob,
+  facet_scales = "free_y")
 }
 \arguments{
 \item{component}{numeric or string; rowname of `results$loadings[[1]]` corresponding to a component name or number}

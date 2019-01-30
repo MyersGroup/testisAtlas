@@ -4,8 +4,8 @@
 \alias{mean_prob_bycomp}
 \title{DEPRECATED, only use if you want custom number of n, For a given component, display binned associations}
 \usage{
-mean_prob_bycomp(regprobs = regprobs_matrix_custom, plot = TRUE, n = 100,
-  factorisation = results, facet_scales = "free_y")
+mean_prob_bycomp(regprobs = regprobs_matrix_custom, plot = TRUE,
+  n = 100, factorisation = results, facet_scales = "free_y")
 }
 \arguments{
 \item{regprobs}{matrix; rows = genes, columns = motif/transcription factors}

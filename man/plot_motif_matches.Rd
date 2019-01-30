@@ -4,10 +4,13 @@
 \alias{plot_motif_matches}
 \title{For denovo motif and known motif, plot sequence logos}
 \usage{
-plot_motif_matches(best_denovo, titles = TRUE, yaxis = FALSE)
+plot_motif_matches(best_denovo, motif_finder_result = results_all,
+  titles = TRUE, yaxis = FALSE)
 }
 \arguments{
 \item{best_denovo}{integer; motif id in object 'hocomoco'}
+
+\item{motif_finder_result}{named list; each item is results of MotifFinder, and the names correspond to best_denovo$X.Query.ID}
 
 \item{titles}{logical; if TRUE (default) the logos titles are shown using $Target.Name and $X.Query.ID from best_denovo}
 

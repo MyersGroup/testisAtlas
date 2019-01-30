@@ -5,8 +5,8 @@
 \title{Plot pseudotime expression panel}
 \usage{
 plot_pseudotime_expression_panel(genes, factorisation = results,
-  cell_metadata = datat, ncol = 7, title = "Histone Genes", gam_k = 5,
-  point_size = 0.2, highlight_reigon = NULL)
+  cell_metadata = datat, ncol = 7, title = "Histone Genes",
+  gam_k = 5, point_size = 0.2, highlight_reigon = NULL)
 }
 \arguments{
 \item{genes}{character vector; vector of gene symbols, of which expression values will be plotted over pseudotime}
