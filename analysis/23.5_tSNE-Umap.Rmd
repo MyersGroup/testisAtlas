@@ -1,0 +1,113 @@
+---
+title: "Tsne Stability + Umap"
+output: html_notebook
+---
+
+Check Tsne is stable over different seeds
+
+## Tsne different seeds
+
+```{r, fig.width=6}
+
+library(SDAtools)
+library(ggplot2)
+library(data.table)
+
+results <- load_results(results_folder = "../results/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(results$loadings[[1]]) <- paste0("V",1:50)
+rownames(results$pips[[1]]) <- paste0("V",1:50)
+str(results)
+
+do_tsne <- function(i){
+  seed <- sample(10^6,1)
+  set.seed(seed)
+  tsne_data5 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+  tsne_data5$seed <- seed
+  return(tsne_data5)
+}
+
+QC_fail_components <- c(22,6,25,29,12,28,41,1,46,4,8,14,9,43)
+
+tsne_repo_rand_seeds <- mclapply(1:20, function(x) do_tsne(x), mc.cores = 16, mc.silent=TRUE, mc.preschedule = FALSE)
+
+saveRDS(tsne_repo_rand_seeds, "../data/tmp_cache/tsne_repo_rand_seeds.rds")
+
+tsne_repo_rand_seeds <- readRDS("../data/tmp_cache/tsne_repo_rand_seeds.rds")
+
+#c(262279, 609512, 225666, 140187, 857033, 857033, 880642, 940864, 293105, 648670)
+
+selected <- which(sapply(tsne_repo_rand_seeds, function(x) x$seed) %in% c(225666, 262279, 648670)) #880642,
+rotations <- c(-165, -50,  45) #95,
+```
+
+# Uniform Manifold Approximation and Projection (UMAP)
+
+Compared to t-SNE it preserves as much of the local, and more of the global data structure, with a shorter runtime.
+
+```{r, fig.width=10}
+# devtools::install_github("jlmelville/uwot")
+library(uwot)
+
+set.seed(116189)
+# nb need  to set threads to 1 for repoduciability to work
+sda_umap <- umap(results$scores[,-QC_fail_components], n_neighbors = 100, n_threads = 1)
+colnames(sda_umap) <- c("Umap1","Umap2")
+
+saveRDS(sda_umap, file = "../data/umap.rds")
+sda_umap <- readRDS("../data/umap.rds")
+
+str(sda_umap)
+
+datat$Umap1 <- NULL
+datat$Umap2 <- NULL
+
+datat <- merge(datat,
+      cbind(data.table(sda_umap), cell=rownames(results$scores))
+)
+
+
+print_tsne("PseudoTime",dim="Umap1",dim2="Umap2")
+
+
+print_tsne(5,dim="Umap1",dim2="Umap2")
+print_tsne(20,dim="Umap1",dim2="Umap2")
+print_tsne(34,dim="Umap1",dim2="Umap2")
+
+print_tsne(38,dim="Umap1",dim2="Umap2") # X activation
+print_tsne(48,dim="Umap1",dim2="Umap2") # odd pachytene clump
+
+
+print_tsne(9,dim="Umap1",dim2="Umap2") # respiration
+
+print_tsne(22,dim="Umap1",dim2="Umap2") # ribosomal
+
+print_tsne("Prdm9",dim="Umap1",dim2="Umap2")
+
+```
+
+# Create figure
+
+```{r}
+tsne_repo_plots <- vector("list", 4)
+
+for(i in 1:3){
+tsne_repo_plots[[i]] <- ggplot(data.table(rotate_matrix(tsne_repo_rand_seeds[[selected[i]]]$Y, rotations[i])), aes(V1, V2, colour=datat$PseudoTime[match(rownames(results$scores), datat$cell)])) +
+  geom_point(size=0.1) +
+  scale_color_viridis() +
+  theme(legend.position = "none") +
+  labs(x="tSNE 1", y="tSNE 2") +
+  ggtitle(paste0("Random Seed: ",tsne_repo_rand_seeds[[selected[i]]]$seed," (rotated ",rotations[i],"°)"))
+}
+
+tsne_repo_plots[[4]] <- ggplot(datat, aes(Umap1, -Umap2, colour=PseudoTime)) +
+  geom_point(size=0.1) +
+  scale_color_viridis() +
+  theme(legend.position = "none") +
+  labs(x="UMAP 1", y="-UMAP 2") +
+  ggtitle("UMAP, Random Seed: 116189")
+
+png("../results/tsne_random_seeds.png", width = 3000, height = 2400, res=300)
+plot_grid(plotlist = tsne_repo_plots, labels = "AUTO")
+dev.off()
+```
+
