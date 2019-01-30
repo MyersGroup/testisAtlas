@@ -686,51 +686,11 @@ crem_enrich <- component_enrichment(crem_genes, threshold = 500)
 
 rfx2_enrich <- component_enrichment(rfx2_genes, threshold = 500)
 
-crem_enrich$KO <- "Enrichment of genes downregulated in Crem KO & Bound by Crem in ChIPseq"
-Mybl1_enrich$KO <- "Enrichment of predicted direct targets of MYBL1"
-rfx2_enrich$KO <- "Enrichment of genes downregulated in Rfx2 KO & Bound by Rfx2 in ChIPseq"
+Myb_enrich_plot <- manhatten_plot(Mybl1_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=3, legend_position=c(0.25,0.6), repel_force = 10) + ggtitle("Enrichment of predicted direct targets of MYBL1")
 
-Myb_enrich_plot <- ggplot(Mybl1_enrich, aes(Component, -log(p.value,10), label=paste0(Component," - ",name))) +
-  geom_point(aes(colour=Type)) +
-  geom_label_repel(data=Mybl1_enrich[p.value<1e-5], ylim=c(5,NA), force = 20, box.padding = 0.6) +
-  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5),
-        legend.position = c(0.25,0.8),
-        legend.background = element_rect(colour="black")) +
-  scale_color_brewer(palette = "Set1") +
-  xlab("Components by Type and Pseudotime") +
-  facet_wrap(~KO, scales = "free_y", nrow=2)
+crem_enrich_plot <- manhatten_plot(crem_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=3, legend_position=c(0.25,0.6), repel_force = 150) + ggtitle("Enrichment of genes downregulated in Crem KO & Bound by Crem in ChIPseq")
 
-Myb_enrich_plot
-
-crem_enrich_plot <- ggplot(crem_enrich, aes(Component, -log(p.value,10), label=paste0(Component," - ",name))) +
-  geom_point(aes(colour=Type)) +
-  geom_label_repel(data=crem_enrich[p.value<1e-20], ylim=c(5,NA), box.padding = 0.6) +
-  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5),
-        legend.position = c(0.25,0.8),
-        legend.background = element_rect(colour="black")) +
-  scale_color_brewer(palette = "Set1") +
-  xlab("Components by Type and Pseudotime") +
-  facet_wrap(~KO, scales = "free_y", nrow=2)
-
-crem_enrich_plot
-
-rfx2_enrich_plot <- ggplot(rfx2_enrich, aes(Component, -log(p.value,10), label=paste0(Component," - ",name))) +
-  geom_point(aes(colour=Type)) +
-  geom_label_repel(data=rfx2_enrich[p.value<1e-10], ylim=c(5,NA), force=50 , box.padding = 0.6) +
-  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5),
-        legend.position = c(0.25,0.8),
-        legend.background = element_rect(colour="black")) +
-  scale_color_brewer(palette = "Set1") +
-  xlab("Components by Type and Pseudotime") +
-  facet_wrap(~KO, scales = "free_y", nrow=2)
-
-rfx2_enrich_plot
+rfx2_enrich_plot <- manhatten_plot(rfx2_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=4, legend_position=c(0.25,0.6), repel_force = 20) + ggtitle("Enrichment of genes downregulated in Rfx2 KO & Bound by Rfx2 in ChIPseq")
 
 pdf(height=12, width=8, file="../results/TF_enrich.pdf")
 cowplot::plot_grid(Myb_enrich_plot, rfx2_enrich_plot, crem_enrich_plot, nrow = 3)
