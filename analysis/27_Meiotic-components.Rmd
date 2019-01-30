@@ -425,26 +425,17 @@ saveRDS(c83_rug_plot, "../data/tmp_cache/c83_rug_plot.rds")
 hormad1_enrich <- component_enrichment(Hormad1KO_genes)
 trip13_enrich <- component_enrichment(Trip13KO$V1)
 
-hormad1_enrich$KO <- "Enrichment of Hormad1 KO DE Genes"
-trip13_enrich$KO <- "Enrichment of Trip13 KO DE Genes"
+hormad1_enrich$KO <- "Enrichment of Hormad1 KO Overexpressed Genes"
+trip13_enrich$KO <- "Enrichment of Trip13 KO Overexpressed Genes"
 
 trip13_enrich <- rbind(trip13_enrich, hormad1_enrich)
 
-trip13_enrich_plot <- ggplot(trip13_enrich, aes(Component, -log(p.value,10), label=paste0(Component," - ",name))) +
-  geom_point(aes(colour=Type)) +
-  geom_label_repel(data=trip13_enrich[p.value<1e-20], ylim=c(30,140), force = 20, nudge_y = -20) +
-  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5),
-        legend.position = c(0.85,0.8),
-        legend.background = element_rect(colour="black")) +
-  scale_color_brewer(palette = "Set1") +
-  xlab("Components by Type and Pseudotime") +
-  facet_wrap(~KO, scales = "free_y", nrow=2)
+set.seed(123)
+trip13_enrich_plot <- manhatten_plot(trip13_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn = 4, repel_force = 10, legend_position = c(0.1,0.5)) + facet_wrap(~KO, scales='free_y', nrow=1)
 
 trip13_enrich_plot
 
-saveRDS(trip13_enrich_plot, "../data/tmp_cache/trip13_enrich_plot.rds")
+saveRDS(trip13_enrich_plot, "../data/plots/trip13_enrich_plot.rds")
 
 plot(results$loadings[[1]][38,Trip13KO$V1], ylab="Component 38 Loading", xlab="Genes overexpressed in Trim18 KO (ordered by p value)")
 

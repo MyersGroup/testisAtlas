@@ -27,15 +27,15 @@ Notable hits in top 25 genes include: Apoe, Tyrobp, Trem2, and Ms4a7 (Part of MS
 
 ```{r, fig.width=6}
 devtools::load_all("~/Dropbox/Github/SDAtools/")
-rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
-genome_loadings(results$loadings[[1]][11,], label_both = FALSE, max.items = 25, label.size = 4) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+#rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
+genome_loadings(results$loadings[[1]][11,], label_both = FALSE, max.items = 25, label.size = 4, gene_locations = rna_locations) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
 ```
 
 
 Genes from Late Onset Alzheimers Disease GWAS - expressed in macropgages (component 11)
 
 ```{r, fig.width=6}
-grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)},
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.5, predict = T)},
                                     input = c("Apoe","Trem2","Bin1","Ms4a6d","Ms4a6b","Ms4a6c","Ms4a7","Tyrobp","Cd33","Mef2c","Spi1","H2-Eb1")),
              nrow=3, heights = c(1,1,1))
 ```
@@ -44,7 +44,7 @@ Genes from Late Onset Alzheimers Disease GWAS - not specifically expressed in ma
 
 ```{r, fig.width=6}
 
-grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)},
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.5, predict = T)},
                                     input = c("Clu","Picalm","Abca7","Cd2ap","Zcwpw1","Nme8","Inpp5d","Sorl1","Rin3","Ptk2b")),
              nrow=3, heights = c(1,1,1))
 
@@ -53,7 +53,7 @@ grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0
 Other genes
 
 ```{r, fig.width=6}
-grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.1, predict = T)},
+grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0.5, predict = T)},
                                     input = c("Lpl","Itm2c","Itm2b","App")),
              nrow=2, heights = c(1,1))
 ```
@@ -90,25 +90,19 @@ Repeating this one sided fishers test for all components gives three results wit
 
 AZ_enrich <- component_enrichment(AD_genes, threshold = 200)
 
-AZ_enrich[order(Component), rank := 1:100]
-AZ_enrich[rank >= 41, Type := "Meiotic"]
-AZ_enrich[rank < 41, Type := "Somatic"]
+AZ_enrich_plot <- manhatten_plot(AZ_enrich, topn = 2, repel_force = 20)
 
-AZ_enrich_plot <- ggplot(AZ_enrich, aes(Component, -log(p.value,10), label=paste0(Component," - ",name))) +
-  geom_point(aes(colour=Type)) +
-  geom_label_repel(data=AZ_enrich[p.value<0.05/100], ylim=c(5,10)) +
-  geom_hline(yintercept = -log(0.05/100,10), col="red", size=0.2) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1),
-        legend.position = c(0.8,0.7),
-        legend.background = element_rect(colour="black")) +
-  scale_color_brewer(palette = "Set1") +
-  xlab("Components by Type and Pseudotime")
-
-AZ_enrich_plot
-  
-saveRDS(AZ_enrich_plot, "../data/tmp_cache/AZ_enrich_plot.rds")
+saveRDS(AZ_enrich_plot, "../data/plots/AZ_enrich_plot.rds")
 ```
 
 
+## MQ Scores & Loadings
 
+```{r}
+
+v11_loadings_plot <- genome_loadings(results$loadings[[1]][11,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = c(AD_genes,"Ms4a7","Ms4a6c"), label_genes = c("Trem2","Apoe","Mef2c","H2-Eb1","Spi1","Bin1","Ms4a7","Cd33")) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+
+C11_MQ_plot <- plot_grid(v11_loadings_plot, plot_cell_scores("V11", point_size = 2), ncol = 2, rel_widths = c(3,1))
+
+saveRDS(C11_MQ_plot, "../data/plots/C11_MQ_plot.rds")
+```
