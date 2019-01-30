@@ -1,0 +1,39 @@
+---
+title: "Transcription Programme Cartoon"
+output: html_notebook
+---
+
+```{r}
+tmp <- rbind(
+data.table(Expression=dnorm(seq(0,10,0.01), 4, 1)*10, Transcriptional_Programme="A"),
+data.table(Expression=dnorm(seq(0,10,0.01), 5.5, 0.5)*6, Transcriptional_Programme="B"),
+data.table(Expression=dexp(seq(10.6,0.6,-0.01), 1)*10, Transcriptional_Programme="C"),
+data.table(Expression=dlnorm(seq(0.4,10.4,0.01), log(5), log(3))*10, Transcriptional_Programme="D"),
+data.table(Expression=dbeta(seq(0.1,1.1,0.001), 4, 2.5, ncp = 0.2), Transcriptional_Programme="E"))
+
+tmp <- cbind(tmp, "Time"=seq(0,10,0.01))
+
+pdf("results/simulated_programme.pdf", height = 9/2, width = 16/2)
+ggplot(tmp, aes(Time, Expression, colour=Transcriptional_Programme)) +
+        geom_line(size=1) +
+        theme_classic(base_size = 15) +
+        scale_color_brewer(palette='Set1') +
+        scale_x_continuous(breaks=c(0,2,4,6,8,10))+
+        theme(legend.position="bottom",
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank())
+dev.off()
+
+# tmp_norm <- tmp[,.(Transcriptional_Programme, Expression=Expression/sum(Expression)),by=PseudoTime]
+# 
+# ggplot(tmp_norm, aes(PseudoTime,Expression, colour=Transcriptional_Programme)) +
+#         geom_col() +
+#         theme_classic(base_size = 15) +
+#         scale_colour_brewer(palette='Set3') +
+#         scale_x_continuous(expand=c(0,0), breaks=c(0,2,4,6,8,10))+
+#         scale_y_continuous(expand=c(0,0), labels = scales::percent)+
+#         theme(legend.position="bottom",
+#               panel.grid.major = element_blank(),
+#               panel.grid.minor = element_blank())
+
+```
