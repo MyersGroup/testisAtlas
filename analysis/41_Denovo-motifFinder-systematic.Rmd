@@ -494,3 +494,19 @@ saveRDS(tmp,"../data/tmp_cache/denovo_summary_trimmed.rds")
 ```
 
 
+Calculate regprobs using found motifs pwms
+
+```{r}
+results_all <- readRDS("../data/motifs/motifFinder_denovo_results_all_clean.rds")
+
+tmp <- lapply(results_all[best_denovo$X.Query.ID], get_PWM)
+
+names(tmp) <- best_denovo$Target.Name
+
+library(parallel)
+system.time(results_custom <- mclapply(tmp, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
+
+saveRDS(results_custom, "MF_results_custom.rds")
+
+```
+
