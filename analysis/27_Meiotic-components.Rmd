@@ -407,18 +407,19 @@ tmp[gene %in% Trip13KO$V1, KO := "Trip13"]
 tmp[gene %in% Hormad1KO_genes, KO := "Hormad1"]
 
 
-c83_rug_plot <- ggplot(tmp, aes(rank, loading,colour=KO)) +
-  geom_point(colour="black") +
-  geom_rug(data=tmp[gene %in% Trip13KO$V1], sides = "b", size=0.2) +
-  geom_rug(data=tmp[gene %in% Hormad1KO_genes], sides = "t", size=0.2) +
-  ylab("Component 38 Gene Loading") + xlab("Rank of gene by loading") +
-  scale_color_brewer(palette = "Set1")+
-  guides(colour = guide_legend(override.aes = list(size=5))) +
-  theme(legend.position = c(0.7,0.7)) + labs(colour="KO DE Genes")
+c38_rug_plot <- ggplot(tmp, aes(rank, loading,colour=KO)) +
+	geom_point(colour="black") +
+	geom_rug(data=tmp[gene %in% Trip13KO$V1], sides = "b", length=0.1) +
+	geom_rug(data=tmp[gene %in% Hormad1KO_genes], sides = "t", length=0.1) +
+	scale_y_continuous(expand=c(0.1,0.1)) +
+	ylab("Component\n 38 Gene Loading") + xlab("Rank of gene by loading") +
+	scale_color_brewer(palette = "Set1")+
+	guides(colour = guide_legend(override.aes = list(size=5))) +
+	theme(legend.position = c(0.6,0.6)) + labs(colour="KO Overexpressed Genes")
 
-c83_rug_plot
+c38_rug_plot
 
-saveRDS(c83_rug_plot, "../data/tmp_cache/c83_rug_plot.rds")
+saveRDS(c38_rug_plot, "../data/plots/c38_rug_plot.rds")
 
 # scale_color_manual(values=c("Trip13"="#377EB8", "Hormad1"="#E41A1C")) +
 
