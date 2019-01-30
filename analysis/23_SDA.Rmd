@@ -305,22 +305,19 @@ str(results)
 check_convergence(results)
 loading_distribution(results)
 
-qplot(as.numeric(results$loadings[[1]]), binwidth = 0.005, 
-        main = "Overall distribution of gene loadings", xlab = "Gene Loading")
-
-density_data <- rbind(data.table(density=as.data.table(density(results$loadings[[1]][results$pips[[1]]>0.5], bw=1e-4, n=5000)[c("x","y")]), type="Slab (PIP>0.5)"),
-                  data.table(density=as.data.table(density(results$loadings[[1]][results$pips[[1]]<0.5],bw=1e-4, n=5000)[c("x","y")]), type="Spike (PIP<0.5)"))
-setnames(density_data, c("gene_loading","density","type"))
-
-sparsity_plot <- ggplot(density_data, aes(gene_loading, density, colour=type)) +
-  geom_line()+
-  facet_zoom(xy = density<20 & abs(gene_loading)<0.1) +
-  scale_color_brewer(palette = "Set1") + 
-  theme_bw() +
-  theme(legend.title=element_blank()) +
-  labs(x="Gene Loading",y="Density") +
-  scale_x_continuous(labels = function(x) as.character(x))
-sparsity_plot
+density_data <- data.table("loading"=c(results$loadings[[1]][results$pips[[1]]>0.5],
+                                       results$loadings[[1]][results$pips[[1]]<0.5]),
+									   "type"=c(rep("Slab (PIP>0.5)         ",sum(results$pips[[1]]>0.5)),
+									   			rep("Spike (PIP<0.5)",sum(results$pips[[1]]<0.5))))
+				  
+sparsity_plot <- ggplot(density_data, aes(loading, colour=type)) + 
+    stat_density(bw=1e-3, n=2^11, geom="line", position = "identity") +
+	facet_zoom(xlim=c(-0.1,0.1), ylim=c(0,15)) + 
+	scale_color_brewer(palette = "Set1") + 
+	theme_bw() +
+	theme(legend.title=element_blank(), legend.position = "top") +
+	labs(x="Gene Loading",y="Density") +
+	scale_x_continuous(labels = function(x) as.character(x))
 
 saveRDS(sparsity_plot, "../data/tmp_cache/sparsity_plot.rds")
 
