@@ -5,6 +5,9 @@ sudo: false
 cache: packages
 bioc_packages:
   - biomaRt
+  - clusterProfiler
+
+apt_packages: libudunits2-dev
 
 warnings_are_errors: false
 
