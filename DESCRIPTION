@@ -16,6 +16,7 @@ Imports:
 	NMF,
 	biomaRt,
 	ggseqlogo,
+	ggnewscale,
 	gridExtra,
 	MASS,
 	princurve,
@@ -26,7 +27,8 @@ Remotes:
 	myersgroup/MotifFinder
 RoxygenNote: 6.1.1
 Depends:
-	MotifFinder
+	MotifFinder,
+	SDAtools
 Suggests:
 	knitr,
 	rmarkdown,
