@@ -362,6 +362,7 @@ export_all_pwms <- function(results_all, file){
 #' For denovo motif and known motif, plot sequence logos
 #'
 #' @param best_denovo integer; motif id in object 'hocomoco'
+#' @param motif_finder_result named list; each item is results of MotifFinder, and the names correspond to best_denovo$X.Query.ID
 #' @param titles logical; if TRUE (default) the logos titles are shown using $Target.Name and $X.Query.ID from best_denovo
 #' @param yaxis logical; if TRUE (default: FALSE) yaxis is shown
 #'
@@ -377,7 +378,7 @@ export_all_pwms <- function(results_all, file){
 #' @export
 #' @import MotifFinder
 
-plot_motif_matches <- function(best_denovo, titles=TRUE, yaxis=FALSE){
+plot_motif_matches <- function(best_denovo, motif_finder_result=results_all, titles=TRUE, yaxis=FALSE){
   
   matched_pwms <- list()
   
@@ -391,7 +392,7 @@ plot_motif_matches <- function(best_denovo, titles=TRUE, yaxis=FALSE){
       title <- titles[i]
     }
     
-    matched_pwms[[i]] <- plot_tomtom_match(query_motif = results_all[[best_denovo[i]$X.Query.ID]],
+    matched_pwms[[i]] <- plot_tomtom_match(query_motif = motif_finder_result[[best_denovo[i]$X.Query.ID]],
                                            tomtom_match = best_denovo[i],
                                            yaxis=yaxis,
                                            titles=title)
