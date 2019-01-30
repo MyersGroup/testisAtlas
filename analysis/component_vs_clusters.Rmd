@@ -1,0 +1,293 @@
+---
+title: "Continuous Expression Trajectories"
+output: html_notebook
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(viridis)
+library(ggrastr)
+devtools::load_all() # library(testisAtlas)
+
+load("../data/tmp_cache/cached_objects.rds")
+load_component_orderings()
+#load("../data/archive/gene_annotations.rds")
+
+```
+
+
+# Components overlap and vary continuously
+
+```{r, fig.width=7, fig.height=4}
+components_w_pseudotime <- paste0("V",component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$component_number)
+
+# Plot component loading by pseudotime
+merge_sda3_melt <- melt(datat[somatic4==FALSE, c("cell", "PseudoTime", components_w_pseudotime), with=FALSE], id.vars = c("cell","PseudoTime"), variable.name = "Component")
+
+levels(merge_sda3_melt$Component) <- paste(levels(merge_sda3_melt$Component), component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$name)
+
+tmp <- merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(4,12,13,16,19,21,25,28)]]
+
+tmp[as.integer(Component) %in% c(4,13,16,19,25), value := value*(-1)]
+
+scores_pseudotime <- ggplot(tmp, aes(-PseudoTime, value, colour=Component, group=Component)) +
+  geom_point_rast(alpha=0.4, size=0.5, stroke=0) +
+  geom_smooth(size=1, method = "gam", formula = y ~ s(x, k = 20), se = F) +#colour="black",
+  ylab("Cell Component Score") +
+  xlab("Pseudotime") +
+  theme_minimal() +
+  scale_colour_manual(values=RColorBrewer::brewer.pal(9,"Set1")[-6])+
+ # theme(legend.position = "bottom") +
+  ylim(-2,8)
+#+ guides(colour = guide_legend(nrow=3))
+
+scores_pseudotime
+
+ggsave(scores_pseudotime, width=16/1.7, height=9/1.7, filename = "../results/overlaping_components2.png")
+
+```
+
+```{r, fig.height=11, fig.width=5}
+# tall version faceted
+pdf("../results/overlaping_components_faceted.pdf", height = 16, width = 9)
+scores_pseudotime +
+  scale_y_continuous() +
+  facet_wrap(~Component, ncol=1, scales="free_y") +
+  theme(legend.position = "none")
+dev.off()
+```
+
+## Structure-esque plot
+
+```{r, fig.width=6}
+tmp <- merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(4,6,8,4,12,13,16,19,21,25,28)]]
+
+tmp[as.integer(Component) %in% c(4,6,8,13,16,19,25), value := value*(-1)]
+
+tmp[, cell2 := factor(cell, levels = merge_sda3_melt[order(-PseudoTime)][Component=="V5 Leptotene"]$cell)]
+tmp[,value_pos := max(c(0,value)),by=.(cell,Component)]
+
+component_colours <- c(RColorBrewer::brewer.pal(9,"Set1"),"skyblue", "black") #"white",
+
+structure <- ggplot(tmp, aes(cell2, value_pos, fill=Component, colour=Component)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = component_colours) +
+  scale_colour_manual(values = component_colours) +
+  labs(x="Pseudotime ordered cells", y="Cell Component Score") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.position = "bottom")+
+  guides(colour = guide_legend(ncol = 2), fill = guide_legend(ncol = 2)) +
+  scale_y_continuous(expand=c(0,0))
+
+structure
+
+saveRDS(structure, file = "../data/plots/structure_plot.rds")
+
+pdf("../results/structure.pdf", height = 7, width = 10)
+structure
+dev.off()
+```
+
+Non-normalised Structure plot
+
+```{r, fig.width=6}
+
+ggplot(tmp, aes(cell2, value, fill=Component, colour=Component)) +
+  geom_col() +
+  scale_fill_manual(values = component_colours) +
+  scale_colour_manual(values = component_colours) +
+  labs(x="Pesudotime ordered cells", y="Cell Component Score") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.position = "bottom" ) +
+  ylim(0,NA)
+```
+
+
+
+# The genes are not the same
+
+```{r, fig.height=6}
+
+component_subset <- c("V33","V2","V5","V23","V13","V42","V20","V30","V15","V17")
+is_negative <- diag(c(-1,-1,-1,1,-1,-1,-1,1,-1,1))
+
+rownames(is_negative) <- component_subset
+
+sign_corrected_loadings_subset <- is_negative %*% results$loadings[[1]][component_subset,]
+
+top_20_genes <- sapply(component_subset, function(x) (names(sort(sign_corrected_loadings_subset[x,],T))[1:10]))
+
+avoid_overlap <- function(x) 
+{
+  ind <- seq_along(x) %% 2 == 0
+  x[ind] <- paste0(x[ind],"--------------") #————————
+  x[!ind] <- paste0(x[!ind],"-") #-
+  x
+}
+#                              
+tmp2 <- t(scale(t(sign_corrected_loadings_subset), center = F, scale = T))[,unique(c(top_20_genes))] #sign_corrected_loadings_subset[,unique(c(top_20_genes))] #
+
+colnames(tmp2) <- avoid_overlap(colnames(tmp2))
+
+# do heatmap in ggplot so can easily combine figures
+genes_melt <- melt(data.table(t(tmp2), keep.rownames = T),
+                   id.vars = "rn",
+                   variable.name = "Component",
+                   value.name = "Scaled_Gene_Loading")
+
+setnames(genes_melt, "rn","Gene")
+genes_melt$Gene <- factor(genes_melt$Gene, colnames(tmp2))
+
+
+top_genes_plot <- ggplot(genes_melt, aes(Component, Gene, fill=Scaled_Gene_Loading))+
+  geom_tile() +
+  scale_fill_gradient2() +
+  #scale_fill_distiller(palette = "RdBu") +
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        axis.ticks.y=element_blank(),
+        axis.text.y=element_text(size=11, margin=margin(0,-6,0,0)),
+        panel.grid.major.y = element_blank()
+        )+
+  ylab(NULL)
+top_genes_plot
+
+saveRDS(top_genes_plot, "../data/plots/top_genes_plot.rds")
+
+# can't easily include this in panel with other ggplot objects
+# Heatmap(t(tmp2),
+#         name = "Column scaled \ngene loadings \nfor the top \n10 genes of\n each component",
+#         cluster_rows = F,
+#         col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)), #viridisLite::viridis(100),
+#         cluster_columns = F,
+#         split = rep(1:10, each=10))
+
+# Heatmap(cor(t(results$loadings[[1]][component_subset,])),
+#         name = "Correlation of gene loadings",
+#         col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),)
+
+library(UpSetR)
+
+top_250_genes <- sapply(component_subset, function(x) (names(sort(-abs(results$loadings[[1]][x,])))[1:250]))
+
+upset(fromList(as.list(data.table(top_250_genes))), order.by = "freq", nsets = 10)
+```
+
+
+# The enrichments are not the same
+
+```{r, fig.height=10}
+GO_enrichment <- readRDS("../data/GO_enrichment.rds")
+GO_data <- readRDS("../data/GO_enrichment_dt.rds")
+
+GO_data[,prank := rank(pvalue), by=Component]
+
+component_subset_oneside <- c("V33N","V2N","V5N","V23P","V13N","V42N","V20N","V30P","V15N","V17P")
+top_GOs <- lapply(component_subset_oneside,
+                  function(x) GO_data[Component==x][order(pvalue)][1:30]$Description)
+names(top_GOs) <- component_subset_oneside
+
+
+tmp  <- GO_data[Component %in% component_subset_oneside & Description %in% unique(unlist(top_GOs))]
+
+tmp$GO_category <- factor(tmp$Description, levels=unique(unlist(top_GOs)))
+tmp$Component <- factor(tmp$Component, levels=component_subset_oneside)
+
+tmp$capped_log10pvalue <- sapply(-log10(tmp$pvalue), function(x) min(x, 15))
+
+
+avoid_overlap <- function(x) 
+{
+  ind <- seq_along(x) %% 2 == 0
+  x[ind] <- paste0(x[ind], "     ")
+  x
+}
+
+
+
+
+# NB changed LDL!!!!!!!!!
+# try dotplots
+custom_GOs <- c("ribosome biogenesis","somatic cell DNA recombination",
+                "receptor internalization","cellular response to LDL particle stimulus",
+                "meiotic cell cycle","meiotic chromosome segregation","synapsis",
+                "mRNA splicing, via spliceosome","reciprocal meiotic recombination",
+                "piRNA metabolic process","negative regulation of transposition",
+                "spermatogenesis","male gamete generation",
+                "spindle checkpoint","negative regulation of mitotic nuclear division",
+                "cell wall macromolecule catabolic process","fusion of sperm to egg plasma membrane involved in single fertilization",
+                "regulation of humoral immune response","regulation of complement activation",
+                "flagellated sperm motility","sperm chromatin condensation")
+
+ggplot(tmp[GO_category %in% custom_GOs], aes(Component, GO_category, colour=capped_log10pvalue, size=Enrichment)) +
+  geom_point() +
+  scale_size(range = c(0, 30)) + 
+  scale_color_viridis()+ 
+  theme(legend.position = "bottom")
+
+ggplot(tmp[GO_category %in% unique(unlist(top_GOs))], aes(Component, GO_category, colour=capped_log10pvalue, size=Enrichment)) +
+  geom_point() +
+  scale_size(range = c(0, 30)) + 
+  scale_color_viridis()+ 
+  theme(legend.position = "bottom")
+```
+
+
+
+```{r, fig.height=11}
+
+# Shorten descriptions to fit
+GO_data$Description <- gsub("low-density lipoprotein","LDL",GO_data$Description)
+GO_data$Description <- gsub("via transesterification reactions with bulged adenosine as nucleophile",
+                                                    "via adenosine transesterification",GO_data$Description)
+GO_data$Description <- gsub("cellular process involved in reproduction in multicellular organism","reproduction in multicellular organism",GO_data$Description)
+
+plot_GO_enrichments <- function(n=30){
+
+  top_GOs <- lapply(component_subset_oneside,
+                    function(x) GO_data[Component==x][order(pvalue)][1:n]$Description)
+  names(top_GOs) <- component_subset_oneside
+  
+  tmp2 <- GO_data[Component %in% component_subset_oneside][Description %in% unique(unlist(top_GOs))][,.(pvalue, Component, Description)]
+  tmp2$GO_term <- factor(tmp2$Description, levels=unique(unlist(top_GOs)))
+  tmp2$Component <- factor(tmp2$Component, levels=component_subset_oneside)
+  tmp2[pvalue< 10^(-15), pvalue:=10^(-15)]
+  tmp2 <- tidyr::complete(tmp2, Component, GO_term)
+  
+  return(
+    ggplot(tmp2, aes(Component, GO_term, fill = -log10(pvalue))) +
+      geom_tile() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+            legend.position = c(-1,-0.07), legend.direction = "horizontal") +
+      scale_fill_gradientn(colours=rev(brewer.pal(11, "RdYlBu")), na.value = "#313695")
+  )
+
+}
+
+saveRDS(plot_GO_enrichments(5), "../data/plots/GO_plot.rds")
+
+pdf("../results/GO_bycomponent.pdf", width=15, height=25)
+plot_GO_enrichments(5)
+dev.off()
+
+upset(fromList(top_GOs), order.by = "freq", nsets = 10)
+
+```
+
+
+```{r}
+# GO_matrix <- dcast(GO_data[Component %in% component_subset_oneside], formula = Description ~ Component, value.var = "pvalue")
+# 
+# tmp <- as.matrix(GO_matrix[,-"Description", with=F])
+# tmp <- tmp[,component_subset_oneside]
+# rownames(tmp) <- GO_matrix$Description
+# tmp[is.na(tmp)] <- max(tmp, na.rm = T)
+# 
+# capped <- -log10(tmp[unique(unlist(top_GOs)),])
+# capped[capped>15] <- 15
+# 
+# tmp <- melt(data.table(capped, keep.rownames = T), id.vars = "rn", variable.name = "Component", value.name = "capped_log10pvalue")
+# setnames(tmp, "rn", "GO_category")
+# tmp$GO_category <- factor(tmp$GO_category, levels=rev(unique(unlist(top_GOs))))
+# tmp$Component <- factor(tmp$Component, levels=component_subset_oneside)
+```
+
