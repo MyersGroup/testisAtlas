@@ -185,6 +185,10 @@ return(ggplot(tmp, aes(get(component), group, colour=group)) +
 #' @param stages logical; Should the stages be annotated
 #' @param point_size numeric; size of point
 #' @param principal_curve string; name of list entry in principal_curves object, to use for pseudotime line
+#' @param dim1 string; name of variable in cell_metadata of the x axis to be used for the plot
+#' @param dim2 string; name of variable in cell_metadata of the y axis to be used for the plot
+#' @param log logical; should the varible mapped to the colour of the points be log transformed, default: F
+#' @param curve_width numeric; width of the pseudotime curve
 #'
 #' @return The Y matrix from Rtsne output, rotated by angle
 #' 
@@ -538,7 +542,7 @@ get_top_genes <- function(component, factorisation=results, n=20, values=FALSE){
 #' Plot gene loadings with cell scores underneath
 #'
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
-#' @param rna_locations ouput of SDAtools::load_gene_locations()
+#' @param gene_locations ouput of SDAtools::load_gene_locations()
 #' @param i integer or string; number or name of component in 'results' object
 #' @param max.items integer; number of genes to label in loadings plot
 #'
@@ -570,6 +574,7 @@ print_loadings_scores <- function(i, factorisation=results, gene_locations=rna_l
 #' @param n integer; number of genes to include in the list, default=100
 #' @param fantom data.table with columns Gene.Name and fold_difference from FANTOM dataset
 #' @param gtex data.table with column Gene.Name, Human_Orthologue, and fold_difference_gtex
+#' @param infertility_genes; charachter vector of gene symbols of known infertility genes
 #' 
 #'
 #' @return print of data.table
@@ -874,6 +879,7 @@ single_component_enrichment <- function(component, genes = Mybl1_genes, factoris
 #' @param threshold numeric; how many genes should be included in the top genes list used to calculate enrichment
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param bg_genes which genes to use as the 'background' default uses all genes in the results object from SDA
+#' @param test string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)
 #'
 #' @details 
 #' for each component (P&N seperately), calculate p value enrichemnt (fishers test) for a set of genes
@@ -917,6 +923,9 @@ component_enrichment <- function(genes, threshold=500, factorisation=results, bg
 #'
 #' @param enrichments result of the component_enrichment() function
 #' @param topn int; how many components should be labeled
+#' @param repel_force; degree of force to move points apart form each other
+#' @param legend_position; numeric vector of length 2, giving positions
+#' between 0 and 1 where the legend should be placed  within the plot
 #'
 #' @details 
 #' 

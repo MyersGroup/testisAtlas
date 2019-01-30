@@ -15,6 +15,8 @@ component_enrichment(genes, threshold = 500, factorisation = results,
 \item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
 \item{bg_genes}{which genes to use as the 'background' default uses all genes in the results object from SDA}
+
+\item{test}{string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)}
 }
 \value{
 A data.table with a row for each component (+ve & -ve seperately) with columns giving the p.value of enrichment,

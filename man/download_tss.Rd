@@ -13,8 +13,6 @@ download_tss(host = "http://Apr2018.archive.ensembl.org", filter = "",
 \item{filter}{charachter vector; specifies which filters to use e.g. c("external_gene_name","transcript_biotype")}
 
 \item{filter_values}{list; corresponding values of the filter e.g. list(gene_names,"protein_coding")}
-
-\item{gene_names}{charachter vector; vector of gene names (symbols) to download TSS for}
 }
 \value{
 

@@ -14,6 +14,8 @@ GO_enrichment(component, geneNumber = 250, side = "N",
 
 \item{side}{char; should negative of positive values be considered the top}
 
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
+
 \item{database}{OrgDb; object of class OrgDb from the package AnnotationDbi}
 }
 \value{

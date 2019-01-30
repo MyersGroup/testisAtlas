@@ -22,6 +22,10 @@ or the name of a variable stored in datat such as "group", "PseudoTime", or "lib
 
 \item{princurves}{list of outputs of princurve()}
 
+\item{dim1}{string; name of variable in cell_metadata of the x axis to be used for the plot}
+
+\item{dim2}{string; name of variable in cell_metadata of the y axis to be used for the plot}
+
 \item{flip}{logical; should the cell scores be multiplied by -1 (score/gene loading sign combination are arbitrary like PCA scores).}
 
 \item{predict}{logical; Should gene expression be the predicted (imputed) values or raw normalised}
@@ -32,7 +36,11 @@ or the name of a variable stored in datat such as "group", "PseudoTime", or "lib
 
 \item{point_size}{numeric; size of point}
 
+\item{log}{logical; should the varible mapped to the colour of the points be log transformed, default: F}
+
 \item{principal_curve}{string; name of list entry in principal_curves object, to use for pseudotime line}
+
+\item{curve_width}{numeric; width of the pseudotime curve}
 }
 \value{
 The Y matrix from Rtsne output, rotated by angle

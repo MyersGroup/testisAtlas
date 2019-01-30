@@ -27,7 +27,6 @@ download_flank_sequences <- function(gene_names, length, flank_type="gene_flank"
 
 #' Download location of Transcripion Start Sites from Ensembl Biomart
 #'
-#' @param gene_names charachter vector; vector of gene names (symbols) to download TSS for
 #' @param host url; to specify which version of Ensembl to use, see biomaRt::listEnsemblArchives()
 #' @param filter charachter vector; specifies which filters to use e.g. c("external_gene_name","transcript_biotype")
 #' @param filter_values list; corresponding values of the filter e.g. list(gene_names,"protein_coding")

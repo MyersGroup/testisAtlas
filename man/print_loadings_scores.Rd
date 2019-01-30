@@ -12,9 +12,9 @@ print_loadings_scores(i, factorisation = results,
 
 \item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
-\item{max.items}{integer; number of genes to label in loadings plot}
+\item{gene_locations}{ouput of SDAtools::load_gene_locations()}
 
-\item{rna_locations}{ouput of SDAtools::load_gene_locations()}
+\item{max.items}{integer; number of genes to label in loadings plot}
 }
 \value{
 ggplot2 object

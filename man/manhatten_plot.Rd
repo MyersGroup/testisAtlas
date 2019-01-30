@@ -11,6 +11,11 @@ manhatten_plot(enrichments, topn = 1, repel_force = 1,
 \item{enrichments}{result of the component_enrichment() function}
 
 \item{topn}{int; how many components should be labeled}
+
+\item{repel_force;}{degree of force to move points apart form each other}
+
+\item{legend_position;}{numeric vector of length 2, giving positions
+between 0 and 1 where the legend should be placed  within the plot}
 }
 \value{
 A ggplot object

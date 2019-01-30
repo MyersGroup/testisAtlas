@@ -8,6 +8,10 @@ ptorder(component, cell_metadata = datat, threshold = 2)
 }
 \arguments{
 \item{component}{string; Component name as in datat}
+
+\item{cell_metadata}{data.table with columns cell, PseudoTime, and components V1, V2 etc.}
+
+\item{threshold}{numeric; value below which cells will not count towards the ordering of the component}
 }
 \value{
 weighted mean of pseudotime for a given component

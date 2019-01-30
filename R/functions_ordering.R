@@ -2,6 +2,8 @@
 #' Order Components by PseudoTime
 #'
 #' @param component string; Component name as in datat
+#' @param cell_metadata data.table with columns cell, PseudoTime, and components V1, V2 etc.
+#' @param threshold numeric; value below which cells will not count towards the ordering of the component
 #'
 #' @details 
 #' The order is determined by using a weighted mean of the pseudotime values, where the weights are the cell scores of 

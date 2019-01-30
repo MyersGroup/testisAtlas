@@ -4,6 +4,7 @@
 #'
 #' @param component string; name of component e.g. "V5N" (N meaning negative size loadings)
 #' @param geneNumber integer; number of top genes to include
+#' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param side char; should negative of positive values be considered the top
 #' @param database OrgDb; object of class OrgDb from the package AnnotationDbi
 #'
