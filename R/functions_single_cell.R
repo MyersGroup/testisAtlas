@@ -192,7 +192,7 @@ return(ggplot(tmp, aes(get(component), group, colour=group)) +
 #' 
 #' @export
 #' 
-#' @import ggplot2 data.table viridis
+#' @import ggplot2 data.table viridis ggnewscale
 
 print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
   
@@ -232,26 +232,30 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
     }
     
     p <- ggplot(tmp[order(score)], aes(get(dim1), get(dim2))) +
-      geom_point(size=point_size, shape=21, stroke=0, aes(fill=score)) +
-      scale_fill_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = "top")) +
+      geom_point(size=point_size, stroke=0, aes(colour=score)) +
+      scale_colour_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"})) +
       ggtitle(paste(i,ifelse(exists("component_order_dt"),component_order_dt[component_number==i]$name,"")))
     
   }else{ # plot gene not component
     gene = i
-    
-    if(!gene %in% colnames(expression_matrix)){
-      return("Gene not found")
-    }
-    
+
     if(predict){
+      if(!gene %in% names(factorisation$loadings[[1]][1,])){
+        return("Gene not found")
+      }
       tmp <- merge(cell_metadata, sda_predict(gene, factorisation))[order(get(gene))]
+    
     }else{
+      if(!gene %in% colnames(expression_matrix)){
+        return("Gene not found")
+      }
       tmp <- merge(cell_metadata, expression_dt(gene, expression_matrix))[order(get(gene))]  
     }
 
+    
     p <- ggplot(tmp, aes(get(dim1), get(dim2))) +
-      geom_point(size=point_size, shape=21, stroke=0, aes(fill=get(gene))) +
-      scale_fill_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"), title.position = "top")) +
+      geom_point(size=point_size, stroke=0, aes(colour=get(gene))) +
+      scale_colour_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"), title.position = if(stages){"top"}else{"left"})) +
       ggtitle(gene)
   }
   
@@ -261,7 +265,8 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
   colnames(curve_data) <- c(dim1,dim2)
   
   if(curve){
-    p <- p + geom_path(data = curve_data,
+    p <- p + new_scale_color() +
+              geom_path(data = curve_data,
                        size = curve_width,
                        #aes(colour=Stage),
                        alpha=0.7,
@@ -282,12 +287,13 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
     
     curve_data[,Stage := factor(Stage, levels=c("Spermatogonia","Leptotene","Zygotene","Pachytene","Division II","Round Spermatid","Elongating \nSpermatid"))]
     
-    p <- p + geom_path(data = curve_data[-c(1:290)],
+    p <- p + new_scale_color() +
+            geom_path(data = curve_data[-c(1:290)],
               size = 4,
               aes(get(dim1)*1.7+3, get(dim2)*1.35-5, colour=Stage),
               alpha=0.5) +
       scale_colour_brewer(palette = "Set1")+
-      guides(colour = guide_legend(ncol = 3, title.position = "top"))
+      guides(colour = guide_legend(ncol = 4, title.position = "top"))
   }
   
   p <- p + theme_minimal() +
@@ -546,9 +552,10 @@ print_loadings_scores <- function(i, factorisation=results, gene_locations=rna_l
                           ggplot(data.table(cell_index=1:nrow(factorisation$scores), score=factorisation$scores[,paste0("V",i)],
                                             experiment=gsub("_.*","",gsub("[A-Z]+\\.","",rownames(factorisation$scores)))),
                                  aes(cell_index, score, colour=experiment)) +
-                            geom_point(size=0.5) + xlab("Cell Index (by Library Size)") +
+                            geom_point(size=0.5, stroke=0) + xlab("Cell Index (by Library Size)") +
                             ylab("Score") +
-                            scale_color_brewer(palette = "Paired")),
+                            scale_color_brewer(palette = "Paired") +
+                            guides(color=guide_legend(ncol=2, override.aes = list(size=2)))),
                nrow=2, heights = c(5,2))
 }
 
