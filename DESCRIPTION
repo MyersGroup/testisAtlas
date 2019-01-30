@@ -16,7 +16,6 @@ Imports:
 	NMF,
 	biomaRt,
 	ggseqlogo,
-	ggnewscale,
 	gridExtra,
 	MASS,
 	princurve,
@@ -24,11 +23,13 @@ Imports:
 	viridis
 Remotes:
 	marchinilab/SDAtools,
-	myersgroup/MotifFinder
+	myersgroup/MotifFinder,
+	eliocamp/ggnewscale
 RoxygenNote: 6.1.1
 Depends:
 	MotifFinder,
-	SDAtools
+	SDAtools,
+	ggnewscale
 Suggests:
 	knitr,
 	rmarkdown,
