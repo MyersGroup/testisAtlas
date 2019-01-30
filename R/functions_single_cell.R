@@ -906,7 +906,32 @@ component_enrichment <- function(genes, threshold=500, factorisation=results, bg
   return(tmp)
 }
 
+#' Plot Manhatten Style Enrichment for each component
+#'
+#' @param enrichments result of the component_enrichment() function
+#' @param topn int; how many components should be labeled
+#'
+#' @details 
+#' 
+#' @return A ggplot object
+#' 
+#' @export
+#' 
+#' @import ggplot2 SDAtools
 
+manhatten_plot <- function(enrichments, topn=1, repel_force=1, legend_position=c(0.85,0.8)){
+  ggplot(enrichments, aes(component, p.value, label=paste0(component," - ",name))) +
+    geom_point(aes(colour=Type)) +
+    geom_label_repel(data=enrichments[order(p.value)][1:topn], force=repel_force, min.segment.length = 0) +
+    geom_hline(yintercept = 0.05/100, col="red", size=0.2) +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5),
+          legend.position = legend_position,
+          legend.background = element_rect(colour="black")) +
+    scale_color_brewer(palette = "Set1") +
+    xlab("Components by Type and Pseudotime") +
+    scale_y_continuous(trans=SDAtools::reverselog_trans())
+}
 
 
 #' Calculate 2D density
