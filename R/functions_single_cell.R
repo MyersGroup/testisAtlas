@@ -142,6 +142,33 @@ clustered_heatmap <- function(cell_metadata=datat, name, annotation.col=NULL, co
 # }
 
 
+#' Plot scores
+#'
+#' @param component string ; component name as in cell_metadata object e.g. "V12"
+#' @param cell_metadata data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.
+#' @param point_size numeric
+#'
+#' @return ggplot object
+#' 
+#' @details
+#' 
+#' @export
+#' 
+#' @import ggplot2 data.table RColorBrewer
+
+plot_cell_scores <- function(component="V25", point_size=0.6, cell_metadata=datat){
+  tmp <- cell_metadata[,.(group,get(component))]
+  tmp[group=="mj",group:="WT"]
+  setnames(tmp, c("group",component))
+
+return(ggplot(tmp, aes(get(component), group, colour=group)) +
+  geom_jitter(size=point_size, alpha=0.5, stroke=0) +
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  theme(legend.position = "none", axis.title.y=element_blank() ) +
+  xlab(paste0("Component ",component,"\n Cell Score")))
+  }
+
 
 
 #' Plot tSNE
