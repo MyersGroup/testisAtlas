@@ -138,11 +138,13 @@ component_order_all <<- component_order_dt[order(-pseudotime_average, na.last = 
 
 meiotic_component_order <<- component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$component_number
 
-half_exclusions <<- c(paste0(names(which(abs(apply(results$scores, 2, min))<1.5)),"N"),
-                     paste0(names(which(abs(apply(results$scores, 2, max))<1.5)),"P"))
+PN_ratio <- apply(results$scores, 2, function(x) log(abs(min(x)/max(x))))
+
+half_exclusion_comps <<- c(paste0(names(which(PN_ratio < -log(5))),"N"),
+                     paste0(names(which(PN_ratio > log(5))),"P"))
 
 ordering <<- c(rbind(paste0("V",component_order,"P"),paste0("V",component_order,"N")))  #component_labels
-half_exclusions <<- which(ordering %in% half_exclusions)
+half_exclusions <<- which(ordering %in% half_exclusion_comps)
 
 tmp <- data.table(component_number=as.numeric(gsub("V|P|N","",ordering)))
 setkey(component_order_dt, component_number)
