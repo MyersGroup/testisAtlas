@@ -805,44 +805,54 @@ match_cells2 <- function(test_groups=NULL, cell_subset=NULL, cell_metadata=datat
 #' @param genes character vector of gene set to look for enrichment for
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param pos logical; if TRUE (default) the positive gene loadings are ranked highest
-#' @param return_genes logical; if TRUE (default: FALSE) ranking of genes in this component is returned,
-#' if false, output of fisher.test is returned
 #' @param threshold numeric; how many genes should be included in the top genes list used to calculate enrichment
 #' @param bg_genes which genes to use as the 'background' default uses all genes in the results object from SDA
+#' @param test string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)
 #'
 #' @details 
 #' Calculate p value of enrichemnt (fishers test) in a component, given a set of genes
-#' requires the results object from SDA to be loaded
 #' 
 #' @return
 #' 
 #' @export
 
-single_component_enrichment <- function(component, genes = Mybl1_genes, factorisation=results, pos=T, return_genes=F, threshold=200, bg_genes=NULL){
+single_component_enrichment <- function(component, genes = Mybl1_genes, factorisation=results, pos=T, threshold=200, bg_genes=NULL, test="fisher"){
   
   if(is.null(bg_genes)){
     bg_genes <- names(factorisation$loadings[[1]][1,])
   }
   
-  if(pos){
-    tmp <- rank(-factorisation$loadings[[1]][component, bg_genes])
-  }else{
-    tmp <- rank(factorisation$loadings[[1]][component, bg_genes])
-  }
+  ranks <- sort(rank((if(pos){-1}else{1}) * factorisation$loadings[[1]][component, bg_genes])[genes], na.last=T)
   
-  names(tmp) <- bg_genes
+  #names(tmp) <- bg_genes
   
-  yes <- sum(tmp[genes] < threshold)
+  yes <- sum(ranks < threshold)
   
-  if(return_genes){
-    return(tmp[genes])
-  }else{
-    return(fisher.test(matrix(c(yes,
+  contingency_table <- matrix(c(yes,
                                 length(genes) - yes,
                                 threshold - yes,
-                                length(tmp) - (threshold - length(genes) + yes)),
-                              nrow=2,ncol=2),alternative="greater"))   
+                                length(bg_genes) - length(genes) - (threshold - yes)),
+                              nrow=2, ncol=2,
+                              dimnames = list(ReachedTreshold = c(T,F),
+                                              InList = c(T, F)))
+  
+  if(test=='binomial'){
+    # this test doesn't assume all marginals are fixed, but is much slower
+    test <- Exact::exact.test(contingency_table, alternative = "greater", model="binomial", cond.row = T, to.plot=F, npNumbers = 5)
+  }else{
+    test <- fisher.test(contingency_table, alternative="greater")
   }
+  
+  return(list("fisher_test"=test,
+              "ranks"=ranks,
+              "counts"=c(yes,
+                length(genes),
+                length(bg_genes),
+                pos,
+                threshold),
+              "Positive"=pos,
+              "contingency_table"=contingency_table
+              ))
   
 }
 
@@ -870,22 +880,26 @@ single_component_enrichment <- function(component, genes = Mybl1_genes, factoris
 #' 
 #' @import data.table
 
-component_enrichment <- function(genes, threshold=500, factorisation=results, bg_genes=NULL){
-  pos_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, factorisation=factorisation, pos = T, threshold = threshold, bg_genes=bg_genes))
-  neg_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, factorisation=factorisation, pos = F, threshold = threshold, bg_genes=bg_genes))
+component_enrichment <- function(genes, threshold=500, factorisation=results, bg_genes=NULL, test="fisher"){
+  pos_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, factorisation=factorisation, pos = T, threshold = threshold, bg_genes=bg_genes, test=test))
+  neg_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, factorisation=factorisation, pos = F, threshold = threshold, bg_genes=bg_genes, test=test))
   
-  pval <- c(sapply(pos_ad_e, function(x) x$p.value),
-            sapply(neg_ad_e, function(x) x$p.value))
-  names(pval) <- c(paste0(1:50,"P"),paste0(1:50,"N"))
+  combined <- c(pos_ad_e,neg_ad_e)
+  names(combined) <- c(paste0(1:50,"P"),paste0(1:50,"N"))
   
-  odds <- c(sapply(pos_ad_e, function(x) x$estimate),
-            sapply(neg_ad_e, function(x) x$estimate))
+  tmp <- data.table(
+    component = factor(names(combined), levels=names(combined)[c(rbind(component_order_all,component_order_all+50))]),
+    p.value = sapply(combined, function(x) x$fisher_test$p.value),
+    OR = sapply(combined, function(x) x$fisher_test$estimate),
+    hits = sapply(combined, function(x) x$counts[1]),
+    hit_names = I(sapply(combined, function(x) names(x$ranks[x$ranks<x$counts[5]])))
+  )
   
-  tmp <- data.table(p.value=pval, OR=odds, Component = factor(names(pval), levels=names(pval)[c(rbind(component_order_all,component_order_all+50))]))
+  #t(sapply(combined, function(x) c("p.value"=x$fisher_test$p.value, "OR"=x$fisher_test$estimate[[1]], "hits"=x$counts[1]))),
   
   tmp$name <- rep(component_order_dt$name,2)
   
-  tmp[order(Component), rank := 1:100]
+  tmp[order(component), rank := 1:100]
   tmp[rank >= 41, Type := "Meiotic"]
   tmp[rank < 41, Type := "Somatic"]
   
