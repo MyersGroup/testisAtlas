@@ -36,15 +36,11 @@ abline(v=500, col="blue", lwd=3)
 # For best matches, find probability of given gene regulated
 
 ```{r}
-results_custom <- readRDS("../data/motifs/MF_results_custom.rds")
 best_denovo <- readRDS("../data/best_denovo.rds")
 motif_matches <- readRDS("../data/motif_matches.rds")
 
 # Load Regprobs
-HM11_regprobs <- readRDS("../data/motifs/HocomocoV11_regprobs_matrix.rds")
-HM11_regprobs_extra <- readRDS("../data/motifs/HocomocoV11_regprobs_matrix_extra.rds")
-stopifnot(identical(rownames(HM11_regprobs), rownames(HM11_regprobs_extra)))
-HM11_regprobs <- cbind(HM11_regprobs,HM11_regprobs_extra)
+HM11_regprobs <- readRDS("../data/motifs/HocomocoV11_regprobs_matrix_core_and_extra.rds")
 str(HM11_regprobs)
 
 # load motif categories
@@ -68,9 +64,16 @@ add custom (new) motifs to matrix
 
 ```{r}
 
+results_custom <- readRDS("../data/motifs/MF_results_custom.rds")
 regprobs_matrix_custom <- sapply(results_custom, function(x) x$dt$regprob)
 rownames(regprobs_matrix_custom) <- results_custom[[1]]$dt$sequence
 #colnames(regprobs_matrix_custom) <- paste0(colnames(regprobs_matrix_custom),"*")
+
+regprobs_matrix_custom <- regprobs_matrix_custom[which(rownames(regprobs_matrix_custom) %in% names(tss_seqs_s)), ]
+
+# add CpG Motif to matrix
+regprobs_matrix_custom <- cbind("CpG"=CG_count[rownames(regprobs_matrix_custom)]/max(CG_count),
+                                regprobs_matrix_custom)
 
 #regprobs_matrix <- cbind(regprobs_matrix, regprobs_matrix_custom[,c("ATF1*","TAF1*")])
 #regprobs_matrix_all <- cbind(regprobs_matrix_all, regprobs_matrix_custom[,c("ATF1*","TAF1*")])
@@ -80,26 +83,23 @@ rownames(regprobs_matrix_custom) <- results_custom[[1]]$dt$sequence
 
 ```{r}
 
-pos = t( results$loadings[[1]] * (results$loadings[[1]]>0) )
-colnames(pos) <- paste0(colnames(pos),"P")
+results$loadings_split <- split_loadings()[rownames(HM11_regprobs),]
 
-neg = t( results$loadings[[1]] * (results$loadings[[1]]<0) )
-colnames(neg) <- paste0(colnames(neg),"N")
+loadings_subset <- t(results$loadings[[1]][,rownames(regprobs_matrix)])
 
-pred = cbind(pos,neg)[rownames(regprobs_matrix),]
-pred2 <- t(results$loadings[[1]][,rownames(regprobs_matrix)])
-
-# add CpG Motif to matrix
-regprobs_matrix_custom <- cbind("CpG"=CG_count[rownames(regprobs_matrix_custom)]/max(CG_count),
-                                regprobs_matrix_custom)
 
 ```
 
 
 
 ```{r}
-qplot(1:50,tapply(CG_count[names(sort(pred2[,"V5"],T))], cut(seq_along(CG_count), 50), function(x) mean(x,na.rm=T)), ylab="Mean CpG count", xlab="Binned Component 5 loadings")
-summary(lm(pred2[,"V5"] ~ CG_count[rownames(pred2)]*(pred2[,"V5"]>0)))
+qplot(1:50,tapply(CG_count[names(sort(loadings_subset[,"V5"],T))],
+                  cut(seq_along(CG_count[names(loadings_subset[,"V5"])]), 50),
+                  function(x) mean(x,na.rm=T)),
+      ylab="Mean CpG count",
+      xlab="Binned Component 5 loadings")
+
+summary(lm(loadings_subset[,"V5"] ~ CG_count[rownames(loadings_subset)]*(loadings_subset[,"V5"]>0)))
 ```
 
 
@@ -229,12 +229,14 @@ plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_mat
 
 library(testisAtlas)
 
-print_binned_meanprob(11) + ggtitle("Component 11")
-print_binned_meanprob(5) + ggtitle("Component 5")
-print_binned_meanprob(42) + ggtitle("Component 42")
-print_binned_meanprob(28) + ggtitle("Component 28")
-print_binned_meanprob(30) + ggtitle("Component 30")
-print_binned_meanprob(17) + ggtitle("Component 17")
+binned_regprobs_custom <- binned_mean_regprob(regprobs = regprobs_matrix_custom)
+
+plot_component_regprobs(11, binned_regprobs_custom)
+plot_component_regprobs(5, binned_regprobs_custom)
+plot_component_regprobs(42, binned_regprobs_custom)
+plot_component_regprobs(28, binned_regprobs_custom)
+plot_component_regprobs(30, binned_regprobs_custom)
+plot_component_regprobs(17, binned_regprobs_custom)
 ```
 
 compare to the mean loadings per bin of loading
@@ -263,29 +265,53 @@ plot(tapply(tmp, bin_factor, mean), main="42")
 
 ```{r, fig.width=10}
 
-mean_prob_matrix <- matrix(nrow=100, ncol=ncol(regprobs_matrix_custom))
-rownames(mean_prob_matrix) <- colnames(pred)
-colnames(mean_prob_matrix) <- colnames(regprobs_matrix_custom)
 
-for (i in seq_along(colnames(pred))){
-  tmp <- names(sort(abs(pred[,i]),T)[1:1000])
-  tmp <- tmp[tmp %in% rownames(regprobs_matrix_custom)][1:100]
-  mean_prob_matrix[i,] <- colMeans(regprobs_matrix_custom[tmp,])
-}
 
-mean_prob_matrix <- mean_prob_matrix[ordering[-half_exclusions],]
-rownames(mean_prob_matrix) <- paste(rownames(mean_prob_matrix), component_names[-half_exclusions]) # paste(rownames(mean_prob_matrix), c(rbind(names(component_labels), names(component_labels)))[-half_exclusions])
+library(ComplexHeatmap)
+library(RColorBrewer)
 
-mean_prob_dt <- melt(data.table(c=substr(rownames(mean_prob_matrix), 1,4), mean_prob_matrix, keep.rownames = T), id.vars = c("rn","c")) #[1:66,]
+plot_meanprob_bycomp(binned_regprobs_custom)
 
-ggplot(mean_prob_dt, aes(factor(c, levels=substr(rownames(mean_prob_matrix), 1,4)), value)) +
-  geom_point() +
-  facet_wrap(~variable, scales = "free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+Heatmap(t(binned_regprobs_custom["SP2",,component_order]),
+        col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        column_title = "SP2")
 
-aheatmap(scale(mean_prob_matrix), Rowv = NA,scale = "col",  hclustfun = "ward.D2") #[1:66,]
-aheatmap(asinh(5*scale(mean_prob_matrix)), Rowv = NA, hclustfun = "ward.D2") #[1:66,]
+Heatmap(t(binned_regprobs_custom["RFX2",,component_order]),
+        col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        column_title = "RFX2")
+
+Heatmap(t(binned_regprobs_custom["GABPA",,component_order]),
+        col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        column_title = "GABPA")
+
+Heatmap(t(binned_regprobs_custom["MYBA",,component_order]),
+        col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        column_title = "MYBA")
+
+Heatmap(t(binned_regprobs_custom["ATF1",,component_order]),
+        col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        column_title = "ATF1*")
+
+mean_prob_matrix <- cbind(binned_regprobs_custom[,50,],binned_regprobs_custom[,1,])
+colnames(mean_prob_matrix) <- colnames(results$loadings_split)
+
+mean_prob_matrix <- t(mean_prob_matrix[,ordering[-half_exclusions]])
+rownames(mean_prob_matrix) <- paste(rownames(mean_prob_matrix), component_names[-half_exclusions])
+
+NMF::aheatmap(scale(mean_prob_matrix), Rowv = NA, hclustfun = "ward.D2")
+
 ```
+
 
 # Correlation of Motif Probability and Gene Loadings
 
@@ -313,41 +339,77 @@ vvv3 <- correlate_regprobs(regprobs = regprobs_matrix_custom)
 vvv3 <- vvv3[ordering[-half_exclusions],]
 rownames(vvv3) <- paste(rownames(vvv3), component_names[-half_exclusions])
 
-colnames(vvv3)[16] <- "CREM-t"
+motif_order <- c("SP2","ETV5","CpG","TAF1","ZN143","NRF1","GABPA","NFYA","ZFP42","MYBA","MLX","CREM","RFX2","TBP","STAT1","SPI1","ATF1")
+
+vvv3 <- vvv3[,motif_order]
+
+motif_gene_names <- c("Sp2","Etv5","CpG","Taf1","Zfp143","Nrf1","Gabpa","Nfya","Zfp42","Mybl1","Mlx","Crem","Rfx2","Tbp","Stat1","Spi1","Crem-t")
+colnames(vvv3) <- motif_gene_names
 
 library(ComplexHeatmap)
 
-library(dendextend)
-dend = rev(hclust(dist(asinh(t(vvv3)))))
-dend = color_branches(dend, k = 2)
+results_custom_motifs <- sapply(results_custom, function(x) x$scoremat)
+hascpg <- c("CpG"=NA,sapply(results_custom_motifs, function(x) MotifFinder::submotif(exp(x))))
 
-dt1 <- data.table("Has CpG?" = c("Yes","Yes","No","Yes","No","Yes","Yes","No","Yes","Yes","Yes","Yes","No","No","Yes","No","Yes"),
-                  "Meth Sensitive?" = c("NA","No","Yes","No","No","Yes","Yes","Yes","Yes","Yes","Yes","Yes","No","No","No","NA","No"))
+meth_sens = c("SP2"="No","ETV5"="Yes","CpG"="NA","TAF1"="No","ZN143"="No","NRF1"="Yes","GABPA"="Yes","NFYA"="Yes",
+                      "ZFP42"="Yes","MYBA"="No","MLX"="Yes","CREM"="Yes","RFX2"="No","TBP"="No","STAT1"="No","SPI1"="Yes","ATF1"="NA")
+
+hascpg["CpG"] <- max(hascpg, na.rm = T)
+
+dt1 <- data.table("P(CpG)>0.25:" = hascpg[motif_order]>0.25,
+                  "P(CpG):" = hascpg[motif_order],
+                  "Meth Sensitive?:" = meth_sens[motif_order])
 
 ha1 = HeatmapAnnotation(df = dt1,
-    col = list("Has CpG?"=c("Yes"="purple","No"="grey"),
-               "Meth Sensitive?"=c("Yes"="pink","No"="grey","NA"="grey28")),
-               annotation_legend_param = list(grid_height = unit(3, "mm"), labels_gp = gpar(fontsize = 7), ncol = 3, title_position = "lefttop")
+    col = list("Has CpG?:"=c("Yes"="purple","No"="grey"),
+               "Meth Sensitive?:"=c("Yes"="dark green","No"="grey","NA"="grey28"),
+               "P(CpG)>0.25:"=c("TRUE"="purple","FALSE"="grey"),
+               "P(CpG):"=circlize::colorRamp2(c(min(hascpg), max(hascpg)), c("white", "red"))), #colorRamp2(seq(0, 1, by = 0.25), viridisLite::viridis(5, direction = -1))
+               annotation_legend_param = list(grid_height = unit(3, "mm"),
+                                              labels_gp = gpar(fontsize = 7),
+                                              legend_direction="horizontal",
+                                              ncol = 3,
+                                              title_position = "lefttop")
 )
 
-#CpGMeth\n sensitive
-#,"CpGMeth\n sensitive"="pink"
-
-pdf(height=5, width=10, file="../results/motifs_fig_DN_2.pdf")
+pdf(height=5, width=10, file="../results/motifs/motifs_fig_DN_asinh.pdf")
 draw(
 Heatmap(asinh(vvv3),
-        col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
+        col = rev(colorRampPalette(bias=1.1, brewer.pal(11, "RdYlBu"))(100)), #viridisLite::cividis(200),
         cluster_rows = FALSE,
         cluster_columns = FALSE,
-        column_order = c("SP2","ETV5","CpG","TAF1","ZN143","NRF1","GABPA","NFYA","ZFP42","MYBA","MLX","CREM","RFX2","TBP","STAT1","SPI1","CREM-t"),
+        column_order = motif_gene_names,
         row_order = 1:nrow(vvv3),
         top_annotation = ha1,
+        heatmap_legend_param = list(legend_direction = "horizontal", title = "asinh(t-value)"),
         row_names_gp = gpar(fontsize = 3),
-        show_heatmap_legend = F,
-        top_annotation_height = unit(4, "mm")),
+        show_heatmap_legend = T,
+        top_annotation_height = unit(5, "mm")),
 split = rep(c("1) Somatic", "2) Diploid", "3) Haploid"), c(23,33,19)),
 row_dend_gp = gpar(fontsize = 3),
-annotation_legend_side = "bottom")
+annotation_legend_side = "bottom",
+heatmap_legend_side = "bottom")
+dev.off()
+
+
+# version without asinh thresholding
+pdf(height=5, width=10, file="../results/motifs/motifs_fig_DN_raw.pdf")
+draw(
+Heatmap(vvv3,
+        col = rev(colorRampPalette(bias=1.1, brewer.pal(11, "RdYlBu"))(100)), #viridisLite::cividis(200),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        column_order = motif_gene_names,
+        row_order = 1:nrow(vvv3),
+        top_annotation = ha1,
+        heatmap_legend_param = list(legend_direction = "horizontal", title = "asinh(t-value)"),
+        row_names_gp = gpar(fontsize = 3),
+        show_heatmap_legend = T,
+        top_annotation_height = unit(5, "mm")),
+split = rep(c("1) Somatic", "2) Diploid", "3) Haploid"), c(23,33,19)),
+row_dend_gp = gpar(fontsize = 3),
+annotation_legend_side = "bottom",
+heatmap_legend_side = "bottom")
 dev.off()
 
 ```
@@ -355,24 +417,14 @@ dev.off()
 For selected motifs - regprobs using Hocomoco not denovo PWM
 
 ```{r}
-vvv2 <- correlate_regprobs(regprobs = regprobs_matrix)
+results$loadings_split <- split_loadings()
+
+vvv2 <- correlate_regprobs(regprobs = regprobs_matrix[,motif_order[-3]])
 
 vvv2 <- vvv2[ordering[-half_exclusions],]
 rownames(vvv2) <- paste(rownames(vvv2), component_names[-half_exclusions])
 
 library(ComplexHeatmap)
-
-library(dendextend)
-dend = rev(hclust(dist(asinh(t(vvv2)))))
-dend = color_branches(dend, k = 2)
-
-ha1 = HeatmapAnnotation(df = data.table("Has CpG?"=c("Yes","No","Yes","No","Yes","Yes","No","Yes","No","Yes","Yes","No","No","No","Yes","Yes")),
-    col = list("Has CpG?"=c("Yes"="purple","No"="grey")),
-               annotation_legend_param = list(grid_height = unit(3, "mm"), labels_gp = gpar(fontsize = 7), ncol = 3, title_position = "lefttop")
-)
-
-#CpGMeth\n sensitive
-#,"CpGMeth\n sensitive"="pink"
 
 pdf(height=5, width=10, file="../results/motifs_fig_HCMC.pdf")
 draw(
@@ -380,9 +432,7 @@ Heatmap(asinh(vvv2),
         col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
         cluster_rows = FALSE,
         cluster_columns = FALSE,
-        column_order = c("SP2","ETV5","TAF1","ZN143","NRF1","GABPA","NFYA","ZFP42","MYBA","MLX","CREM","RFX2","TBP","STAT1","SPI1","ATF1"),
         row_order = 1:nrow(vvv2),
-        top_annotation = ha1,
         row_names_gp = gpar(fontsize = 3),
         show_heatmap_legend = F,
         top_annotation_height = unit(2, "mm")),
@@ -390,55 +440,7 @@ split = rep(c("1) Somatic", "2) Diploid", "3) Haploid"), c(23,33,19)),
 row_dend_gp = gpar(fontsize = 3),
 annotation_legend_side = "bottom")
 dev.off()
-
-#column_dend_reorder = c(rep(0.5,3),2,rep(0.5,9),rep(1,3)),
-
 ```
-
-```{r}
-
-# pdf(height=5, width=10, file="../results/motifs_fig_B.pdf")
-# aheatmap(asinh(vvv2), scale="none", Rowv = NA, cexCol=0.9, cexAnn = 0.5, treeheight = 10,
-#          color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
-#          Colv = NA,
-#          reorderfun = function(a,b) as.dendrogram(hclust(dist(scale(asinh(t(vvv2)))))),
-#          annCol = list("Contains CpG?"=c("Yes","Yes","No but CpGMeth\n sensitive","Yes","No","Yes","Yes","No","Yes","No","Yes","Yes","No","No","No","Yes","Yes","No","Yes")),
-#          annColors = list("Contains CpG?"=c("Yes"="purple","No"="white","No but CpGMeth\n sensitive"="pink"),"Methylation Sensitive?"=c("red","black")))
-# dev.off()
-# 
-# aheatmap(vvv2, scale="none", Rowv = NA, cexCol=0.9, cexAnn = 0.5, treeheight = 10,
-#          color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
-#          annCol = list("Contains CpG?"=c("Yes","Yes","No but CpGMeth\n sensitive","Yes","No","Yes","Yes","No","Yes","No","Yes","Yes","No","No","No","Yes","Yes","No","Yes")),
-#          annColors = list("Contains CpG?"=c("Yes"="purple","No"="white","No but CpGMeth\n sensitive"="pink"),"Methylation Sensitive?"=c("red","black")))
-# #dev.off()
-
-
-# order using Travelling sales person
-# set.seed(512367)
-# tsp_col_order <- as.numeric(seriation::seriate(dist(t(vvv2[1:66,])), method = "TSP")[[1]])
-# #tsp_col_order <- tsp_col_order[c(1:8,17:9)]
-# #tsp_col_order <- tsp_col_order[c(3:1,4:6,21:7)]
-# 
-# aheatmap(asinh(vvv2)[1:66,tsp_col_order], scale="none", Rowv = NA, cexCol=1.3, cexAnn=1.3, 
-#          color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
-#          Colv=NA,
-#          annCol = list("Contains CpG?"=c("Yes","Yes","Yes","Yes","Yes","Yes","Yes","No but CpGMeth\n sensitive","No","No","Yes","No","No","No","No","No","No")),
-#          annColors = list("Contains CpG?"=c("Yes"="purple","No"="white","No but CpGMeth\n sensitive"="pink"),"Methylation Sensitive?"=c("red","black")))
-
-```
-
-
-<!-- # ```{r, fig.width=10} -->
-<!-- # # Cap large tvalues -->
-<!-- # # vvv[abs(vvv) < qnorm(0.9)] = 0 -->
-<!-- # #qnorm(1-1e-14) -->
-<!-- # vvv2[abs(vvv2) > qnorm(1-1e-7)] = qnorm(1-1e-7) * sign(vvv2[abs(vvv2) > qnorm(1-1e-7)]) -->
-<!-- #  -->
-<!-- # aheatmap(vvv2[1:66,tsp_col_order], scale="none", Colv=NA, breaks=0, Rowv = NA, cexCol=1.3, -->
-<!-- #          color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100))) -->
-<!-- #  -->
-<!-- #  -->
-<!-- # ``` -->
 
 
 # Chip-Seq data comparison

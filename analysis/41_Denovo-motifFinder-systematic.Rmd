@@ -212,6 +212,7 @@ For each motif group, plot the denovo motifs
 # for each TF, select the best matching denovo motif, for those with min q of 0.001
 
 motif_matches <- tomtom_summary[q.value<0.001][, .SD[which.min(q.value)], by = Target.Name][order(E.value)]
+saveRDS(motif_matches, "../data/motif_matches.rds")
 
 motif_matches_random <- tomtom_summary_random[q.value<0.001][, .SD[which.min(q.value)], by = Target.Name][order(E.value)]
 
@@ -457,11 +458,12 @@ for (i in best_matches){
 
 # Add novel
 best_denovo <- rbind(best_denovo, tomtom_summary_byquery[X.Query.ID %in% c("C7N.I82","C18P.I53")])
+saveRDS(best_denovo, "../data/best_denovo.rds")
 
+best_denovo <- readRDS("../data/best_denovo.rds")
 
 matched_pwms <- plot_motif_matches(best_denovo,
-                                   titles=c("Sp2","Nfya","Zfp143","Rfx2","Nrf1","Gabpa","Spi1","Crem","Etv5","Zfp42","Mlx","Stat1","Tbp","Mybl1","Atf1*","Taf1*"))
-
+                                   titles=c("Sp2","Nfya","Zfp143","Rfx2","Nrf1","Gabpa","Spi1","Crem","Etv5","Zfp42","Mlx","Stat1","Tbp","Mybl1","Atf1 (Crem-t)","Taf1?"))
 
 plot_grid(plotlist=matched_pwms, ncol=4)
 
@@ -470,7 +472,6 @@ plot_grid(plotlist=matched_pwms, ncol=4)
 x_pos = 0.45
 y_pos = 0.82
 wh <- 0.16
-#icons <- c("TI","N","TL","TI","I","N","I","T2I","TI","T","TL","TL","N","I","N")
 icons <- c("NW","TL","TI","TI","IW","NW","MW","TI","IW","TW","IW","NW","TL","T2I","NW","NW")
 tmp <- list()
 
@@ -480,17 +481,18 @@ for(i in seq_along(matched_pwms)){
     draw_image(paste0("../results/icons/",icons[i],".png"), x=x_pos, y=y_pos, width=wh, height=wh)
 }
 
-# pdf(height=12, width=15, file="../results/motifs_test.pdf")
-# plot_grid(NULL, NULL, NULL, plot_grid(plotlist=tmp, ncol=3), labels = c("", "C", "D", "E"), ncol = 2, label_size=16, rel_heights = c(1.1,1))
-# dev.off()
+# reorder to match heatmap
+tmp = tmp[c(1,9,16,3,5,6,2,10,14,11,8,4,13,12,7,15)]
 
-pdf(height=5, width=10, file="../results/motifs_fig_A.pdf")
+saveRDS(tmp,"../data/tmp_cache/denovo_summary_trimmed.rds")
+tmp <- readRDS("denovo_summary_trimmed.rds")
+
+library(cowplot)
+
+png(height=2000, width=4000, file="../results/motifs/motifs_fig_A.png", res=400)
 plot_grid(plotlist=tmp, ncol=4)
 dev.off()
 
-plot_grid(plotlist=tmp, ncol=4)
-
-saveRDS(tmp,"../data/tmp_cache/denovo_summary_trimmed.rds")
 ```
 
 
