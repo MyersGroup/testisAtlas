@@ -218,6 +218,7 @@ str(regprobs_matrix_extra)
 
 saveRDS(regprobs_matrix_core, "../data/motifs/HocomocoV11_regprobs_matrix.rds")
 saveRDS(regprobs_matrix_extra, "../data/motifs/HocomocoV11_regprobs_matrix_extra.rds")
+saveRDS(cbind(HM11_regprobs,HM11_regprobs_extra), "../data/motifs/HocomocoV11_regprobs_matrix_core_and_extra.rds")
 ```
 
 ## Check convergance
