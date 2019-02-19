@@ -90,6 +90,13 @@ sex_predictions <- rowSums(predicted_expression[,sex_genes])
 X_predictions <- rowSums(predicted_expression[,X_genes])
 Y_predictions <- rowSums(predicted_expression[,Y_genes])
 
+#autosomal_sum <- rowSums(data[,autosomal_genes])
+#sex_sum <- rowSums(data[,sex_genes])
+#X_sum <- rowSums(data[,X_genes])
+#Y_sum <- rowSums(data[,Y_genes])
+
+#msci_sums <- data.table(sex_sum, autosomal_sum, Y_sum, X_sum, cell=names(autosomal_sum))
+
 msci_predictions <- data.table(sex_predictions, autosomal_predictions, Y_predictions, X_predictions, cell=names(autosomal_predictions))
 setkey(msci_predictions, cell)
 datat <- merge(msci_predictions, datat, by="cell")
@@ -172,23 +179,53 @@ aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)
 #   geom_hline(yintercept = 0.05, linetype="dashed") +
 #   theme(legend.position = "bottom")
 
-msci_pseudotime <- ggplot(datat[somatic4==FALSE], aes(-PseudoTime, sex_predictions / autosomal_predictions, colour = V38)) +
-  geom_point(size=0.25,alpha=0.5) +
-  scale_color_viridis(direction=-1) +
-  labs(color = "Component 38 (Hormad1 KO) Cell Scores", y="Ratio of total sex to autosomal expression") +
+curve_data <- load_curve_data(princurves, principal_curve)
+
+msci_pseudotime <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, sex_predictions / autosomal_predictions)) +
+  geom_point(size=0.25,alpha=0.5, aes(colour = V38)) +
+  scale_color_viridis(direction=-1, guide=guide_colourbar("C38 Cell Scores\n(Hormad1 KO)", title.position = "top")) +
+  labs(y="Ratio of total sex to autosomal expression") +
   theme_minimal() +
+  theme(legend.position = "bottom") +
+  new_scale_color()+
+  geom_line(aes(y=-0.015, colour=Stage), size=5) +
+  scale_colour_brewer(palette = "Set1")+
+  guides(colour = guide_legend(ncol = 4, title.position = "top")) +
   theme(legend.position = "bottom")
+
+msci_pseudotimeX <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, X_predictions / autosomal_predictions)) +
+  geom_point(size=0.25,alpha=0.5, aes(colour = V38)) +
+  scale_color_viridis(direction=-1, guide=guide_colourbar("C38 Cell Scores\n(Hormad1 KO)", title.position = "top")) +
+  labs(y="Ratio of total X to autosomal expression") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  new_scale_color()+
+  geom_line(aes(y=-0.015, colour=Stage), size=5) +
+  scale_colour_brewer(palette = "Set1")+
+  guides(colour = guide_legend(ncol = 4, title.position = "top")) +
+  theme(legend.position = "bottom")
+
+msci_pseudotimeY <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, Y_predictions / autosomal_predictions)) +
+  geom_point(size=0.25,alpha=0.5, aes(colour = V38)) +
+  scale_color_viridis(direction=-1, guide=guide_colourbar("C38 Cell Scores\n(Hormad1 KO)", title.position = "top")) +
+  labs(y="Ratio of total Y to autosomal expression") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  new_scale_color()+
+  geom_line(aes(y=-0.002, colour=Stage), size=5) +
+  scale_colour_brewer(palette = "Set1")+
+  guides(colour = guide_legend(ncol = 4, title.position = "top")) +
+  theme(legend.position = "bottom")
+
+#V38<1
 
 msci_pseudotime
 
-msci_pseudotime_sans38 <- ggplot(datat[somatic4==FALSE & V38<1], aes(-PseudoTime, sex_predictions / autosomal_predictions)) +
-    geom_point(size=0.25,alpha=0.5) +
-    labs(y="Sex to Autosomal Expression Ratio", x="Pseudotime") +
-    theme_minimal()
+msci_pseudotime_sans38 
 
-msci_pseudotime_sans38
-
-saveRDS(msci_pseudotime_sans38, "../data/tmp_cache/msci_pseudotime_sans38.rds")
+saveRDS(msci_pseudotime, "../data/plots/msci_pseudotime.rds")
+saveRDS(msci_pseudotimeX, "../data/plots/msci_pseudotimeX.rds")
+saveRDS(msci_pseudotimeY, "../data/plots/msci_pseudotimeY.rds")
 ```
 
 # Sex-Autosome Ratio on tSNE
@@ -252,7 +289,13 @@ ggplot(datat[somatic4==FALSE], aes(-PseudoTime, X_predictions, colour = V38)) +
   ggtitle("X chromosome expression through pseudotime") +
   theme_minimal()
 
+ggplot(melt_genes(X_genes[1]), aes(-PseudoTime, Expression)) + geom_point()
+
 ``` 
+
+
+
+
 
 # Expression of X escapees
 
@@ -265,24 +308,41 @@ x_escapees <- readxl::read_excel("../data/previous_studies/Cruz/12864_2016_2618_
 
 genes <- x_escapees$`Gene Symbol`[x_escapees$`Gene Symbol` %in% colnames(data)]
 
+# "Cypt2-ps" -> Cypt2
+
+#4930468A15Rik -> Cldn34d
+#Mtap7d3 -> Map7d3
+#Gm14483 -> H2al1a
+#Gm5382 -> H2al1n
+#4930557A04Rik -> H2al3
+#Gm4937 -> Cldn34b3
+
+# Gm14484 -> H2al1e, not detected
+#Gm10096, not detected
+#Gm14477 -> H2al1c, not detected
+
+genes <- c(genes,"Cypt2","Cldn34d","Map7d3","H2al1a","H2al1n","H2al3","Cldn34b3")
+
 plot_pseudotime_expression_panel(genes, ncol = 5, title = "Smoothed gene expression over pseudotime - MSCI 'X-escapees'", highlight_reigon = c(-15500,-12500), point_size = 0.1)
 
 ```
 
 ```{r, fig.width=6}
-X_escapees_plot <- ggplot(melt_genes(x_escapees$`Gene Symbol`), aes(-PseudoTime, value, group=variable)) +
-  geom_smooth(method = "gam",formula = y ~ s(x, k = 25),  se=FALSE, colour="black") +
-  ylab("Gene Expression") + xlab("Pseudotime") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  geom_rect(data=data.frame(xmin=-15000, xmax=-12500, ymin=-Inf, ymax=Inf),
-            aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax),
-              fill="grey20",
-              colour=NA,
-              alpha=0.2,
-              inherit.aes = FALSE)
+
+
+X_escapees_plot <- ggplot(curve_data[melt_genes(genes)[!is.na(PseudoTime)], on="PseudoTime"], aes(-PseudoTime, Expression, group=Gene)) +
+    stat_smooth(geom="line", method = "gam", formula = y ~ s(x, k = 35), se=FALSE, colour="black") +
+    ylab("Gene Expression") + xlab("Pseudotime") +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    new_scale_color()+
+    geom_line(aes(y=-0.1, colour=Stage), size=5) +
+    scale_colour_brewer(palette = "Set1")+
+    theme(legend.position = "none") # + facet_wrap(~Gene, scales='free_y')
 
 X_escapees_plot
+
+saveRDS(X_escapees_plot,"../data/plots/X_escapees_plot.rds")
 ```
 
 # X escapees In Context
