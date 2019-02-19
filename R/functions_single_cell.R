@@ -169,6 +169,36 @@ return(ggplot(tmp, aes(get(component), group, colour=group)) +
   xlab(paste0("Component ",component,"\n Cell Score")))
   }
 
+#' Load Curve Data
+#'
+#' @param princurves list of outputs of princurve()
+#' @param principal_curve string; name of list entry in principal_curves object, to use for pseudotime line
+#'
+#' @return data.table with columns for position of curve, annotated with Stage
+#' 
+#' @export
+#' 
+#' @import data.table
+load_curve_data <- function(princurves=principal_curves, principal_curve="df_9"){
+  
+  curve_data <- data.table(princurves[["df_9"]]$s[princurves[["df_9"]]$tag, 1],
+                           princurves[["df_9"]]$s[princurves[["df_9"]]$tag, 2])
+  curve_data[,PseudoTime := 1:nrow(curve_data)]
+  
+  m <- nrow(curve_data)
+  
+  curve_data[m:(m*0.975),Stage := "Spermatogonia"]
+  curve_data[(m*0.975):(m*0.96),Stage := "Leptotene"]
+  curve_data[(m*0.96):(m*0.93),Stage := "Zygotene"]
+  curve_data[(m*0.93):(m*0.62),Stage := "Pachytene"]
+  curve_data[(m*0.62):(m*0.5),Stage := "Division II"]
+  curve_data[(m*0.5):(m*0.2),Stage := "Round Spermatid"]
+  curve_data[(m*0.2):0,Stage := "Elongating \nSpermatid"]
+  
+  curve_data[,Stage := factor(Stage, levels=c("Spermatogonia","Leptotene","Zygotene","Pachytene","Division II","Round Spermatid","Elongating \nSpermatid"))]
+  
+  return(curve_data)
+}
 
 
 #' Plot tSNE
@@ -263,10 +293,8 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       ggtitle(gene)
   }
   
-  curve_data <- data.table(princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 1],
-                           princurves[[principal_curve]]$s[princurves[[principal_curve]]$tag, 2])
-  
-  colnames(curve_data) <- c(dim1,dim2)
+  curve_data <- load_curve_data(princurves, principal_curve)
+  colnames(curve_data)[1:2] <- c(dim1,dim2)
   
   if(curve){
     p <- p + new_scale_color() +
@@ -279,17 +307,6 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
   }
   
   if(stages){
-    m <- nrow(curve_data)
-    
-    curve_data[m:(m*0.975),Stage := "Spermatogonia"]
-    curve_data[(m*0.975):(m*0.96),Stage := "Leptotene"]
-    curve_data[(m*0.96):(m*0.93),Stage := "Zygotene"]
-    curve_data[(m*0.93):(m*0.62),Stage := "Pachytene"]
-    curve_data[(m*0.62):(m*0.5),Stage := "Division II"]
-    curve_data[(m*0.5):(m*0.2),Stage := "Round Spermatid"]
-    curve_data[(m*0.2):0,Stage := "Elongating \nSpermatid"]
-    
-    curve_data[,Stage := factor(Stage, levels=c("Spermatogonia","Leptotene","Zygotene","Pachytene","Division II","Round Spermatid","Elongating \nSpermatid"))]
     
     p <- p + new_scale_color() +
             geom_path(data = curve_data[-c(1:290)],
@@ -475,13 +492,14 @@ plot_pseudotime_expression_panel <- function(genes, factorisation=results, cell_
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param cell_metadata data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.
 #' @param predict logical; if TRUE (default FALSE) imputed/predicted gene expression is used
+#' @param expression_matrix matrix; rows=cells, columns=genes, unimputed but normalised (scaled) expression values
 #'
 #' @return data.table with columns 'cell', 'PsuedoTime', 'Tsne1_QC1', 'Tsne2_QC1', 'Gene', and 'Expression'
 #'
 #' @export
 #' @import data.table
 #' 
-melt_genes <- function(genes, cell_metadata=datat, expression_matrix=data, predict=FALSE){
+melt_genes <- function(genes, cell_metadata=datat, expression_matrix=data, predict=FALSE, factorisation=results){
   # generate melted version of datat on the fly for subset of genes
   # rather than keeping two 7Gb data.tables in memory
   #saveRDS(merge_sda3_melt2, "PseudoTime_Shiny/data_V3.rds")

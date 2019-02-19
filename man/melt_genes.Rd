@@ -5,12 +5,14 @@
 \title{Create long table combining gene expression and cell metadata}
 \usage{
 melt_genes(genes, cell_metadata = datat, expression_matrix = data,
-  predict = FALSE)
+  predict = FALSE, factorisation = results)
 }
 \arguments{
 \item{genes}{character vector; vector of gene symbols, of which expression values will be plotted over pseudotime}
 
 \item{cell_metadata}{data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.}
+
+\item{expression_matrix}{matrix; rows=cells, columns=genes, unimputed but normalised (scaled) expression values}
 
 \item{predict}{logical; if TRUE (default FALSE) imputed/predicted gene expression is used}
 
