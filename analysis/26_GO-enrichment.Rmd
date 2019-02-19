@@ -7,7 +7,7 @@ output: html_notebook
 library(SDAtools)
 library(testisAtlas)
 
-#load("../data/tmp_cache/SDA_objects.rds")
+#load("../data/tmp_cache/cached_objects.rds")
 
 results <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
 rownames(results$loadings[[1]]) <- paste0("V",1:50)
@@ -19,11 +19,13 @@ str(results)
 
 library(AnnotationHub) # source("https://bioconductor.org/biocLite.R"); biocLite("AnnotationHub")
 library(clusterProfiler) # source("https://bioconductor.org/biocLite.R"); biocLite("clusterProfiler")
+library(AnnotationDbi)
 
 # load GO database
 hub <- AnnotationHub()
 query(hub, "Musculus")
-Musculus <- hub[["AH57974"]] #query(hub, "org.MM.eg"), AH52234, AH57184
+query(hub, "org.MM.eg")
+Musculus <- hub[["AH66157"]] #AH57974, AH52234, AH57184
 #AH57974 ncbi orgdb
 
 
