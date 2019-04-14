@@ -140,8 +140,7 @@ genes_melt$Gene <- factor(genes_melt$Gene, colnames(tmp2))
 
 top_genes_plot <- ggplot(genes_melt, aes(Component, Gene, fill=Scaled_Gene_Loading))+
   geom_tile() +
-  scale_fill_gradient2() +
-  #scale_fill_distiller(palette = "RdBu") +
+  scale_fill_gradientn(colours = log_colour_scale(range(genes_melt$Scaled_Gene_Loading))) +
   theme_minimal()+
   theme(legend.position = "bottom",
         axis.ticks.y=element_blank(),
@@ -253,12 +252,15 @@ plot_GO_enrichments <- function(n=30){
   tmp2[pvalue< 10^(-15), pvalue:=10^(-15)]
   tmp2 <- tidyr::complete(tmp2, Component, GO_term)
   
+  #rev(brewer.pal(11, "RdYlBu"))
+  
   return(
     ggplot(tmp2, aes(Component, GO_term, fill = -log10(pvalue))) +
       geom_tile() +
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
             legend.position = c(-1,-0.07), legend.direction = "horizontal") +
-      scale_fill_gradientn(colours=rev(brewer.pal(11, "RdYlBu")), na.value = "#313695")
+      scale_fill_gradientn(colours=viridis::viridis(100)[round(sqrt(seq(from = 1,to = 100,length.out = 10))/sqrt(100)*100)],
+                           na.value = viridis::viridis(100)[1])#"#313695")
   )
 
 }
