@@ -1332,7 +1332,7 @@ plotCellAUC <- function(i, cumsum_predict, cumsum_train, cumsum_mean){
   
   aucg <- data.table(frac_genes = seq(1,length(cumsum_predict[,i]),1)/length(cumsum_predict[,i]),
                      Imputed = cumsum_predict[,i],
-                     Training = cumsum_train[,i],
+                     Cellwise = cumsum_train[,i],
                      Average = cumsum_mean[,i])
   
   aucg <- melt(aucg, id.vars = "frac_genes", variable.name = "Source of Expression Ranking", value.name = "Cumulative Test data reads")
@@ -1346,7 +1346,7 @@ plotCellAUC <- function(i, cumsum_predict, cumsum_train, cumsum_mean){
       scale_color_brewer(palette = "Set1") +
       annotate("label",
                label = paste0("Imputed AUC: ",signif(sum(cumsum_predict[,i])/ length(cumsum_mean[,i]),3),
-                              "\nTraining AUC: ",signif(sum(cumsum_train[,i])/ length(cumsum_mean[,i]),3),
+                              "\nCellwise AUC: ",signif(sum(cumsum_train[,i])/ length(cumsum_mean[,i]),3),
                               "\nAverage AUC: ",signif(sum(cumsum_mean[,i])/ length(cumsum_mean[,i]),3)),
                x = 0.6, y = 0.25)
   )
