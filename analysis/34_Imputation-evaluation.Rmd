@@ -38,42 +38,10 @@ raw_data_test <- Matrix(as.matrix(raw_data_test), sparse = TRUE)
 # sanity check
 sum(raw_data < raw_data_train2)
 
-saveRDS(raw_data_train2, "../data/raw_data_train.rds")
-saveRDS(raw_data_test,"../data/raw_data_test.rds")
+saveRDS(raw_data_train2, "../data/imputation/raw_data_train.rds")
+saveRDS(raw_data_test,"../data/imputation/raw_data_test.rds")
 
 ```
-
-Normalise data & run SDA
-
-```{r}
-data <- readRDS("../data/raw_data_train.rds")
-
-normalised_data <- dropsim::normaliseDGE(t(data),
-                     center = FALSE,
-                     scale = TRUE,
-                     threshold = 10,
-                     min_library_size = 200,
-                     gene_subset = (2/3))
-
-saveRDS(normalised_data,"../data/train_0.8_normalised.rds")
-
-library(SDAtools)
-export_data(as.matrix(normalised_data), name = "merged_mouse_V3_SDA_train_0.8.data", path="")
-
-run_SDA(sda_location = "../sda",
-        out = "../results/conradV3_sda_train_0.8_1",
-        data = "merged_mouse_V3_SDA_train_0.8.data",
-        num_comps = 50,
-        max_iter = 10000,
-        save_freq = 1000,
-        set_seed = "79151 17351",
-        N = 20036,
-        eigen_parallel = TRUE,
-        num_openmp_threads = 5,
-        num_blocks = 5)
-
-```
-
 
 # Compute counts recovery info
 
@@ -122,9 +90,6 @@ save(gene_subset, sds, lib_size_correction_factor, cell_subset, file = "../data/
 # dge2[dge2 > 10] <- 10
 # dge2[dge2 < (-10)] <- (-10)
 
-
-
-
 # check reverse_normalisation works
 # tmp <- reverse_normalisation(dge)
 
@@ -133,14 +98,52 @@ save(gene_subset, sds, lib_size_correction_factor, cell_subset, file = "../data/
 
 ```
 
-# Load SDA results & calculate prediction (imputed values)
+
+# Normalise data
+
+```{r}
+data <- readRDS("../data/imputation/raw_data_train.rds")
+
+normalised_data <- dropsim::normaliseDGE(t(data),
+                     center = FALSE,
+                     scale = TRUE,
+                     threshold = 10,
+                     min_library_size = 200,
+                     gene_subset = (2/3))
+
+saveRDS(normalised_data,"../data/imputation/train_0.8_normalised.rds")
+```
+
+# run SDA
+
+```{r}
+library(SDAtools)
+export_data(as.matrix(normalised_data), name = "merged_mouse_V3_SDA_train_0.8.data", path="")
+
+run_SDA(sda_location = "../sda",
+        out = "../results/conradV3_sda_train_0.8_1",
+        data = "merged_mouse_V3_SDA_train_0.8.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "79151 17351",
+        N = 20036,
+        eigen_parallel = TRUE,
+        num_openmp_threads = 5,
+        num_blocks = 5)
+
+```
+
+
+
+## Load SDA results & calculate prediction (imputed values)
 
 ```{r}
 
 library(SDAtools)
 
 # predicted with mask
-results_train <- load_results(results_folder = "../data/SDA/conradV3_sda_train_0.8_1/", data_path = "../data/count_matrices/")
+results_train <- load_results(results_folder = "../results/conradV3_sda_train_0.8_1/", data_path = "../data/conradV3/") #data/SDA #data/count_matrices/
 rownames(results_train$loadings[[1]]) <- paste0("V",1:50)
 rownames(results_train$pips[[1]]) <- paste0("V",1:50)
 
@@ -150,82 +153,258 @@ str(results_train)
 str(predicted_train)
 ```
 
-# Reverse Normalisation of training data
+# run PCA
 
 ```{r}
 
-load(file = "../data/count_dge_recovery_information.rds")
+library(flashpcaR)
+pca_training <- flashpca(as.matrix(normalised_data), ndim=50, stan="none", verbose=T, seed=42, do_loadings=T, divisor = "none")
 
-cell_subset <- rownames(predicted_train)
 
-predicted_train_counts <- reverse_normalisation(predicted_train, sign = TRUE)
+rownames(pca_training$projection) <- rownames(normalised_data)
+rownames(pca_training$loadings) <- colnames(normalised_data)
 
-predicted_train_counts_0 <- copy(predicted_train_counts)
-predicted_train_counts_0[predicted_train_counts_0 < 0] <- 0
 
-predicted_train_counts_rpkm <- predicted_train_counts_0/rowSums(predicted_train_counts_0)
-
-str(predicted_train)
-str(predicted_train_counts)
-str(predicted_train_counts_0)
-str(predicted_train_counts_rpkm)
-rm(predicted_train)
-rm(predicted_train_counts)
+saveRDS(pca_training,"../data/imputation/pca_training.rds")
 ```
 
-# Load raw test & train data
+
+## Load PCA results & calculate prediction (imputed values)
 
 ```{r}
-raw_data_test <- readRDS("../data/raw_data_test.rds")
-raw_data_test <- raw_data_test[rownames(predicted_train_counts_0), colnames(predicted_train_counts_0)]
 
-raw_data_train <- readRDS("../data/raw_data_train.rds")
-raw_data_train <- raw_data_train[rownames(predicted_train_counts_0), colnames(predicted_train_counts_0)]
+pca_training <- readRDS("../data/imputation/pca_training.rds")
+
+predicted_train_PCA <- pca_training$projection %*% t(pca_training$loadings)
+
+str(predicted_train_PCA)
+```
+
+#  run ICA
+
+```{r}
+normalised_data <- readRDS("../data/imputation/train_0.8_normalised.rds")
+
+a <- Sys.time()
+ICA_decomp <- fastICA::fastICA(as.matrix(normalised_data), n.comp = 50, verbose = TRUE)
+b <- Sys.time()
+
+b-a
+
+# 10 hours
+
+saveRDS(ICA_decomp,"../data/imputation/ICA_decomp_training.rds")
+colnames(ICA_decomp$A) <- colnames(ICA_decomp$X)
+ICA_decomp$X_Center <- attributes(ICA_decomp$X)[3][[1]]
+saveRDS(ICA_decomp[-1],"../data/imputation/ICA_decomp_training_sansX.rds")
+
+
+######
+
+
+normalised_data <- readRDS("../data/imputation/train_0.8_normalised.rds")
+
+a <- Sys.time()
+ICA_decomp <- fastICA::fastICA(as.matrix(normalised_data), n.comp = 50, verbose = TRUE, method="C")
+b <- Sys.time()
+```
+
+## Load ICA results & calculate prediction (imputed values)
+
+```{r}
+
+ica_training <- readRDS("../data/imputation/ICA_decomp_training_sansX.rds")
+
+# X = SA
+
+predicted_train_ica <- ica_training$S %*% ica_training$A
+
+# add center back, which ICA removes automatically
+predicted_train_ica <- sweep(predicted_train_ica, 2, ica_training$X_Center, "+")
+
+str(predicted_train_ica)
+```
+
+# run NNMF
+
+```{r}
+
+normalised_data <- readRDS("../data/imputation/train_0.8_normalised.rds")
+
+NNMF_training <- NNLM::nnmf(as.matrix(normalised_data), 50, rel.tol = 1e-5)
+
+saveRDS(NNMF_training,"../data/imputation/NNMF_training.rds")
+```
+
+
+## Load NNMF results & calculate prediction (imputed values)
+
+```{r}
+
+NNMF_training <- readRDS("../data/imputation/NNMF_training.rds")
+
+predicted_train_NNMF <- NNMF_training$W %*% NNMF_training$H
+
+str(predicted_train_NNMF)
+```
+
+
+
+```{r}
+# pip3 install dca --user wells
+# pip3 install tensorflow --user wells
+# 
+# from dca.api import dca
+# import anndata
+# 
+# adata = anndata.read_text("../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data")
+# 
+# adata.obs_names = cellinfo.Cell
+# adata.var_names = geneinfo.Gene
+
 
 ```
 
-# AUC
+
+# Function to calculate ranks & AUCs
 
 ```{r}
 
-set.seed(42)
-reorder = sample(1:ncol(raw_data_train))
-av_exp_order <- names(sort(colSums(raw_data_train), T))
-
-predicted_train_counts_rpkm2 = predicted_train_counts_rpkm[,reorder]
-raw_data_test2 = raw_data_test[,reorder]
-raw_data_train2 = raw_data_train[,reorder]
-
-cumsum_predictF <- function(i){
-  testvec = raw_data_test2[i,]
-  cumsum(testvec[order(predicted_train_counts_rpkm2[i,], decreasing=T)]) / sum(testvec)
+calculateAUCs <- function(predicted_train, 
+                          raw_data_test_file="../data/imputation/raw_data_test.rds",
+                          raw_data_train_file="../data/imputation/raw_data_train.rds",
+                          count_recovery_file="../data/imputation/count_dge_recovery_information.rds",
+                          shift=F){
+  # Reverse Normalisation of training data
+  
+  load(count_recovery_file)
+  
+  cell_subset <- rownames(predicted_train)
+  
+  predicted_train <- reverse_normalisation(predicted_train, sign = TRUE, cells=cell_subset, lib_correction=lib_size_correction_factor, standard_dev=sds)
+  
+  mean(predicted_train<0)
+  
+  if(shift){
+    predicted_train <- predicted_train + abs(quantile(predicted_train, 1/1e3))
+  }
+  
+  
+  predicted_train[predicted_train < 0] <- 0
+  
+  mean(predicted_train==0)
+  
+  predicted_train <- predicted_train/rowSums(predicted_train)
+  
+  str(predicted_train)
+  # rm(predicted_train_counts_0)
+  # rm(predicted_train)
+  
+  # Load raw test & train data
+  
+  raw_data_test <- readRDS(raw_data_test_file)
+  raw_data_test <- raw_data_test[rownames(predicted_train), colnames(predicted_train)]
+  
+  raw_data_train <- readRDS(raw_data_train_file)
+  raw_data_train <- raw_data_train[rownames(predicted_train), colnames(predicted_train)]
+  
+  
+  
+  # AUC
+  set.seed(42)
+  reorder = sample(1:ncol(raw_data_train))
+  av_exp_order <- names(sort(Matrix::colSums(raw_data_train), T))
+  
+  predicted_train = predicted_train[,reorder]
+  raw_data_test2 = raw_data_test[,reorder]
+  raw_data_train2 = raw_data_train[,reorder]
+  
+  
+  
+  cumsum_predictF <- function(i){
+    testvec = raw_data_test2[i,]
+    cumsum(testvec[order(predicted_train[i,], decreasing=T)]) / sum(testvec)
+  }
+  
+  cumsum_trainF <- function(i){
+    testvec = raw_data_test2[i,]
+    cumsum(testvec[order(raw_data_train2[i,], decreasing=T)]) / sum(testvec)
+  }
+  
+  cumsum_meanF <- function(i){
+    testvec = raw_data_test2[i,]
+    cumsum(testvec[av_exp_order]) / sum(testvec) #order(reorder)
+  }
+  
+  
+  cumsum_predict <- sapply(1:nrow(raw_data_train), cumsum_predictF)
+  cumsum_train <- sapply(1:nrow(raw_data_train), cumsum_trainF)
+  cumsum_mean <- sapply(1:nrow(raw_data_train), cumsum_meanF)
+  
+  
+  cellAUCs <- data.table(cell = rownames(raw_data_train),
+                         predict = colSums(cumsum_predict) /ncol(raw_data_train),
+                         train = colSums(cumsum_train) /ncol(raw_data_train),
+                         mean = colSums(cumsum_mean) /ncol(raw_data_train))
+  
+  return(list(cellAUCs, cumsum_predict, cumsum_train, cumsum_mean))
+  
 }
 
-cumsum_trainF <- function(i){
-  testvec = raw_data_test2[i,]
-  cumsum(testvec[order(raw_data_train2[i,], decreasing=T)]) / sum(testvec)
-}
+```
 
-cumsum_meanF <- function(i){
-  testvec = raw_data_test2[i,]
-  cumsum(testvec[av_exp_order]) / sum(testvec) #order(reorder)
-}
+# Calculate & Save AUCs / ranks
 
+NB do this part on a server with lots of memory >16GB
 
-cumsum_predict <- sapply(1:nrow(raw_data_train), cumsum_predictF)
-cumsum_train <- sapply(1:nrow(raw_data_train), cumsum_trainF)
-cumsum_mean <- sapply(1:nrow(raw_data_train), cumsum_meanF)
+```{r}
+
+SDA_AUCs <- calculateAUCs(predicted_train)
 
 
-cellAUCs <- data.table(cell = rownames(raw_data_train),
-                       predict = colSums(cumsum_predict) /ncol(raw_data_train),
-                       train = colSums(cumsum_train) /ncol(raw_data_train),
-                       mean = colSums(cumsum_mean) /ncol(raw_data_train))
+saveRDS(SDA_AUCs[[1]], file = "../data/imputation/cellAUCs.rds")
 
-saveRDS(cellAUCs, file = "../data/tmp_cache/cellAUCs.rds")
+save(SDA_AUCs, file = "../data/imputation/imputed_ranks.rds")
 
-save(cumsum_predict, cumsum_train, cumsum_mean, file = "../data/tmp_cache/imputed_ranks.rds")
 
+
+
+SDA_AUCs_shifted <- calculateAUCs(predicted_train, shift=T)
+
+saveRDS(SDA_AUCs_shifted[[1]], file = "../data/imputation/cellAUCs_SDA_shifted.rds")
+
+save(SDA_AUCs_shifted, file = "../data/imputation/imputed_ranks_SDA_shifted.rds")
+
+
+
+
+PCA_AUCs <- calculateAUCs(predicted_train_PCA)
+
+saveRDS(PCA_AUCs[[1]], file = "../data/imputation/cellAUCs_PCA.rds")
+
+save(PCA_AUCs, file = "../data/imputation/imputed_ranks_PCA.rds")
+
+
+
+ICA_AUCs <- calculateAUCs(predicted_train_ica)
+
+saveRDS(ICA_AUCs[[1]], file = "../data/imputation/cellAUCs_ICA.rds")
+
+save(ICA_AUCs, file = "../data/imputation/imputed_ranks_ICA.rds")
+
+
+
+NNMF_AUCs <- calculateAUCs(predicted_train_NNMF)
+
+saveRDS(NNMF_AUCs[[1]], file = "../data/imputation/cellAUCs_NNMF.rds")
+
+save(NNMF_AUCs, file = "../data/imputation/imputed_ranks_NNMF.rds")
+```
+
+
+## Plot AUC
+
+```{r}
 cellAUCs <- readRDS("../data/tmp_cache/cellAUCs.rds")
 load("../data/tmp_cache/imputed_ranks.rds")
 
@@ -253,6 +432,111 @@ plot_mean
 
 ```
 
+## vs PCA
+```{r}
+
+cellAUCs <- readRDS("../data/imputation/cellAUCs.rds")
+cellAUCs_SDA_shifted <- readRDS("../data/imputation/cellAUCs_SDA_shifted.rds")
+cellAUCs_PCA <- readRDS("../data/imputation/cellAUCs_PCA.rds")
+cellAUCs_ICA <- readRDS("../data/imputation/cellAUCs_ICA.rds")
+cellAUCs_NNMF <- readRDS("../data/imputation/cellAUCs_NNMF.rds")
+
+
+
+cellAUCs <- merge(cellAUCs, cellAUCs_PCA, by="cell", suffixes = c("",".PCA"))
+cellAUCs <- merge(cellAUCs, cellAUCs_ICA, by="cell", suffixes = c("",".ICA"))
+cellAUCs <- merge(cellAUCs, cellAUCs_NNMF, by="cell", suffixes = c("",".NNMF"))
+cellAUCs <- merge(cellAUCs, cellAUCs_SDA_shifted, by="cell", suffixes = c("",".SDA_shifted"))
+
+ggplot(cellAUCs, aes(train, predict)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
+ggplot(cellAUCs, aes(train, predict.SDA_shifted)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
+ggplot(cellAUCs, aes(train, predict.PCA)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
+ggplot(cellAUCs, aes(train, predict.ICA)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
+ggplot(cellAUCs, aes(train, predict.NNMF)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
+```
+
+```{r}
+
+cellAUCs[,mean(predict>predict.PCA)]
+# 0.74
+cellAUCs[,mean(predict<predict.PCA)]
+# 0.26
+
+cellAUCs[,mean(predict>predict.NNMF)]
+# 0.21
+cellAUCs[,mean(predict<predict.NNMF)]
+# 0.79
+
+
+# X vs Y
+ggplot(cellAUCs, aes(predict.PCA, predict)) + geom_point(stroke=0, size=1, alpha=0.3) + geom_abline(intercept = 0,slope=1,col='red')
+
+ggplot(cellAUCs, aes(predict.ICA, predict)) + geom_point(stroke=0, size=1, alpha=0.3) + geom_abline(intercept = 0,slope=1,col='red')
+
+ggplot(cellAUCs, aes(predict.NNMF, predict)) + geom_point(stroke=0, size=1, alpha=0.3) + geom_abline(intercept = 0,slope=1,col='red')
+
+# density difference
+ggplot(cellAUCs, aes(predict.PCA - predict)) + geom_density()
+ggplot(cellAUCs, aes(predict.ICA - predict)) + geom_density()
+ggplot(cellAUCs, aes(predict.NNMF - predict)) + geom_density()
+
+# Overlaping Densities
+tmp <- melt(cellAUCs, id="cell", variable.name = "Method", value.name = "AUC")[Method %in% c("predict","predict.PCA","predict.ICA","predict.NNMF")]
+
+tmp[,Method := gsub("predict\\.?","",Method)]
+tmp[Method=="",Method := "SDA"]
+
+pdf("../results/other_factorisations/compare_imputation.pdf")
+ggplot(tmp,
+       aes(AUC, colour=Method)) +
+  geom_density() +
+  scale_color_brewer(palette = "Set1") + 
+  xlim(0.82,1) +
+  theme(legend.position = "bottom")
+dev.off()
+
+# compare ECDF
+ggplot(tmp,
+       aes(AUC, colour=Method)) +
+  stat_ecdf(geom = "step") +
+  scale_color_brewer(palette = "Set1") + 
+  xlim(0.85,0.97) +
+  theme(legend.position = "bottom")
+
+
+ggplot(cellAUCs, aes(train,predict - predict.PCA)) + geom_hex(bins=100) + scale_fill_viridis(option="inferno") + geom_hline(yintercept = 0, col="red")
+
+# where in tSNE
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
+  geom_point(size=1, stroke=0, data = datat[cell %in% cellAUCs[predict.PCA<=predict]$cell]) +
+  geom_point(size=1, stroke=0, data = datat[cell %in% cellAUCs[predict.PCA>predict]$cell], colour="red")
+
+
+```
+
+```{r, fig.width=3}
+ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict < 0.99)) +
+  geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
+  scale_color_manual(values=c("lightgrey","red")) + theme_minimal()
+
+ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict > 1.01)) +
+  geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
+  scale_color_manual(values=c("lightgrey","red")) + theme_minimal()
+
+ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict > 1.01)) +
+  geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
+  scale_color_manual(values=c("lightgrey","red")) + theme_minimal() + theme(legend.position="bottom")
+
+ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF-predict > 0.01)) +
+  geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
+  scale_color_manual(values=c("lightgrey","red")) + theme_minimal() + theme(legend.position="bottom")
+
+ggplot(datat[cellAUCs], aes(library_size, log(predict.NNMF/predict))) +
+  geom_point(size=0.5, stroke=0, alpha=0.2) +
+  theme_minimal() + scale_x_log10() + geom_hline(yintercept = 0, col="red", size=0.2)
+```
+
+
 ## Example Curves
 
 ```{r}
@@ -275,6 +559,8 @@ str(cellAUCs[train>predict])
 
 plotCellAUCg(which(rownames(raw_data_train)=="GTCCATAGTCAT.Cul4a_2017-03-30"))
 
+plotCellAUC(which(rownames(raw_data_train)=="GTCCATAGTCAT.Cul4a_2017-03-30"), cumsum_predict, cumsum_train, cumsum_mean)
+
 ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
   geom_point(size=0.2) +
   geom_point(size=1, data = datat[cell %in% cellAUCs[train>predict]$cell], colour="red")
@@ -282,6 +568,8 @@ ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
 str(cellAUCs[test>predict])
 
 plotCellAUCg(which(rownames(raw_data_train)=="ATGACGGTGCGC.CNP_2016-12-15"))
+
+plotCellAUC(which(rownames(raw_data_train)=="ATGACGGTGCGC.CNP_2016-12-15"), cumsum_predict, cumsum_train, cumsum_mean)
 
 ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
   geom_point(size=0.2) +
@@ -296,13 +584,24 @@ In general which cells are better with / without imputation
 setkey(cellAUCs, cell)
 
 # which cells are best
-c <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
-  geom_point(size=0.2) + 
+c <- ggplot(merge(datat, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
+  geom_point(size=0.3, stroke=0) + 
   scale_color_viridis(direction = -1) +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
-  labs(x="t-SNE 1", y="t-SNE 2", colour="Ratio of Imputed Expression AUC\n to Average Training Expression AUC")
+  theme_classic(base_size=8) +
+  theme(legend.position = "top",
+        legend.justification = "right",
+        legend.margin=margin(t = 0, unit='cm'),
+        axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      rect = element_rect(fill = "transparent"),
+      panel.background = element_rect(fill = "transparent"), # bg of the panel
+      plot.background = element_rect(fill = "transparent", color = NA)) +
+  guides(colour=guide_colourbar(barwidth=5, barheight=0.5, title.position="top")) +
+  labs(x="", y="", colour="Ratio of Imputed to\n Average Expression AUC")
 
 d <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=predict/train)) +
   geom_point(size=0.2) + 
@@ -320,7 +619,9 @@ e <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=log(library
   guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
   labs(x="t-SNE 1", y="t-SNE 2", colour="Log Library Size (Total UMI Counts)")
 
-
+c
+d
+e
 ```
 
 ```{r}
@@ -351,7 +652,6 @@ genes_tmp <- c("Zbtb16","Prdm9","Piwil1","Ccna1","Ssxb1","Lrrd1","Gapdhs")
 
 imputation_plot <- imputed_vs_raw(genes_tmp)
 imputation_plot
-
 ```
 
 ## 80:20
@@ -383,6 +683,13 @@ ggplot(cbind(cellAUCs, density_frac80), aes(mean80, predict80, color=density_fra
   labs(colour="Cell density", x="Average Training Fraction of Genes for 80% Cumsum", y="Imputed Fraction of Genes for 80% Cumsum")
 ```
 
+```{r, fig.width=4, fig.height=4}
+# add tSNE subplot
+plot_mean_2 <- ggdraw() +
+  draw_plot(plot_mean, 0, 0, 1, 1) +
+  draw_plot(c, 0.5, 0.07, 0.5, 0.5)
+```
+
 
 save figure
 
@@ -391,10 +698,10 @@ save figure
 right_panel <- plot_grid(plotCellAUC(5749, cumsum_predict, cumsum_train, cumsum_mean),
                          plot_train,
                          lib_size_plot,
-                         plot_mean,
+                         plot_mean_2,
                          ncol = 2, labels = c("B","C","D","E"))
 
-png(width = 4250, height = 2500, res = 300, file = "../results/imputation/imputationAUC.png")
+png(width = 4250, height = 2500, res = 300, file = "../results/imputation/imputationAUC2.png")
 plot_grid(imputation_plot,right_panel, labels = c("A"), rel_widths = c(2,3))
 dev.off()
 ```
