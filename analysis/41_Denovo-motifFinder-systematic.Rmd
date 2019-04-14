@@ -11,7 +11,7 @@ output:
     theme: spacelab
 ---
 
-# Automode
+# De Novo Motif Finding
 
 Find denovo motifs for every component, using varying parameters -> 9000 potential motifs total.
 
@@ -24,9 +24,9 @@ library(ggseqlogo)
 nmf.options(grid.patch=TRUE) # stop blank pages appearing
 
 library(testisAtlas)
-
-tss_seqs <- seqinr::read.fasta("../data/extracted_seqs/all_genes_tss_500.fasta", forceDNAtolower = FALSE, as.string = TRUE)
-
+#_500
+tss_seqs <- seqinr::read.fasta("../data/motifs/promoter_sequences/all_genes_tss_1000.fasta", forceDNAtolower = FALSE, as.string = TRUE)
+#motifs/promoter_sequences
 tss_seqs_s <- gsub("a|t|c|g|n","N",as.character(tss_seqs))
 names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs))
 
@@ -37,25 +37,27 @@ rownames(results$loadings[[1]]) <- paste0("V",1:50)
 
 ```
 
+
 Run in parallel
 
 ```{r}
 # test on a single component
-#test <- get_component_motifs(20,F, random=T)
-
-results_positive <- mclapply(1:50, function(x) get_component_motifs(x, TRUE), mc.cores = 7, mc.silent=TRUE, mc.preschedule = FALSE)
+#test <- get_component_motifs(5,T)
 
 results_negative <- mclapply(1:50, function(x) get_component_motifs(x, FALSE), mc.cores = 7, mc.silent=TRUE, mc.preschedule = FALSE)
 
-results_random <- mclapply(1:50, function(x) get_component_motifs(x, positive=FALSE, random=TRUE), mc.cores = 15, mc.silent=TRUE, mc.preschedule = FALSE)
+results_positive <- mclapply(1:50, function(x) get_component_motifs(x, TRUE), mc.cores = 7, mc.silent=TRUE, mc.preschedule = FALSE)
+
+
+# results_random <- mclapply(1:50, function(x) get_component_motifs(x, positive=FALSE, random=TRUE), mc.cores = 15, mc.silent=TRUE, mc.preschedule = FALSE)
 
 # a couple errored due to NA in creating seqs regs e.g. 14? / a single cell one
 
-saveRDS(results_negative, "motifFinder_denovo_results_negative.rds")
+saveRDS(results_negative, "motifFinder_denovo_results_negative_V3.rds")
 
-saveRDS(results_positive, "motifFinder_denovo_results_positive.rds")
+saveRDS(results_positive, "motifFinder_denovo_results_positive_V3.rds")
 
-saveRDS(results_random, "motifFinder_denovo_results_random.rds")
+# saveRDS(results_random, "motifFinder_denovo_results_random.rds")
 
 ```
 
@@ -64,27 +66,11 @@ Clean up & Combine results.
 
 ```{r}
 
-# # correct wrong/uneven number of items per list in negatives
 
-# for(i in which(unlist(lapply(results_negative, length))!=90)){
-#   results_negative[[i]][[91]] <- "tmp"
-#   results_negative[[i]][[91]] <- NULL
-# }
+results_positive <- readRDS("motifFinder_denovo_results_positive_V3.rds")
 
 table(unlist(lapply(results_negative, length)))
-
-# # correct wrong/uneven number of items per list in positives
-# 
-# which(unlist(lapply(results_positive, length))!=90)
-# # 6 & 28 - try error : sum(is.na(regs_spermio)) == 0 is not TRUE
-# 
-# for(i in c(11,37,50)){
-#   results_positive[[i]][[91]] <- "tmp"
-#   results_positive[[i]][[91]] <- NULL
-# }
-# 
-#   results_positive[[6]] <- vector("list", 90)
-#   results_positive[[28]] <- vector("list", 90)
+# expect 50 components with length 90
 
 table(unlist(lapply(results_positive, length)))
 
@@ -99,18 +85,29 @@ names(results_random) <- paste0("C",1:50,"R")
 for(i in 1:50){
   names(results_positive[[i]]) <- paste0("I",1:90)
   names(results_negative[[i]]) <- paste0("I",1:90)
-  names(results_random[[i]]) <- paste0("I",1:90)
+#  names(results_random[[i]]) <- paste0("I",1:90)
 }
 
 results_all <- c(unlist(results_positive, recursive = FALSE),
                  unlist(results_negative, recursive = FALSE))
 
-saveRDS(results_all, "motifFinder_denovo_results_all_clean.rds")
+sum(sapply(results_all, is.null))
+#V3: 1427 failed / 9000
+
+# above is rather large due to sequences kept, so remove
+for(i in 1:length(results_all)){
+  if(!is.null(results_all[[i]])){
+    results_all[[i]]$seqs <- names(results_all[[i]]$seqs)
+    results_all[[i]]$trimmedseqs <- NULL  
+  }
+}
 
 
-results_all_random <- unlist(results_random, recursive = FALSE)
+saveRDS(results_all, "motifFinder_denovo_results_all_clean_V3.rds")
 
-saveRDS(results_all_random, "motifFinder_denovo_results_all_random_clean.rds")
+# results_all_random <- unlist(results_random, recursive = FALSE)
+# 
+# saveRDS(results_all_random, "motifFinder_denovo_results_all_random_clean.rds")
 ```
 
 # Find motif matches in HOCOMOCO using TOMTOM
@@ -119,42 +116,57 @@ Export denovo motifs in MEME format to input to TomTom to match to known motifs
 
 ```{r}
 
-export_all_pwms(results_all, "all_denovo_pwms.meme")
+system("mkdir all_denovo_pwms_V3")
 
-export_all_pwms(results_all_random, "random_pwms.meme")
+export_all_pwms(results_all, "all_denovo_pwms_V3/all_denovo_pwms_V3.meme")
+
+# export_all_pwms(results_all_random, "random_pwms.meme")
 
 ```
 
 Run tomtom
 
 ```{bash, eval=FALSE}
-# SDA results
-~/meme/bin/tomtom -no-ssc -oc all_denovo_PWM_tomtom -verbosity 1 -min-overlap 5 -dist pearson -evalue -thresh 10.0 code/all_denovo_pwms.meme motif_databases/MOUSE/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme
+wget http://meme-suite.org/meme-software/5.0.4/meme-5.0.4.tar.gz
 
-# motif_databases/JASPAR/JASPAR2018_CORE_vertebrates_non-redundant.meme
+tar zxf meme-5.0.4.tar.gz
+cd meme-5.0.4
+./configure --prefix=$HOME/meme --with-url=http://meme-suite.org --enable-build-libxml2 --enable-build-libxslt
+make
+make test
+make install
+
+mkdir all_denovo_PWM_tomtom_v3
+
+# Run TOMTOM in parallel (it's a bit slow)
+
+for batch in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
+do
+(
+~/meme/bin/tomtom \
+  -no-ssc -verbosity 1 -min-overlap 5 -dist pearson -evalue -thresh 10.0 \
+  code/all_denovo_pwms_V3/all_denovo_pwms_V3.meme${batch} \
+  motif_databases/MOUSE/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme \
+  motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme \
+  -text > all_denovo_PWM_tomtom_v3/all_denovo_PWM_tomtom_v3_${batch}.tsv
+) &
+done
 
 # random (null) results
 
-~/meme/bin/tomtom -no-ssc -oc random_PWM_tomtom -verbosity 1 -min-overlap 5 -dist pearson -evalue -thresh 10.0 code/random_pwms.meme motif_databases/MOUSE/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme
+# ~/meme/bin/tomtom -no-ssc -oc random_PWM_tomtom -verbosity 1 -min-overlap 5 -dist pearson -evalue -thresh 10.0 code/random_pwms.meme motif_databases/MOUSE/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme
 ```
 
 
-load tomtom results
+# Load tomtom results
 
 ```{r, fig.width=4}
 #load results
 
-results_all <- readRDS("../data/motifs/motifFinder_denovo_results_all_clean.rds")
+results_all <- readRDS("../data/motifs/motifFinder_denovo_results_all_clean_V3.rds")
 
-tomtom_summary <- fread("../data/motifs/all_denovo_PWM_tomtom/tomtom.txt")
-
-names(tomtom_summary) <- make.names(names(tomtom_summary))
-
-results_all_random <- readRDS("../data/motifs/motifFinder_denovo_results_all_random_clean.rds")
-
-tomtom_summary_random <- fread("../data/motifs/random_PWM_tomtom/tomtom.txt")
-
-names(tomtom_summary_random) <- make.names(names(tomtom_summary_random))
+tomtom_summary <- rbindlist(lapply(list.files(path = "../data/motifs/all_denovo_PWM_tomtom_v3/", full.names = T),
+                                   function(x) fread(cmd=paste("grep -v '#'",x), check.names = T)))
 
 ```
 
@@ -165,151 +177,349 @@ names(tomtom_summary_random) <- make.names(names(tomtom_summary_random))
 
 IC_values <- unlist(lapply(1:9000, information_content))
 
-IC_values <- data.table(IC_values, X.Query.ID=names(results_all))
-setkey(IC_values,X.Query.ID)
-setkey(tomtom_summary,X.Query.ID)
+textPWM <- function(x){
+  if(!is.null(results_all[[x]])){
+    return(pwm2text(results_all[[x]]$scoremat))
+  }else{
+    return(NA)
+  }
+}
+
+textPWMs <- sapply(1:9000, textPWM)
+
+# need to convert NULL to NA via char
+maxiters <- as.integer(as.character(lapply(results_all,function(x) nrow(x$alphas))))
+
+IC_values <- data.table(IC_values, maxiters, Query_ID=names(results_all), textual_PWM=textPWMs)
+setkey(IC_values,Query_ID)
+setkey(tomtom_summary,Query_ID)
 
 tomtom_summary <- merge(tomtom_summary, IC_values, all.x=T)
 
 # extract / format transcription factor name
-tomtom_summary[,Target.Name := sapply(strsplit(Target.ID,"_"), function(x) x[[1]][[1]])]
-tomtom_summary_random[,Target.Name := sapply(strsplit(Target.ID,"_"), function(x) x[[1]][[1]])]
+tomtom_summary[,Target.Name := sapply(strsplit(Target_ID,"_"), function(x) x[[1]][[1]])]
+#tomtom_summary_random[,Target.Name := sapply(strsplit(Target_ID,"_"), function(x) x[[1]][[1]])]
 
 # extract / format component name
-tomtom_summary[,Component := sapply(strsplit(X.Query.ID,"\\."), function(x) x[[1]][[1]])]
-tomtom_summary_random[,Component := sapply(strsplit(X.Query.ID,"\\."), function(x) x[[1]][[1]])]
+tomtom_summary[,Component := sapply(strsplit(Query_ID,"\\."), function(x) x[[1]][[1]])]
+#tomtom_summary_random[,Component := sapply(strsplit(Query_ID,"\\."), function(x) x[[1]][[1]])]
 
 # calculate GC statistics from consensus
-tomtom_summary[,GC_count := nchar(gsub("[AT]","",Query.consensus))]
-tomtom_summary[,AT_count := nchar(gsub("[GC]","",Query.consensus))]
+tomtom_summary[,GC_count := nchar(gsub("[AT]","",Query_consensus))]
+tomtom_summary[,AT_count := nchar(gsub("[GC]","",Query_consensus))]
 tomtom_summary[,GC_percent := (GC_count)/(AT_count+GC_count)]
 
-# remove old JASPAR hits
-tomtom_summary <- tomtom_summary[!grepl("^MA",Target.Name)]
+# Extract Iteration ID
+tomtom_summary[,Iteration := sapply(strsplit(Query_ID,"\\."), function(x) as.numeric(gsub("I","",x[[2]][[1]])))]
+
+tomtom_summary[Iteration<=9*3, region:="Right"]
+tomtom_summary[Iteration>9*3 & Iteration<=9*6, region:="Left"]
+tomtom_summary[Iteration>9*6, region:="Centered"]
+
+tomtom_summary[,IC_perbase := IC_values/nchar(Query_consensus)]
 
 # for each denovo motif, use best tomtom match
-tomtom_summary_byquery <- tomtom_summary[,.SD[which.min(E.value)],by=X.Query.ID]
+tomtom_summary_byquery <- tomtom_summary[,.SD[which.min(E.value)],by=Query_ID]
 
 ```
 
+
+# GC
 
 ```{r}
-# many with 100% GC bases in consensus of query
 hist(tomtom_summary_byquery$GC_percent, breaks=200)
 
-# what's found most frequently
-tomtom_summary_byquery[,.N,by=Target.Name][order(-N)][1:20]
+ggplot(tomtom_summary_byquery, aes(nchar(Query_consensus), GC_percent)) + geom_point(alpha=0.005) + scale_x_log10()
 ```
 
-For each motif group, plot the denovo motifs
+# Most frequent matches
+```{r}
 
-```{r, fig.width=6}
-# Which motifs have best matches
-# best_denovo <- tomtom_summary[,.SD[which.min(p.value)],by=Target.ID][order(E.value)][1:400]
-# tomtom_summary_byquery[,min(E.value),by=Target.Name][order(V1)][1:20]
+tomtom_summary_byquery[,.N,by=Target.Name][order(-N)][1:40]
+
+```
+
+# Are 'unconverged' motifs worse?
+
+```{r}
+
+ggplot(tomtom_summary_byquery, aes(IC_values, colour=maxiters==1000)) + geom_density()
+
+ggplot(tomtom_summary_byquery, aes(-log10(p.value), colour=maxiters==1000)) + geom_density()
+
+```
 
 
-# for each TF, select the best matching denovo motif, for those with min q of 0.001
-
-motif_matches <- tomtom_summary[q.value<0.001][, .SD[which.min(q.value)], by = Target.Name][order(E.value)]
-saveRDS(motif_matches, "../data/motif_matches.rds")
-
-motif_matches_random <- tomtom_summary_random[q.value<0.001][, .SD[which.min(q.value)], by = Target.Name][order(E.value)]
-
-print(paste(nrow(motif_matches), "different matches"))
-# 124 matches
-print(paste(length(unique(motif_matches$X.Query.ID)),"different motifs"))
-# from 92 motifs
-
-# load motif match groupings
-motif_groups <- read.table("../data/motifs/motif_results_groups.csv", fill=T, sep = ",", stringsAsFactors=F)
-motif_groups$group <- c(NA,1:(nrow(motif_groups)-1))
-motif_groups <- data.table(melt(motif_groups, id.vars="group"))[value!=""]
-
-print(paste("Groups:",paste(unique(motif_groups$group), collapse = " ")))
-
-# check all the matches are present
-sum(!motif_groups$value %in% motif_matches$Target.Name)
-sum(!motif_matches$Target.Name %in% motif_groups$value)
-
-# for each group of motifs plot the matches
-
-pdf("../results/Denovo_motifs_grouped.pdf", width = 9)
-for(class in 1:max(unique(motif_groups$group), na.rm = T)){
-  tmp <- motif_groups[group==class]$value
-  print(plot_grid(plotlist = plot_motif_matches(motif_matches[Target.Name %in% tmp], titles = T)))
+# for each most common target plot match
+```{r}
+for(match in tomtom_summary_byquery[,.N,by=Target.Name][order(-N)][1:50]$Target.Name){
+  print(plot_motif_matches(tomtom_summary_byquery[Target.Name==match][order(p.value)][1]))
 }
-dev.off()
-
 ```
 
-see results/Denovo_motifs_grouped.pdf for plots of grouped motifs
-
-
-In which components are the motifs found
-
-```{r, fig.width=6}
-
-#best_matches <- c("THA11","SP2","NFYB","RFX2","NRF1","GABPA","SPIB","MYB","ATF2","ETS1","ETV5","TBP","CREB1","THAP1","TYY1")
-
-ordering <- c(rbind(paste0("C",component_labels,"P"),paste0("C",component_labels,"N")))
-
-#lapply(ordering, function(x) tomtom_summary_byquery[Component==x][Target.Name %in% best_matches, min(E.value), by=Target.Name])
-
-# For each TF - component combo, get min E.Value
-
-motif_which_component <- tomtom_summary[Target.Name %in% motif_groups[!is.na(group)]$value, min(E.value), by=.(Component,Target.Name)][order(Target.Name)]
-
-motif_which_component <- dcast(motif_which_component, formula= Component ~ Target.Name, value.var="V1")
-
-motif_which_component_m <- as.matrix(motif_which_component[,-"Component", with=F])
-rownames(motif_which_component_m) <- motif_which_component$Component
-
-ordering2 <- ordering[ordering %in% motif_which_component$Component][1:75] #46
-
-motif_which_component_m[is.na(motif_which_component_m)] <- 12
-
-motif_which_component_m <- -log(motif_which_component_m[ordering2,],10)
-
-aheatmap(motif_which_component_m, Rowv = NA, cexRow = 1, scale = "col", hclustfun = "ward.D2")
-
-motif_which_component_m[motif_which_component_m>10] <- 10
-
-aheatmap(motif_which_component_m, Rowv = NA, cexRow = 1, hclustfun = "ward.D2")
-
+# which motifs have NO TOMTOM match
+```{r}
+for(match in names(which(sapply(results_all, is.null)==F))[!names(which(sapply(results_all, is.null)==F)) %in% unique(tomtom_summary_byquery$Query_ID)]){
+  print(ggseqlogo(get_PWM(results_all[[match]])))
+}
 ```
+
+
+# Does search region affect motif quality
+```{r}
+ggplot(tomtom_summary_byquery[,.("mean_IC"=mean(IC_values)),by=c("Iteration","region")], aes(Iteration, mean_IC, colour=region)) + geom_point()
+ggplot(tomtom_summary_byquery[,.("mean_pvalue"=mean(-log10(p.value))),by=c("Iteration","region")], aes(Iteration, mean_pvalue, colour=region)) + geom_point()
+```
+
+
+
+
 
 # Look for novel motifs
 
 Look for motifs with high information content but low match to currently known motifs
 
-Most good motifs have an IC value of 7+
-```{r, fig.width=6}
-
-summary(IC_values)
-best_denovo[,.(X.Query.ID, Target.ID, IC_values)][order(-IC_values)]
-```
-
 Most high IC are GC rich - probably SP1 etc.
 
 ```{r, fig.width=6}
-ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=GC_count)) +
-  geom_point(size=0.1) +
-  scale_x_log10() +
-  theme(legend.position = "bottom") +
-  scale_colour_gradientn(colours = viridis(100), limits=c(1, 15))
 
-ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=GC_percent)) +
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=GC_percent)) +
   geom_point(size=0.1) +
   scale_x_log10() +
   theme(legend.position = "bottom") +
   scale_colour_gradientn(colours = viridis(100, direction = -1))
 
-ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=Target.Name %in% c("SP2","SP1","SP3","SP4"))) +
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=grepl("^SP[0-9]",Target.Name))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=grepl("ATF[0-9]",Target.Name))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+# Stra8? motif
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=grepl("A?GG[AT][AG][AG]?|[TC]?[TC][TA]CCT?",Query_consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=grepl("CREB1",Target.Name))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=IC_perbase>0.8 & E.value>1e-4)) +
   geom_point(size=0.1) +
   scale_x_log10() +
   theme(legend.position = "bottom")
 ```
+
+##  C26
+
+```{r}
+
+print(ggseqlogo(get_PWM(results_all[paste0("C26N.I",69)][[1]],T)) + ggtitle(paste(i,"T")))
+for(i in c(65,68,70)){
+  print(ggseqlogo(get_PWM(results_all[paste0("C26N.I",i)][[1]])) + ggtitle(i))
+}
+
+```
+
+```{r}
+for(i in c(14,22)){
+  print(ggseqlogo(get_PWM(results_all[paste0("C26N.I",i)][[1]])) + ggtitle(i))
+}
+print(ggseqlogo(get_PWM(results_all[paste0("C26N.I",67)][[1]],T)) + ggtitle(paste(i,"T")))
+
+```
+
+## 3 C's
+
+```{r}
+
+# CXXCXXC
+for(i in c(20,15,80,1,6)){
+  print(ggseqlogo(get_PWM(results_all[paste0("C2P.I",i)][[1]])))
+}
+
+# CXXCXXC
+for(i in c(13,1,27,79)){
+  print(ggseqlogo(get_PWM(results_all[paste0("C39P.I",i)][[1]],T)))
+}
+
+# CXXCXXC
+for(i in c(5,62,63,52,59,79,8,70,74,56)){
+  print(ggseqlogo(get_PWM(results_all[paste0("C48P.I",i)][[1]],T)))
+}
+
+```
+
+
+```{r}
+tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][,.N,by=Component][order(-N)]
+tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][,.N,by=Target.Name][order(-N)]
+tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-3 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][,.N,by=Target.Name][order(-N)]
+
+tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][!grepl("A?GG[AT][AG][AG]?|[TC]?[TC][TA]CCT?",Query_consensus) & !grepl("ATF[0-9]|CREB1",Target.Name)][order(Component)]
+
+
+# C28P = ATF2&7
+# C41P = CREB1
+
+# C48P - CXXCXXC|GXXGXXG
+
+for(i in 1:20){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Component=="C48P"][i])) # 41-45 c32, C39 47-49  
+}
+
+# CXXCXXC again, some TTT
+for(i in 1:19){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Component=="C39P"][i])) # 41-45 c32, C39 47-49  
+}
+
+
+for(i in 1:17){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Component=="C2P"][i])) # 41-45 c32, C39 47-49  
+}
+
+
+for(i in 1:12){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Component=="C50P"][i])) # 41-45 c32, C39 47-49  
+}
+# TXXXXXT
+
+for(i in 1:14){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Component=="C33P"][i])) # 41-45 c32, C39 47-49  
+}
+
+for(i in 1:16){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Component=="C31P"][i])) # 41-45 c32, C39 47-49  
+}
+
+
+# AXCXXC
+for(i in c(36,83,4)){ # 26,61, opposite side component, RFX
+  plot_motif_matches(tomtom_summary_byquery[Query_ID==paste0("C33P.I",i)])
+}
+
+
+
+
+for(i in 1:5){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][!grepl("A?GG[AT][AG][AG]?|[TC]?[TC][TA]CCT?",Query_consensus) & !grepl("ATF[0-9]|CREB1",Target.Name)][Target.Name=="TBP"][i])) # 41-45 c32, C39 47-49  
+}
+
+for(i in 1:4){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][!grepl("A?GG[AT][AG][AG]?|[TC]?[TC][TA]CCT?",Query_consensus) & !grepl("ATF[0-9]|CREB1",Target.Name)][Target.Name=="OSR2"][i])) # 41-45 c32, C39 47-49  
+}
+
+for(i in 1:4){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][!grepl("A?GG[AT][AG][AG]?|[TC]?[TC][TA]CCT?",Query_consensus) & !grepl("ATF[0-9]|CREB1",Target.Name)][Target.Name=="BHA15"][i])) # 41-45 c32, C39 47-49  
+}
+
+# GTGAGT|ACTCAC - MAFG like, 14N (sc) & 3N (lympho)
+
+for(i in 1:5){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Component=="C14N"][i])) # 41-45 c32, C39 47-49  
+}
+
+
+for(i in 1:20){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Target.Name=="TAF1"][i])) # 41-45 c32, C39 47-49  
+}
+
+
+for(i in 1:6){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Target.Name=="ZN770"][i])) # 41-45 c32, C39 47-49  
+}
+
+for(i in 1:5){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Target.Name=="ZEB1"][i])) # 41-45 c32, C39 47-49  
+}
+
+for(i in 1:12){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Target.Name=="ETV7"][i])) # 41-45 c32, C39 47-49  
+}
+
+for(i in 1){
+  print(plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)][Target.Name=="ETV6"][i])) # 41-45 c32, C39 47-49  
+}
+# 21N - 2
+
+tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1]
+tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & grepl("A?GG[AT][AG][AG]?|[TC]?[TC][TA]CCT?", Query_consensus)]
+
+tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & grepl("CAGCAG", Query_consensus)] #Prdm9like
+
+tomtom_summary_byquery[IC_perbase>0.7 & E.value>1e-1 & Component=="C5N"]
+
+tomtom_summary_byquery[IC_perbase>0.5 & grepl("TGAGG.[GA]{2}|[CT]{2}.CCTCA", Query_consensus)]
+
+
+
+for(i in c(1:90)){
+  if(!is.null(results_all[paste0("C44N.I",i)][[1]])){
+    print(ggseqlogo(get_PWM(results_all[paste0("C44N.I",i)][[1]]))+ ggtitle(paste0("C44N.I",i)))  
+  }
+}
+```
+
+# Export for regprob finding
+
+```{r}
+plot_motif_matches(tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)  & IC_values>5][,.SD[which.max(IC_perbase)],by=Target_ID][4])
+
+test_queries <- tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)  & IC_values>5][,.SD[which.max(IC_perbase)],by=Target_ID]$Query_ID
+
+# V2
+test_queries <- tomtom_summary_byquery[IC_perbase>0.5 & E.value>1e-5 & E.value<1e-1 & !grepl("ATF[0-9]|CREB1",Target.Name) & (GC_count+AT_count>4)  & IC_values>5][,.SD[which.max(IC_perbase)],by=Target_ID]$Query_ID
+
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=Query_ID %in% test_queries)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+dput(test_queries)
+```
+
+
+#  31
+
+```{r}
+# TXXTXXT
+for(i in c(18,13,11)){
+  print(plot_motif_matches(tomtom_summary_byquery[Query_ID==paste0("C31P.I",i)]))
+}
+```
+
+```{r}
+for(i in c(6,3,20,26,23,59)){
+  print(plot_motif_matches(tomtom_summary_byquery[Query_ID==paste0("C31P.I",i)]))
+}
+```
+
+```{r}
+plot_motif_matches(tomtom_summary_byquery[Query_ID=="C31P.I19"])
+plot_motif_matches(tomtom_summary_byquery[Query_ID=="C31P.I6"])
+plot_motif_matches(tomtom_summary_byquery[Query_ID=="C31P.I20"])
+plot_motif_matches(tomtom_summary_byquery[Query_ID=="C31P.I26"])
+plot_motif_matches(tomtom_summary_byquery[Query_ID=="C31P.I59"])
+```
+
+
+```{r}
+# GGXXXXGG
+
+for(i in c(19,25,17,24,10,59,12,22,2)){
+  print(plot_motif_matches(tomtom_summary_byquery[Query_ID==paste0("C31P.I",i)]))
+}
+
+```
+
 
 If we look at motifs with GC of between 10% and 90%, there's a lump of motifs with relatively high IC and low E value.
 
@@ -331,14 +541,45 @@ They mostly match (badly) with ATF1 and are from the late components 17, 18, 36,
 
 ```{r, fig.width=6}
 
-tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][,.N,by=Target.Name]
+tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][,.N,by=Target.Name][order(-N)]
+
+tomtom_summary_byquery[E.value>1e-2 & IC_perbase>0.5][,.N,by=Target.Name][order(-N)]
 
 tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][,.N,by=Component][order(-N)][1:10]
 
-ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=Target.Name %in% c("ATF1"))) +
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=grepl("ATF",Target.Name))) +
   geom_point(size=0.1) +
   scale_x_log10() +
   theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=grepl("TGA[ACGT]GTCACAA?|T?TGTGAC[ACGT]TCA",Query_consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=grepl("^SP",Target.Name))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=grepl("^RFX",Target.Name))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") + scale_color_manual(values=c("white","black"))
+
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=grepl("^TAF1",Target.Name))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") + scale_color_manual(values=c("white","black"))
+
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=grepl("GG[ACT]GG[ACT]GG?|CC[AGT]CC[AGT]CC",Query_consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+
 ```
 
 Looking at a few examples they all look pretty much the same, part of an ATF1 motif, plus CACAA. The ATF1 motif itself is quite weak also.
@@ -350,13 +591,13 @@ Perhaps the most interesting part of these motifs, is that the CpG part of them 
 set.seed(42)
 
 cowplot::plot_grid(plotlist =  list(
-plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-2 & & IC_perbase>0.5][sample(1:1638, 1)], yaxis = T)[[1]],
 plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]],
 plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]],
 plot_motif_matches(tomtom_summary_byquery[GC_percent<0.8 & GC_percent>0.2][E.value>1e-4 & IC_values>10][sample(1:172, 1)], yaxis = T)[[1]])
 )
 
-plot_motif_matches(tomtom_summary_byquery[X.Query.ID=="C18P.I53"], yaxis = T)
+plot_motif_matches(tomtom_summary_byquery[Query_ID=="C18P.I53"], yaxis = T)
 
 # export_PWM(results_all[["C18P.I53"]],"C18P.I53", file="C18P.I53.motif")
 
@@ -366,19 +607,76 @@ Maybe we're biasing towards small amount of CpG by conditioning on (poor) match 
 
 ```{r, fig.width=6}
 
-ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=IC_values>10 & E.value>1e-4 & Target.Name!="ATF1" & grepl("TGTGA|TCACA", Query.consensus))) +
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=IC_values>10 & E.value>1e-4 & Target.Name!="ATF1" & grepl("TGTGA|TCACA", Query_consensus))) +
   geom_point(size=0.1) +
   scale_x_log10() +
   theme(legend.position = "bottom")
 
 cowplot::plot_grid(plotlist =  list(
-plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][1], yaxis = T)[[1]],
-plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][2], yaxis = T)[[1]],
-plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][4], yaxis = T)[[1]],
-plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query.consensus)][order(-E.value)][5], yaxis = T)[[1]])
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query_consensus)][order(-E.value)][1], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query_consensus)][order(-E.value)][2], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query_consensus)][order(-E.value)][4], yaxis = T)[[1]],
+plot_motif_matches(tomtom_summary_byquery[E.value>1e-4 & IC_values>10 & grepl("TGTGA|TCACA", Query_consensus)][order(-E.value)][5], yaxis = T)[[1]])
 )
 
 ```
+
+```{r}
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=Query_ID=="C5N.I82")) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=region)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=region)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") + facet_wrap(~region) + ylim(NA,20)
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=region)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") + facet_wrap(~region)
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=Iteration)) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom") + scale_color_viridis()
+
+tomtom_summary_byquery[region=="Right" & IC_perbase>0.75][,.N,by=Component][order(-N)]
+
+tomtom_summary_byquery[region=="Right" & IC_perbase>0.6][Component=="C44N"]
+
+plot_motif_matches(tomtom_summary_byquery[region=="Right" & IC_perbase>0.7][Component=="C15N"][3])
+
+plot_motif_matches(tomtom_summary_byquery[region=="Right" & IC_perbase>0.75][Component=="C5N"][1])
+
+tomtom_summary_byquery[region=="Right"][order(-IC_perbase)]
+
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=grepl("TGAGG|CCTCA", Query_consensus))) +
+  geom_point(size=0.2) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+
+
+# highest IC, match to Stra8 consensus
+tomtom_summary_byquery[grepl("TGAGG.[GA]{2}|[CT]{2}.CCTCA", Query_consensus)][order(-IC_perbase)]
+plot_motif_matches(tomtom_summary_byquery[grepl("TGAGG.[GA]{2}|[CT]{2}.CCTCA", Query_consensus)][order(-IC_perbase)][1])
+
+# highest IC, match to CremT
+plot_motif_matches(tomtom_summary_byquery[grepl("TGA[ACGT]GTCACAA|TTGTGAC[ACGT]TCA",Query_consensus)][order(-IC_perbase)][1])
+
+
+for(i in 1:20){
+  print(plot_motif_matches(tomtom_summary_byquery[region=="Right"][order(-IC_perbase)][i]))
+}
+```
+
 
 ## GGCGGC
 
@@ -386,12 +684,18 @@ Anything else after excluding all matched to the ATF1 like motif? Mostly long GG
 
 ```{r, fig.width=6}
 
-ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus))) +
+ggplot(tomtom_summary_byquery, aes(E.value, IC_perbase, colour=IC_perbase>0.8 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query_consensus))) +
   geom_point(size=0.1) +
   scale_x_log10() +
   theme(legend.position = "bottom")
 
-plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][4], yaxis = T)
+ggplot(tomtom_summary_byquery, aes(E.value, IC_values, colour=IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query_consensus))) +
+  geom_point(size=0.1) +
+  scale_x_log10() +
+  theme(legend.position = "bottom")
+
+tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query_consensus)]
+plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query_consensus) & Component!="C19N"][order(-E.value)][1], yaxis = T)
 plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][6], yaxis = T)
 plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][7], yaxis = T)
 plot_motif_matches(tomtom_summary_byquery[IC_values>10 & E.value>1e-4 & !grepl("TGTGA|TCACA", Query.consensus) & Component!="C19N"][order(-E.value)][8], yaxis = T)
@@ -434,45 +738,174 @@ plot_motif_matches(tomtom_summary_byquery[grepl("GCCGCCG|CGGCGGC", Query.consens
 
 ```
 
+More likely to match mouse motif than human
+
+```{r}
+ggplot(tomtom_summary, aes(p.value)) + geom_density(aes(colour=grepl("_MOUSE",Target_ID))) + scale_x_log10()  + ylim(0,0.1)
+tomtom_summary[,mean(log10(p.value)),by=grepl("MOUSE",Target_ID)]
+tomtom_summary_byquery[,.N,by=grepl("MOUSE",Target_ID)]
+```
+
+
+# Grouped
+For each motif group, plot the denovo motifs
+
+```{r, fig.width=6}
+# Which motifs have best matches
+# best_denovo <- tomtom_summary[,.SD[which.min(p.value)],by=Target_ID][order(E.value)][1:400]
+# tomtom_summary_byquery[,min(E.value),by=Target.Name][order(V1)][1:20]
+
+
+# for each TF, select the best matching denovo motif, for those with min q of 0.001
+#q.value<0.001
+motif_matches <- tomtom_summary[E.value<1e-2][, .SD[which.min(p.value)], by = Target.Name][order(E.value)]
+saveRDS(motif_matches, "../data/motifs/motif_matches_v3.rds")
+
+
+print(paste(nrow(motif_matches), "different matches"))
+# 123 (126v1) matches
+print(paste(length(unique(motif_matches$Query_ID)),"different motifs"))
+# from 101 (92v1) motifs
+
+pdf("../results/known_motifs_v3.pdf")
+for(i in 1:nrow(motif_matches)){
+  print(plot_motif_matches(motif_matches[order(q.value)][i]))
+}
+dev.off()
+
+# load motif match groupings
+motif_groups <- read.table("../data/motifs/motif_results_groups.csv", fill=T, sep = ",", stringsAsFactors=F)
+motif_groups$group <- c(1:(nrow(motif_groups)))
+motif_groups <- data.table(melt(motif_groups, id.vars="group"))[value!=""]
+
+print(paste("Groups:",paste(unique(motif_groups$group), collapse = " ")))
+
+# check all the matches are present
+sum(!motif_groups$value %in% motif_matches$Target.Name)
+sum(!motif_matches$Target.Name %in% motif_groups$value)
+
+motif_groups$value[!motif_groups$value %in% motif_matches$Target.Name]
+motif_matches$Target.Name[!motif_matches$Target.Name %in% motif_groups$value]
+
+# for each group of motifs plot the matches
+
+pdf("../results/Denovo_motifs_grouped_V3B.pdf", width = 9)
+for(class in 1:max(unique(motif_groups$group), na.rm = T)){
+  print(class)
+  tmp <- motif_groups[group==class]$value
+  if(nrow(motif_matches[Target.Name %in% tmp])>0){
+    print(plot_grid(plotlist = plot_motif_matches(motif_matches[Target.Name %in% tmp], titles = T)))
+  }else{
+    print(paste("NO",tmp))
+  }
+  
+}
+dev.off()
+
+```
+
+see results/Denovo_motifs_grouped.pdf for plots of grouped motifs
+
+
+In which components are the motifs found
+
+```{r, fig.width=6}
+
+#best_matches <- c("THA11","SP2","NFYB","RFX2","NRF1","GABPA","SPIB","MYB","ATF2","ETS1","ETV5","TBP","CREB1","THAP1","TYY1")
+
+ordering <- c(rbind(paste0("C",component_labels,"P"),paste0("C",component_labels,"N")))
+
+#lapply(ordering, function(x) tomtom_summary_byquery[Component==x][Target.Name %in% best_matches, min(E.value), by=Target.Name])
+
+# For each TF - component combo, get min E.Value
+
+motif_which_component <- tomtom_summary[Target.Name %in% motif_groups[!is.na(group)]$value, min(E.value), by=.(Component,Target.Name)][order(Target.Name)]
+
+motif_which_component <- dcast(motif_which_component, formula= Component ~ Target.Name, value.var="V1")
+
+motif_which_component_m <- as.matrix(motif_which_component[,-"Component", with=F])
+rownames(motif_which_component_m) <- motif_which_component$Component
+
+ordering2 <- ordering[ordering %in% motif_which_component$Component][1:75] #46
+
+motif_which_component_m[is.na(motif_which_component_m)] <- 12
+
+motif_which_component_m <- -log(motif_which_component_m[ordering2,],10)
+
+aheatmap(motif_which_component_m, Rowv = NA, cexRow = 1, scale = "col", hclustfun = "ward.D2")
+
+motif_which_component_m[motif_which_component_m>10] <- 10
+
+aheatmap(motif_which_component_m, Rowv = NA, cexRow = 1, hclustfun = "ward.D2")
+
+```
+
+## Stra8 Motif
+
+from personal communication with Kojima
+
+```{r}
+stra8_motif <- fread("../data/previous_studies/Kojima/stra8_motif1.motif", skip = 1)
+stra8_motif <- t(as.matrix(stra8_motif))
+rownames(stra8_motif) <- c("A","C","G","T")
+ggseqlogo(as.matrix(stra8_motif))
+
+export_PWM(as.matrix(stra8_motif), name = "Stra8_Kojima_Elife",file = "../data/previous_studies/Kojima/Stra8_Kojima_Elife.meme")
+```
+
 # Plot best Motif per group
 
 ```{r, fig.asp=0.5}
 # print best matches in grid
 
-best_matches <- character()
-
-for(class in 1:max(unique(motif_groups$group), na.rm = T)){
-  best_matches <- c(best_matches,motif_matches[Target.Name %in% motif_groups[group==class]$value][1]$Target.Name)
-}
-
-best_matches
-
-# swap some
-
-best_matches <- c("SP2", "NFYA", "ZN143", "RFX2", "NRF1", "GABPA", "SPI1", "CREM", "ETV5", "ZFP42", "MLX", "STAT1", "TBP", "MYBA") #, "OSR2", "PO2F3" - taken out to fit novel ones in
+best_matches <- c("SP2", "NFYA", "ZN143", "RFX6", "NRF1", "GABPA", "SPI1", "ATF1", "ETV5", "TYY1", "RARA", "TBP", "MYBA","TAF1")
 
 best_denovo <- data.table()
 for (i in best_matches){
-  best_denovo <- rbind(best_denovo, tomtom_summary[grepl(i,Target.ID)][order(E.value)][1]) #[!grepl("D$",Target.ID)]
+  best_denovo <- rbind(best_denovo, tomtom_summary[grepl(i,Target_ID)][order(p.value)][1]) #[!grepl("D$",Target_ID)]
 }
 
 # Add novel
-best_denovo <- rbind(best_denovo, tomtom_summary_byquery[X.Query.ID %in% c("C7N.I82","C18P.I53")])
-saveRDS(best_denovo, "../data/best_denovo.rds")
+best_denovo <- rbind(best_denovo, tomtom_summary_byquery[Query_ID %in% c("C5N.I57","C17P.I37")]) #"C7N.I82","C18P.I53" (TAF1 & ATF1), C5.25 26, 15
+saveRDS(best_denovo, "../data/best_denovo_V3.rds")
 
-best_denovo <- readRDS("../data/best_denovo.rds")
+best_denovo <- readRDS("../data/best_denovo_V3.rds")
+
+# make Stra8 match new motif (not yet in HocoMoco)
+best_denovo[Query_ID=="C5N.I57"]$Target_ID <- "LOCAL../data/previous_studies/Kojima/Stra8_Kojima_Elife.meme"
+best_denovo[Query_ID=="C5N.I57"]$Optimal_offset <- -1
+best_denovo[Query_ID=="C5N.I57"]$Orientation  <- "-"
 
 matched_pwms <- plot_motif_matches(best_denovo,
-                                   titles=c("Sp2","Nfya","Zfp143","Rfx2","Nrf1","Gabpa","Spi1","Crem","Etv5","Zfp42","Mlx","Stat1","Tbp","Mybl1","Atf1 (Crem-t)","Taf1?"))
+                                   titles=c("Sp2",
+                                            "Nfya",
+                                            "Zfp143",
+                                            "Rfx2 (Rfx6)",
+                                            "Nrf1", #5
+                                            "Gabpa",
+                                            "Spi1",
+                                            "Crem (Atf1)",
+                                            "Etv5",
+                                            "Zfp42 (Yy1)", #10
+                                            "Rara",
+                                            "Tbp",
+                                            "Mybl1",
+                                            "Taf1",
+                                            "Crem-t (Atf1)", #15
+                                            "Stra8*"))
 
+# quick plot to check
+pdf("../results/motifs/Motis_V3.pdf")
 plot_grid(plotlist=matched_pwms, ncol=4)
+dev.off()
 
-# Add icon annotations
 
-x_pos = 0.45
+# Make final plot with icon annotations and in order
+
+x_pos = 0.65
 y_pos = 0.82
 wh <- 0.16
-icons <- c("NW","TL","TI","TI","IW","NW","MW","TI","IW","TW","IW","NW","TL","T2I","NW","NW")
+icons <- c("NW","TL","TI","TI","IW","NW","MW","TI","IW","TW","IW","TL","T2I","NW","TI","TI")
 tmp <- list()
 
 for(i in seq_along(matched_pwms)){
@@ -482,33 +915,144 @@ for(i in seq_along(matched_pwms)){
 }
 
 # reorder to match heatmap
-tmp = tmp[c(1,9,16,3,5,6,2,10,14,11,8,4,13,12,7,15)]
+# c(1,9,16,3,5,6,2,10,14,11,8,4,13,12,7,15)
+tmp = tmp[c(1,14,6,5,9,10,2,3,16,13,4,8,11,12,7,15)] 
 
-saveRDS(tmp,"../data/tmp_cache/denovo_summary_trimmed.rds")
-tmp <- readRDS("denovo_summary_trimmed.rds")
+saveRDS(tmp,"../data/plots/denovo_motifs.rds")
+tmp <- readRDS("../data/plots/denovo_motifs.rds")
 
 library(cowplot)
 
-png(height=2000, width=4000, file="../results/motifs/motifs_fig_A.png", res=400)
+pdf(height=5, width=10,file="../results/motifs/motifs_fig_A.pdf")
 plot_grid(plotlist=tmp, ncol=4)
 dev.off()
 
 ```
 
 
-Calculate regprobs using found motifs pwms
+# Calculate regprobs using found motifs pwms
 
 ```{r}
-results_all <- readRDS("../data/motifs/motifFinder_denovo_results_all_clean.rds")
+results_all <- readRDS("motifFinder_denovo_results_all_clean_V3.rds")
 
-tmp <- lapply(results_all[best_denovo$X.Query.ID], get_PWM)
+motif_matches <- readRDS("../data/motifs/motif_matches_v3.rds")
 
-names(tmp) <- best_denovo$Target.Name
+results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(results$loadings[[1]]) <- paste0("V",1:50)
+
+
+tss_seqs <- seqinr::read.fasta("../data/motifs/promoter_sequences/all_genes_tss_1000.fasta", forceDNAtolower = FALSE, as.string = TRUE)
+tss_seqs_s <- toupper(as.character(tss_seqs))
+names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs))
+
+tss_seqs_s <- substr(tss_seqs_s,500,1500)
+
+tss_seqs_s <- tss_seqs_s[names(tss_seqs_s) %in% colnames(results$loadings[[1]])]
+
+
+pwms <- lapply(results_all[c(motif_matches$Query_ID,"C5N.I57","C17P.I37")], get_PWM)
+
+names(pwms) <- c(motif_matches$Target.Name,"STRA8","CREMT")
 
 library(parallel)
-system.time(results_custom <- mclapply(tmp, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
+system.time(results_custom <- mclapply(pwms, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
 
-saveRDS(results_custom, "MF_results_custom.rds")
+saveRDS(results_custom, "../data/motifs/MF_results_custom_V3b.rds")
 
 ```
 
+# Regprobs for C2N
+
+```{r}
+
+queryIDs <- strsplit(paste0("C2N.I",1:90,collapse = " ")," ")[[1]]
+queryIDs <- queryIDs[-which(sapply(results_all[queryIDs], is.null))]
+
+pwms <- lapply(results_all[queryIDs], get_PWM)
+
+
+
+library(parallel)
+system.time(results_C2N <- mclapply(pwms, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
+
+saveRDS(results_C2N, "../data/motifs/MF_results_C2N_V3.rds")
+
+
+####
+
+queryIDs <- strsplit(paste0("C5N.I",1:90,collapse = " ")," ")[[1]]
+queryIDs <- queryIDs[-which(sapply(results_all[queryIDs], is.null))]
+
+pwms <- lapply(results_all[queryIDs], get_PWM)
+
+library(parallel)
+system.time(results_C5N <- mclapply(pwms, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
+
+saveRDS(results_C5N, "../data/motifs/MF_results_C5N_V3.rds")
+
+
+###
+
+queryIDs <- strsplit(paste0("C11P.I",1:90,collapse = " ")," ")[[1]]
+queryIDs <- queryIDs[-which(sapply(results_all[queryIDs], is.null))]
+
+pwms <- lapply(results_all[queryIDs], get_PWM)
+
+library(parallel)
+system.time(results_C11P <- mclapply(pwms, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
+
+saveRDS(results_C11P, "../data/motifs/MF_results_C11P_V3.rds")
+
+####
+
+queryIDs <- strsplit(paste0("C3P.I",1:90,collapse = " ")," ")[[1]]
+queryIDs <- queryIDs[-which(sapply(results_all[queryIDs], is.null))]
+
+pwms <- lapply(results_all[queryIDs], get_PWM)
+
+library(parallel)
+system.time(results_C3P <- mclapply(pwms, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
+
+saveRDS(results_C3P, "../data/motifs/MF_results_C3P_V3.rds")
+
+####
+
+
+pwms <- lapply(results_all[test_queries], get_PWM)
+
+system.time(results_novel <- mclapply(pwms, function(x) find_motifs_parallel(x, custom=T), mc.cores = 16, mc.silent=FALSE, mc.preschedule = FALSE))
+
+saveRDS(results_novel, "../data/motifs/MF_results_novel_B.rds")
+
+#saveRDS(results_novel, "../data/motifs/MF_results_novel_A.rds")
+
+#    user    system   elapsed
+# 25261.987 11709.344  2385.375
+```
+
+
+```{r, fig.width=10}
+results_custom <- readRDS("../data/motifs/MF_results_custom_V3.rds")
+tmp <- names(results_custom)
+results_custom <- sapply(1:length(results_custom), function(x) results_custom[[x]]$regprob)
+colnames(results_custom) <- tmp
+
+library(ComplexHeatmap)
+Heatmap(cor(results_custom))
+Heatmap(cor(results_custom, method = "spearman"))
+```
+
+# Export Stra8
+
+To run FIMO to predict targets & assess specificity
+
+```{r}
+plot_motif_matches(tomtom_summary_byquery[Query_ID=="C5N.I26"])
+
+export_PWM(get_PWM(results_all["C5N.I26"][[1]]), "C5N.I26", "C5N.I26.meme")
+
+fimo_stra8 <- fread("~/Downloads/fimo.tsv")
+fimo_stra8[,.N,by=sequence_name][order(-N)]
+
+fimo_stra8[,.N,by=nchar(sequence_name)>5][order(-N)]
+```
