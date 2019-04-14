@@ -408,15 +408,15 @@ plot_motif_matches <- function(best_denovo, motif_finder_result=results_all, tit
   
   for(i in 1:nrow(best_denovo)){
     print(i)
-    print(best_denovo[i]$X.Query.ID)
+    print(best_denovo[i]$Query_ID)
     
     if(titles==T){
-      title <- paste0(best_denovo[i]$Target.Name," - (",best_denovo[i]$X.Query.ID,")")
+      title <- paste0(best_denovo[i]$Target.Name," - (",best_denovo[i]$Query_ID,")")
     }else{ # if(!is.null(titles))
       title <- titles[i]
     }
     
-    matched_pwms[[i]] <- plot_tomtom_match(query_motif = motif_finder_result[[best_denovo[i]$X.Query.ID]],
+    matched_pwms[[i]] <- plot_tomtom_match(query_motif = motif_finder_result[[best_denovo[i]$Query_ID]],
                                            tomtom_match = best_denovo[i],
                                            yaxis=yaxis,
                                            titles=title)
