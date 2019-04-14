@@ -409,8 +409,8 @@ tmp[gene %in% Hormad1KO_genes, KO := "Hormad1"]
 
 c38_rug_plot <- ggplot(tmp, aes(rank, loading,colour=KO)) +
 	geom_point(colour="black") +
-	geom_rug(data=tmp[gene %in% Trip13KO$V1], sides = "b", length=0.1) +
-	geom_rug(data=tmp[gene %in% Hormad1KO_genes], sides = "t", length=0.1) +
+	geom_rug(data=tmp[gene %in% Trip13KO$V1], sides = "b", length=unit(0.1,"npc")) +
+	geom_rug(data=tmp[gene %in% Hormad1KO_genes], sides = "t", length=unit(0.1,"npc")) +
 	scale_y_continuous(expand=c(0.1,0.1)) +
 	ylab("Component\n 38 Gene Loading") + xlab("Rank of gene by loading") +
 	scale_color_brewer(palette = "Set1")+
