@@ -442,237 +442,127 @@ annotation_legend_side = "bottom")
 dev.off()
 ```
 
-
-# Chip-Seq data comparison
-
-
-
-## Crem
-
+# More motifs
 
 ```{r}
-martianov <- readxl::read_excel("../data/previous_studies/Martianov/1471-2164-11-530-S3.XLS")
-names(martianov) <- make.names(names(martianov))
-martianov <- data.table(martianov)[order(-X.10.log10.pvalue.)]
 
-martianov[1:1000]
+# select motifs, HCMC regprobs
+save_regprobs_heatmap(regprobs_matrix, "../results/motifs/motifs_fig_DN_HCMCregprobs_subset.pdf", width=5)
 
-ggplot(martianov, aes(fold_enrichment, X.10.log10.pvalue.)) + geom_point(size=0.1)
+# all denovo motifs, but using hocomoco regprobs
+save_regprobs_heatmap(regprobs_matrix_all, "../results/motifs/motifs_fig_DN_HCMCregprobs.pdf", width=10)
 
-
-martianov[abs(TSS_distance)<500 & H3K4Me3=="yes"][1:1000]$start %in% martianov[1:1000]$start
-
-fwrite(martianov[1:1000][,.(chr, Peak.Summit.position-500, Peak.Summit.position+500)],
-       "../data/previous_studies/Martianov/crem_genes.bed", col.names = FALSE, sep = "\t")
-
-# do liftover
-
-system("sed -i -e 's/chr//g' ../data/previous_studies/Martianov/crem_genes_mg38.bed")
-
-system("bedtools getfasta -fi ../data/motifs/promoter_sequences/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa -bed ../data/previous_studies/Martianov/crem_genes_mg38.bed > ../data/previous_studies/Martianov/crem_sequences.fasta")
+# All denovo motifs, denovo regprobbs
+save_regprobs_heatmap(regprobs_matrix_custom, "../results/motifs/motifs_fig_DN_All.pdf", width=10)
 
 ```
 
-"To determine whether an additional conserved sequence motif could be identified in these sites, the 100 most highly occupied regions were analysed using the Meme programme [18]. This analysis showed that the only frequently occuring motif corresponded to the SP1 binding site. No CRE or CRE related motif could be detected in this way and no novel alternative CREM binding motif could be identified." - Martianov https://doi.org/10.1186/1471-2164-11-530
-
-Can we find the denovo Atf1* motif in Crem-ChIPseq sequences (what proportion & where)
+# All Hocomoco Motifs
 
 ```{r}
+regprobs_matrix_core <- sapply(results_core, function(x) x$dt$regprob)
+rownames(regprobs_matrix_core) <- results_core[[1]]$dt$sequence
 
-crem_seqs <- seqinr::read.fasta("../data/previous_studies/Martianov/crem_sequences.fasta", forceDNAtolower = FALSE, as.string = TRUE)
-crem_seqs_s <- toupper(as.character(crem_seqs))
+save_regprobs_heatmap(regprobs_matrix_core, "../results/motifs/motifs_fig_HM_core.pdf", width=100)
 
-names(crem_seqs_s) <- seq_along(crem_seqs_s)
-
-results_all <- readRDS("../data/motifs/motifFinder_denovo_results_all_clean.rds")
-best_denovo <- readRDS("../data/best_denovo.rds")
-
-tmp <- lapply(results_all[best_denovo$X.Query.ID], get_PWM)
-
-names(tmp) <- best_denovo$Target.Name
-
-dput(tmp["ATF1"])
-
-atf1_in_crem_chipseq <- find_motifs_parallel(tmp[[1]], custom=T, seqs=crem_seqs_s)
-
-plot(atf1_in_crem_chipseq$alphas)
-plot(atf1_in_crem_chipseq$prior)
-plot_motif_location(atf1_in_crem_chipseq)
-
+save_regprobs_heatmap(HM11_regprobs[,1:300], "../results/motifs/motifs_fig_HM11_regprobsA.pdf", width=100)
+save_regprobs_heatmap(HM11_regprobs[,301:600], "../results/motifs/motifs_fig_HM11_regprobsB.pdf", width=100)
+save_regprobs_heatmap(HM11_regprobs[,601:900], "../results/motifs/motifs_fig_HM11_regprobsC.pdf", width=100)
+save_regprobs_heatmap(HM11_regprobs[,901:1276], "../results/motifs/motifs_fig_HM11_regprobsD.pdf", width=100)
 ```
 
-See PDFs - we do find enrichment at promoter.
 
-Find crem motif denovo from ChipSeq data from Martianov
-
-```{r}
-crem_seqs <- seqinr::read.fasta("../data/previous_studies/Martianov/crem_sequences.fasta", forceDNAtolower = FALSE, as.string = TRUE)
-crem_seqs_s <- gsub("a|t|c|g|n","N",as.character(crem_seqs))
-names(crem_seqs_s) <- seq_along(crem_seqs_s)
-
-# export for using MEME
-MotifFinder::export_FASTA(crem_seqs_s, "../data/previous_studies/Martianov/crem_sequences_masked.fasta")
-
-
-  reigons <- rbind(
-    c(0,250),
-    c(0,200),
-    c(0,150),
-    c(-250,0),
-    c(-200,0),
-    c(-150,0),
-    c(-100,100),
-    c(-150,150),
-    c(-200,200),
-    c(-400,400)
-  )
-  
-  sp1_motifs <- c("CCGCCC","CCCGCC","CGCCCC","CCCCGC")
-  
-  auto_motifs <- vector("list", nrow(reigons)*3*3)
-  count <- 1
-  
-  pdf(file = paste0("Crem_denovo.pdf"))
-  
-  for (i in 1:nrow(reigons)){
-    for (j in 1:3){ # different motif ranks
-      for (k in 1:3){ # repeat for multiple seeds
-        
-        print(paste("reigon",i))
-        print(paste("motif rank",j))
-        print(paste("seed",k))
-        
-        tmp <- findamotif(gsub("a|t|c|g","N",substr(crem_seqs_s, 500+reigons[i,1], 500+reigons[i,2])),
-                          len=6, nits=100,
-                          motif_blacklist = sp1_motifs,
-                          motif_rank = j)
-        
-        if(!is.null(tmp)){
-          auto_motifs[[count]] <- tmp
-          print(
-            ggseqlogo(list(get_PWM(auto_motifs[[count]]),
-                           get_PWM(auto_motifs[[count]],T)),
-                      ncol=1) +
-              ggtitle(paste0("id: ",count,
-                             "reigon: c(",reigons[i,1],",",reigons[i,2],
-                             "), motif_rank:",j,
-                             ", seed:",auto_motifs[[count]]$seed)) + ylim(0,2)
-          )
-          
-          auto_motifs[[count]]$command <- paste(reigons[i,1],reigons[i,2],j,k,sep = ",")
-          
-          print(plot(auto_motifs[[count]]$alphas))
-          print(plot(auto_motifs[[count]]$prior))
-          print(plot_motif_location(auto_motifs[[count]]))
-        }
-        
-        count <- count+1
-        
-      }
-    }
-  }
-  
-  dev.off()
-  
-```
-
-See pdf - we find the normal CREM motif, at promoters, also using Meme.
-
+# All Denovo motifs from single components
 
 
 ```{r}
-crem_genes <- readxl::read_excel("../data/previous_studies/Kosir/Table_S4.xls", skip=2)
-setnames(crem_genes, make.names(names(crem_genes)))
 
-crem_genes <- crem_genes$Symbol[1:100]
-crem_genes <- crem_genes[which(crem_genes %in% colnames(results$loadings[[1]]))]
-crem_genes <- crem_genes[1:50]
+results_C2N <- readRDS("../data/motifs/MF_results_C2N_V3.rds")
+regprobs_matrix_C2N <- sapply(results_C2N, function(x) x$dt$regprob)
+rownames(regprobs_matrix_C2N) <- results_C2N[[1]]$dt$sequence
 
-aheatmap(t(results$loadings[[1]][component_order,crem_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Crem KO & Bound by Crem in ChIPseq", scale="row")
-```
+regprobs_matrix_C2N <- regprobs_matrix_C2N[which(rownames(regprobs_matrix_C2N) %in% names(tss_seqs_s)), ]
 
-## Mybl1
+save_regprobs_heatmap(regprobs_matrix_C2N, "../results/motifs/motifs_fig_DN_C2N.pdf", width = 7)
 
-```{r}
-# from "A-MYB (MYBL1) transcription factor is a master regulator of male meiosis"
-# (Supp tables are PDFs...)
-
-#"Nek2","Moap1", P38ip=Supt20, "Mat2a",
-
-Mybl1_genes <- c("Morc2b",
-"Piwil1",
-"Als2cr12",
-"Cklf",
-"Cntd1",
-"Cenpp",
-"Poteg",
-"Znrd1as",
-"Nol8",
-"Taf9",
-"Supt20",
-"Rpl39l",
-"Tbl2",
-"Snx1",
-"Ralgps2",
-"Hsp90aa1",
-"Ube2t",
-"Ccnb3",
-"Rfx2")
+#####
 
 
-#pdf(height=5, width=5*1.7, file="../results/Mybl1_enrich.pdf")
-aheatmap(t(results$loadings[[1]][component_order,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of predicted direct targets of MYBL1")
-#dev.off()
+results_C5N <- readRDS("../data/motifs/MF_results_C5N_V3.rds")
+regprobs_matrix_C5N <- sapply(results_C5N, function(x) x$dt$regprob)
+rownames(regprobs_matrix_C5N) <- results_C5N[[1]]$dt$sequence
+
+regprobs_matrix_C5N <- regprobs_matrix_C5N[which(rownames(regprobs_matrix_C5N) %in% names(tss_seqs_s)), ]
+
+save_regprobs_heatmap(regprobs_matrix_C5N, "../results/motifs/motifs_fig_DN_C5N.pdf", width = 7)
+
+######
+
+results_C11P <- readRDS("../data/motifs/MF_results_C11P_V3.rds")
+regprobs_matrix_C11P <- sapply(results_C11P, function(x) x$dt$regprob)
+rownames(regprobs_matrix_C11P) <- results_C11P[[1]]$dt$sequence
+
+regprobs_matrix_C11P <- regprobs_matrix_C11P[which(rownames(regprobs_matrix_C11P) %in% names(tss_seqs_s)), ]
+
+save_regprobs_heatmap(regprobs_matrix_C11P, "../results/motifs/motifs_fig_DN_C11P.pdf", width = 7)
+
+######
+
+results_C3P <- readRDS("../data/motifs/MF_results_C3P_V3.rds")
+regprobs_matrix_C3P <- sapply(results_C3P, function(x) x$dt$regprob)
+rownames(regprobs_matrix_C3P) <- results_C3P[[1]]$dt$sequence
+
+regprobs_matrix_C3P <- regprobs_matrix_C3P[which(rownames(regprobs_matrix_C3P) %in% names(tss_seqs_s)), ]
+
+save_regprobs_heatmap(regprobs_matrix_C3P, "../results/motifs/motifs_fig_DN_C3P.pdf", width = 7)
+
+
+######
+
+results_novel_A <- readRDS("../data/motifs/MF_results_novel_A.rds")
+regprobs_matrix_novel_A <- sapply(results_novel_A, function(x) x$dt$regprob)
+rownames(regprobs_matrix_novel_A) <- results_novel_A[[1]]$dt$sequence
+
+save_regprobs_heatmap(regprobs_matrix_novel_A, "../results/motifs/motifs_fig_DN_novelA.pdf", width=15)
+
+
+
+results_novel_B <- readRDS("../data/motifs/MF_results_novel_B.rds")
+regprobs_matrix_novel_B <- sapply(results_novel_B, function(x) x$dt$regprob)
+rownames(regprobs_matrix_novel_B) <- results_novel_B[[1]]$dt$sequence
+
+save_regprobs_heatmap(regprobs_matrix_novel_B, "../results/motifs/motifs_fig_DN_novelB.pdf", width=15)
 
 
 ```
 
-
-## Rfx2
+# Distribution of Positions relative to TSS
 
 ```{r}
-# from "RFX2 Is a Major Transcriptional Regulator of Spermiogenesis."
-rfx2_genes <- readxl::read_excel("../data/previous_studies/Kistler/journal.pgen.1005368.s011.XLSX", skip=2)
-setnames(rfx2_genes, make.names(names(rfx2_genes)))
+whichpos_matrix_custom <- sapply(results_custom, function(x) x$dt[order(-regprob)][1:3000]$whichpos)
 
-#rfx2_genes <- data.table(rfx2_genes)[ChIP.Seq=="yes"][order(logFC.at.P30)][1:50]$Ensembl.ID
-#rfx2_genes <- data.table(rfx2_genes)[order(Pvalue.at.P30)][!is.na(Pvalue.at.P30)]$Ensembl.ID
-rfx2_genes <- data.table(rfx2_genes)[ChIP.Seq=="yes"][order(Pvalue.at.P30)][!is.na(Pvalue.at.P30)]$Ensembl.ID
+whichpos_dt <- melt(data.table(t(whichpos_matrix_custom[,motif_order[c(-1)]]), keep.rownames = T), id.vars = "rn")
 
-# 1700026D08Rik -> Cfap161, Ttc18 -> Cfap70, Ccdc135 -> Drc7, Ccdc11 -> Cfap53, 9330101J02Rik -> Cfap46, Adck4 -> Coq8b
-library(biomaRt)
-ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
-mapTab2 <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
-				filter = "ensembl_gene_id", values = rfx2_genes, mart = ensembl, uniqueRows=TRUE)
-rfx2_genes <- mapTab2[match(rfx2_genes, mapTab2$ensembl_gene_id),]$external_gene_name
+whichpos_dt[,rn := factor(rn, levels=motif_order[c(-1)])]
 
-rfx2_genes[which(!rfx2_genes %in% colnames(results$loadings[[1]]))]
-
-rfx2_genes <- rfx2_genes[which(rfx2_genes %in% colnames(results$loadings[[1]]))]
-
-aheatmap(t(results$loadings[[1]][component_order,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
-
+ggplot(whichpos_dt, aes(value-500)) +
+  geom_density() +
+  facet_wrap(~rn, scales="free_y") +
+  geom_vline(xintercept = 0, col='red') + 
+  xlab("Distance from TSS") + 
+  ylab("Relative Density")
 ```
 
-## Manhatten Plots
+# Attempt: expression due to single TF
 
-```{r, fig.height=5}
+```{r}
 
-Mybl1_enrich <- component_enrichment(Mybl1_genes, threshold = 500)
 
-crem_enrich <- component_enrichment(crem_genes, threshold = 500)
+common_genes <- rownames(regprobs_matrix_custom)[rownames(regprobs_matrix_custom) %in% colnames(data)]
 
-rfx2_enrich <- component_enrichment(rfx2_genes, threshold = 500)
-
-Myb_enrich_plot <- manhatten_plot(Mybl1_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=3, legend_position=c(0.25,0.6), repel_force = 10) + ggtitle("Enrichment of predicted direct targets of MYBL1")
-
-crem_enrich_plot <- manhatten_plot(crem_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=3, legend_position=c(0.25,0.6), repel_force = 150) + ggtitle("Enrichment of genes downregulated in Crem KO & Bound by Crem in ChIPseq")
-
-rfx2_enrich_plot <- manhatten_plot(rfx2_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=4, legend_position=c(0.25,0.6), repel_force = 20) + ggtitle("Enrichment of genes downregulated in Rfx2 KO & Bound by Rfx2 in ChIPseq")
-
-pdf(height=12, width=8, file="../results/TF_enrich.pdf")
-cowplot::plot_grid(Myb_enrich_plot, rfx2_enrich_plot, crem_enrich_plot, nrow = 3)
-dev.off()
+tmp <- data[,common_genes] * matrix(rep(t(regprobs_matrix_custom[common_genes,"CREMT",drop=F]),nrow(data)),nrow=nrow(data),byrow = T)
+tmp2 <- Matrix::rowMeans(tmp)
+ggplot(data.table(Stra8=tmp2, cell=names(tmp2))[datat,on="cell"], aes(Tsne1_QC1, Tsne2_QC1, colour=Stra8)) + geom_point(stroke=0, size=1) + scale_colour_viridis(direction = -1)
 
 ```
 

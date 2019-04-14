@@ -1,0 +1,259 @@
+---
+title: "ChIPseq Reanalysis"
+output: html_notebook
+---
+
+# Chip-Seq data comparison
+
+## Crem
+
+
+```{r}
+martianov <- readxl::read_excel("../data/previous_studies/Martianov/1471-2164-11-530-S3.XLS")
+names(martianov) <- make.names(names(martianov))
+martianov <- data.table(martianov)[order(-X.10.log10.pvalue.)]
+
+#martianov[1:1000]
+
+ggplot(martianov, aes(fold_enrichment, X.10.log10.pvalue.)) + geom_point(size=0.1)
+
+
+martianov[abs(TSS_distance)<500 & H3K4Me3=="yes"][1:1000]$start %in% martianov[1:1000]$start
+
+fwrite(martianov[1:1000][,.(chr, Peak.Summit.position-500, Peak.Summit.position+500)],
+       "../data/previous_studies/Martianov/crem_genes.bed", col.names = FALSE, sep = "\t")
+
+# do liftover
+
+system("sed -i -e 's/chr//g' ../data/previous_studies/Martianov/crem_genes_mg38.bed")
+
+system("bedtools getfasta -fi ../data/motifs/promoter_sequences/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa -bed ../data/previous_studies/Martianov/crem_genes_mg38.bed > ../data/previous_studies/Martianov/crem_sequences.fasta")
+
+```
+
+"To determine whether an additional conserved sequence motif could be identified in these sites, the 100 most highly occupied regions were analysed using the Meme programme [18]. This analysis showed that the only frequently occuring motif corresponded to the SP1 binding site. No CRE or CRE related motif could be detected in this way and no novel alternative CREM binding motif could be identified." - Martianov https://doi.org/10.1186/1471-2164-11-530
+
+Can we find the denovo Atf1* motif in Crem-ChIPseq sequences (what proportion & where)
+
+```{r}
+
+crem_seqs <- seqinr::read.fasta("../data/previous_studies/Martianov/crem_sequences.fasta", forceDNAtolower = FALSE, as.string = TRUE)
+crem_seqs_s <- toupper(as.character(crem_seqs))
+
+names(crem_seqs_s) <- seq_along(crem_seqs_s)
+
+results_all <- readRDS("../data/motifs/motifFinder_denovo_results_all_clean.rds")
+best_denovo <- readRDS("../data/best_denovo.rds")
+
+tmp <- lapply(results_all[best_denovo$X.Query.ID], get_PWM)
+
+names(tmp) <- best_denovo$Target.Name
+
+dput(tmp["ATF1"])
+
+atf1_in_crem_chipseq <- find_motifs_parallel(tmp[[1]], custom=T, seqs=crem_seqs_s)
+
+plot(atf1_in_crem_chipseq$alphas)
+plot(atf1_in_crem_chipseq$prior)
+plot_motif_location(atf1_in_crem_chipseq)
+
+```
+
+See PDFs - we do find enrichment at promoter.
+
+Find crem motif denovo from ChipSeq data from Martianov
+
+```{r}
+crem_seqs <- seqinr::read.fasta("../data/previous_studies/Martianov/crem_sequences.fasta", forceDNAtolower = FALSE, as.string = TRUE)
+crem_seqs_s <- gsub("a|t|c|g|n","N",as.character(crem_seqs))
+names(crem_seqs_s) <- seq_along(crem_seqs_s)
+
+# export for using MEME
+MotifFinder::export_FASTA(crem_seqs_s, "../data/previous_studies/Martianov/crem_sequences_masked.fasta")
+
+
+  reigons <- rbind(
+    c(0,250),
+    c(0,200),
+    c(0,150),
+    c(-250,0),
+    c(-200,0),
+    c(-150,0),
+    c(-100,100),
+    c(-150,150),
+    c(-200,200),
+    c(-400,400)
+  )
+  
+  sp1_motifs <- c("CCGCCC","CCCGCC","CGCCCC","CCCCGC")
+  
+  auto_motifs <- vector("list", nrow(reigons)*3*3)
+  count <- 1
+  
+  pdf(file = paste0("Crem_denovo.pdf"))
+  
+  for (i in 1:nrow(reigons)){
+    for (j in 1:3){ # different motif ranks
+      for (k in 1:3){ # repeat for multiple seeds
+        
+        print(paste("reigon",i))
+        print(paste("motif rank",j))
+        print(paste("seed",k))
+        
+        tmp <- findamotif(gsub("a|t|c|g","N",substr(crem_seqs_s, 500+reigons[i,1], 500+reigons[i,2])),
+                          len=6, nits=100,
+                          motif_blacklist = sp1_motifs,
+                          motif_rank = j)
+        
+        if(!is.null(tmp)){
+          auto_motifs[[count]] <- tmp
+          print(
+            ggseqlogo(list(get_PWM(auto_motifs[[count]]),
+                           get_PWM(auto_motifs[[count]],T)),
+                      ncol=1) +
+              ggtitle(paste0("id: ",count,
+                             "reigon: c(",reigons[i,1],",",reigons[i,2],
+                             "), motif_rank:",j,
+                             ", seed:",auto_motifs[[count]]$seed)) + ylim(0,2)
+          )
+          
+          auto_motifs[[count]]$command <- paste(reigons[i,1],reigons[i,2],j,k,sep = ",")
+          
+          print(plot(auto_motifs[[count]]$alphas))
+          print(plot(auto_motifs[[count]]$prior))
+          print(plot_motif_location(auto_motifs[[count]]))
+        }
+        
+        count <- count+1
+        
+      }
+    }
+  }
+  
+  dev.off()
+  
+```
+
+See pdf - we find the normal CREM motif, at promoters, also using Meme.
+
+
+
+```{r}
+crem_genes <- readxl::read_excel("../data/previous_studies/Kosir/Table_S4.xls", skip=2)
+setnames(crem_genes, make.names(names(crem_genes)))
+
+crem_genes <- data.table(crem_genes)[Fold.Change<0]$Symbol
+crem_genes <- crem_genes[which(crem_genes %in% colnames(results$loadings[[1]]))]
+```
+
+## Mybl1
+
+```{r}
+# from "A-MYB (MYBL1) transcription factor is a master regulator of male meiosis"
+# (Supp tables are PDFs...)
+
+#"Nek2","Moap1", P38ip=Supt20, "Mat2a",
+
+Mybl1_genes <- c("Morc2b",
+"Piwil1",
+"Als2cr12",
+"Cklf",
+"Cntd1",
+"Cenpp",
+"Poteg",
+"Znrd1as",
+"Nol8",
+"Taf9",
+"Supt20",
+"Rpl39l",
+"Tbl2",
+"Snx1",
+"Ralgps2",
+"Hsp90aa1",
+"Ube2t",
+"Ccnb3",
+"Rfx2")
+
+
+#pdf(height=5, width=5*1.7, file="../results/Mybl1_enrich.pdf")
+aheatmap(t(results$loadings[[1]][component_order,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of predicted direct targets of MYBL1")
+#dev.off()
+
+
+```
+
+
+## Rfx2
+
+```{r}
+# from "RFX2 Is a Major Transcriptional Regulator of Spermiogenesis."
+rfx2_genes <- readxl::read_excel("../data/previous_studies/Kistler/journal.pgen.1005368.s011.XLSX", skip=2)
+setnames(rfx2_genes, make.names(names(rfx2_genes)))
+
+rfx2_genes <- data.table(rfx2_genes)[ChIP.Seq=="yes"][logFC.at.P30<0 | logFC.at.P21<0]$Ensembl.ID
+
+# 1700026D08Rik -> Cfap161, Ttc18 -> Cfap70, Ccdc135 -> Drc7, Ccdc11 -> Cfap53, 9330101J02Rik -> Cfap46, Adck4 -> Coq8b
+library(biomaRt)
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
+mapTab2 <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
+				filter = "ensembl_gene_id", values = rfx2_genes, mart = ensembl, uniqueRows=TRUE)
+rfx2_genes <- mapTab2[match(rfx2_genes, mapTab2$ensembl_gene_id),]$external_gene_name
+
+rfx2_genes[which(!rfx2_genes %in% colnames(results$loadings[[1]]))]
+
+rfx2_genes <- rfx2_genes[which(rfx2_genes %in% colnames(results$loadings[[1]]))]
+
+aheatmap(t(results$loadings[[1]][component_order,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+
+```
+
+# Soh et al (Stra8) enrichment
+
+```{r}
+soh_elife <- readxl::read_xlsx("../data/previous_studies/Kojima/elife-43738-supp3-v1.xlsx", skip = 3)
+
+soh_elife$..1[6] <- "4933427D06Rik"
+
+#Reg2, Majin, & Pramel1 not detected
+
+soh_elife_genes <- soh_elife$..1[soh_elife$..1 %in% colnames(results$loadings[[1]])]
+soh_elife_enrich <- component_enrichment(soh_elife_genes, threshold = 500)
+
+manhatten_plot(soh_elife_enrich[!component %in% gsub("V","",half_exclusion_comps)])
+head(soh_elife_enrich[!component %in% gsub("V","",half_exclusion_comps)][order(p.value)])
+```
+
+# kojima et al (Stra8) enrichment
+
+```{r}
+kojima_elife_chip <- readxl::read_xlsx("../data/previous_studies/Kojima/elife-43738-supp1-v1.xlsx", sheet = "STRA8-activated", col_names = F)
+kojima_stra8_chip <- kojima_elife_chip$...1[kojima_elife_chip$...1 %in% colnames(results$loadings[[1]])]
+```
+
+## Manhatten Plots
+
+```{r, fig.height=5}
+
+kojima_stra8_enrich <- component_enrichment(kojima_stra8_chip, threshold = 500)
+
+Mybl1_enrich <- component_enrichment(Mybl1_genes, threshold = 500)
+
+crem_enrich <- component_enrichment(crem_genes, threshold = 500)
+
+rfx2_enrich <- component_enrichment(rfx2_genes, threshold = 500)
+
+Stra8_enrich_plot <- manhatten_plot(kojima_stra8_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=2, legend_position=c(0.2,0.6), repel_force = 10) + ggtitle("Enrichment of genes bounds by Stra8 in ChIPseq and upregulated")
+
+Myb_enrich_plot <- manhatten_plot(Mybl1_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=3, legend_position=c(0.2,0.6), repel_force = 10) + ggtitle("Enrichment of predicted direct targets of MYBL1")
+
+crem_enrich_plot <- manhatten_plot(crem_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=4, legend_position=c(0.2,0.6), repel_force = 150) + ggtitle("Enrichment of genes downregulated in Crem KO & Bound by Crem in ChIPseq")
+
+rfx2_enrich_plot <- manhatten_plot(rfx2_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=4, legend_position=c(0.2,0.6), repel_force = 20) + ggtitle("Enrichment of genes downregulated in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+
+pdf(height=8, width=14, file="../results/TF_enrich.pdf")
+cowplot::plot_grid(Stra8_enrich_plot, Myb_enrich_plot, rfx2_enrich_plot, crem_enrich_plot, nrow = 2, labels = "AUTO")
+dev.off()
+
+```
+
+
