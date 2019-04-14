@@ -1278,6 +1278,44 @@ compare_factorisations <- function(f1=nnmf_decomp$H, f2=results$loadings[[1]], n
 }
 
 
+#' Rotate SDA factorisation
+#'
+#' @param X SDA results list to be rotated
+#' @param reference SDA results list to for X to be rotated towards
+#' 
+#' @return SDA results list, but with the gene loadings and scores matrices rotated by procrustes
+#' 
+#' @export
+#' @import vegan
+#' 
+rotate_SDA <- function(X=results9_WT, reference=results1){
+  
+  if(ncol(X$loadings[[1]])>ncol(reference$loadings[[1]])){
+    common_genes <- colnames(X$loadings[[1]])[colnames(X$loadings[[1]]) %in% colnames(reference$loadings[[1]])]
+  }else{
+    common_genes <- colnames(reference$loadings[[1]])[colnames(reference$loadings[[1]]) %in% colnames(X$loadings[[1]])]
+  }
+  
+  rot_9WT <- vegan::procrustes(t(reference$loadings[[1]][,common_genes]), 
+                               t(X$loadings[[1]][,common_genes]))
+  
+  colnames(rot_9WT$Yrot) <- paste0(rownames(X$loadings[[1]]),"rot")
+  
+  colnames(rot_9WT$rotation) <- rownames(reference$loadings[[1]])
+  rownames(rot_9WT$rotation) <- rownames(X$loadings[[1]])
+  
+  # rotate scores too
+  rot_9WT_scoresrot <- X$scores %*% rot_9WT$rotation
+  colnames(rot_9WT_scoresrot) <- paste0(rownames(X$loadings[[1]]),"rot")
+  str(rot_9WT_scoresrot)
+  
+  row_9WT_list <- list(loadings=list(t(rot_9WT$Yrot)), scores=rot_9WT_scoresrot)  
+  
+  return(row_9WT_list)
+}
+
+
+
 #' Plot ROC curve for imputation rankings
 #'
 #' @param i integer or string; number or name of cell
