@@ -12,9 +12,18 @@
 #' @return weighted mean of pseudotime for a given component
 #' @export
 
-ptorder <- function(component, cell_metadata=datat, threshold=2){
-  tmp <- cell_metadata[!is.na(PseudoTime)][abs(get(component)) > threshold][,.(PseudoTime, abs(get(component)))]
-  return(weighted.mean(tmp$PseudoTime, tmp$V2))
+ptorder <- function(component, cell_metadata=datat, threshold=2, side="both"){
+  tmp <- cell_metadata[!is.na(PseudoTime)][abs(get(component)) > threshold][,.(PseudoTime, get(component))]
+  
+  # if(side=="P"){
+  #   tmp[V2<0, V2 := 0]
+  # }else if(side=="N"){
+  #   tmp[V2>0, V2 := 0]
+  # }else{
+  #   tmp$V2 <- abs(tmp$V2)
+  # }
+  
+  return(weighted.mean(tmp$PseudoTime, abs(tmp$V2)))
 }
 
 
@@ -135,7 +144,7 @@ component_order_dt[, pseudotime_average := sapply(paste0("V",component_number), 
 
 component_order_dt[Somatic==TRUE | component_number %in% c(22,43), pseudotime_average := NA]
 
-component_order <<- component_order_dt[!grep("Single",name)][!component_number %in% c(22,43)][order(-pseudotime_average, na.last = F)]$component_number
+component_order <<- component_order_dt[!grep("Single",name)][order(-pseudotime_average, na.last = F)]$component_number  #[!component_number %in% c(22,43)]
 component_order_all <<- component_order_dt[order(-pseudotime_average, na.last = F)]$component_number
 
 meiotic_component_order <<- component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$component_number
