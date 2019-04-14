@@ -270,6 +270,20 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       scale_colour_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"})) +
       ggtitle(paste(i,ifelse(exists("component_order_dt"),component_order_dt[component_number==i]$name,"")))
     
+    
+    if(colourscale=="diverging"){
+      newcols <- brewer.pal(11, "RdYlBu")
+      newcols[6] <- "grey60"
+      p <- p + scale_colour_gradientn(colours = newcols[11:1],
+                                      trans="asinh",
+                                      limits=c(-max(abs(factorisation$scores[,i])),max(abs(factorisation$scores[,i]))),
+                                      guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"}))
+    }else{
+      p <- p + scale_colour_viridis(direction = invert,
+                                    guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"}))
+    }
+    
+    
   }else{ # plot gene not component
     gene = i
 
@@ -300,8 +314,9 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
     p <- p + new_scale_color() +
               geom_path(data = curve_data,
                        size = curve_width,
+                       colour = 'black',
                        #aes(colour=Stage),
-                       alpha=0.7,
+                       alpha=1,
                        arrow = arrow(angle = 12.5, ends = "first", type = "closed")) +
       scale_colour_brewer(palette = "Set1")
   }
