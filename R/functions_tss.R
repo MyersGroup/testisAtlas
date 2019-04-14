@@ -228,12 +228,12 @@ motif_consensus <- function(sequence_matrix, motif){
 #' @export
 #' @import MotifFinder ggseqlogo
 
-get_component_motifs <- function(component, positive, random=FALSE){
+get_component_motifs <- function(component, positive, topn=250, random=FALSE){
   
-  gene_names17 <- head(names(sort(results$loadings[[1]][component,], decreasing = positive)),550)
+  gene_names17 <- head(names(sort(results$loadings[[1]][component,], decreasing = positive)),2500)
   
   regs_spermio <- tss_seqs_s[gene_names17]
-  regs_spermio <- regs_spermio[!is.na(regs_spermio)][1:250]
+  regs_spermio <- regs_spermio[!is.na(regs_spermio)]
   stopifnot(sum(is.na(regs_spermio))==0)
   
   reigons <- rbind(
@@ -246,7 +246,7 @@ get_component_motifs <- function(component, positive, random=FALSE){
     c(-100,100),
     c(-150,150),
     c(-200,200),
-    c(-400,400)
+    c(-300,300)
   )
   
   sp1_motifs <- c("CCGCCC","CCCGCC","CGCCCC","CCCCGC")
@@ -262,10 +262,10 @@ get_component_motifs <- function(component, positive, random=FALSE){
   
   if(random){ # to get "Null" Hypothesis Motifs
     set.seed(42+component)
-    gene_names_random <- sample(names(results$loadings[[1]][42,]),1500)
+    gene_names_random <- sample(names(results$loadings[[1]][42,]),2500)
     
     regs_random <- tss_seqs_s[gene_names_random]
-    regs_random <- regs_random[!is.na(regs_random)][1:250]
+    regs_random <- regs_random[!is.na(regs_random)][1:topn]
     stopifnot(sum(is.na(regs_random))==0)
     regs_spermio <- regs_random
     
@@ -283,10 +283,21 @@ get_component_motifs <- function(component, positive, random=FALSE){
         print(paste("motif rank",j))
         print(paste("seed",k))
         
-        tmp <- findamotif(gsub("a|t|c|g","N",substr(regs_spermio, 500+reigons[i,1], 500+reigons[i,2])),
-                          len=6, nits=100,
-                          motif_blacklist = sp1_motifs,
-                          motif_rank = j)
+        seqs <- gsub("a|t|c|g","N",substr(regs_spermio,
+                                          nchar(regs_spermio)/2 + reigons[i,1],
+                                          nchar(regs_spermio)/2 + reigons[i,2]))
+        number_masked <- stringr::str_count(seqs, "N")
+        seqs <- seqs[number_masked <= as.integer((reigons[i,2]-reigons[i,1]) * 0.1)][1:topn]
+        
+        
+        tmp <- findamotif(seqs,
+                          len=6,
+                          nits=1000,
+                          #motif_blacklist = sp1_motifs,
+                          #motif_rank = j,
+                          motif_seed = "random",
+                          conv_t=0.05^2,
+                          plen=0.6)
         
         if(!is.null(tmp)){
           auto_motifs[[count]] <- tmp
