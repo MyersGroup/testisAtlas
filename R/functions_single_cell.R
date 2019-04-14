@@ -228,7 +228,8 @@ load_curve_data <- function(princurves=principal_curves, principal_curve="df_9")
 #' 
 #' @import ggplot2 data.table viridis ggnewscale
 
-print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
+print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, colourscale="diverging", expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
+  
   
   if(i %in% colnames(cell_metadata)){ # plot feature in datat
     
@@ -240,7 +241,7 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
     }
     
     p <- ggplot(tmp[order(feature)], aes(get(dim1), get(dim2))) +
-      geom_point(size=point_size, shape=21, stroke=0, aes(fill=feature)) +
+      geom_jitter(size=point_size, shape=21, stroke=0, aes(fill=feature), width=jitter, height=jitter) +
       ggtitle(paste(i))
     
     if(is.numeric(tmp$feature)){
@@ -265,9 +266,8 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
       invert = -1
     }
     
-    p <- ggplot(tmp[order(score)], aes(get(dim1), get(dim2))) +
-      geom_point(size=point_size, stroke=0, aes(colour=score)) +
-      scale_colour_viridis(direction = invert, guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"})) +
+    p <- ggplot(tmp[order(abs(score))], aes(get(dim1), get(dim2))) +
+      geom_point(size=point_size, stroke=0, aes(colour=score), position = position_jitter(width = jitter, height = jitter, seed=42L)) +
       ggtitle(paste(i,ifelse(exists("component_order_dt"),component_order_dt[component_number==i]$name,"")))
     
     
@@ -302,7 +302,7 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, expression
 
     
     p <- ggplot(tmp, aes(get(dim1), get(dim2))) +
-      geom_point(size=point_size, stroke=0, aes(colour=get(gene))) +
+      geom_point(size=point_size, stroke=0, aes(colour=get(gene)), position = position_jitter(width = jitter, height = jitter, seed=42L)) +
       scale_colour_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"), title.position = if(stages){"top"}else{"left"})) +
       ggtitle(gene)
   }
