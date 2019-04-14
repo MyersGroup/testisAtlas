@@ -336,6 +336,7 @@ get_component_motifs <- function(component, positive, topn=250, random=FALSE){
 #'
 #' @param results_all list of outputs from MotifFinder
 #' @param file string; name of file to save PWMs to
+#' @param motifs_per_file integer; split the motifs into seperate files so you can run TOMTOM in parallel
 #'
 #' @details Export list of MotifFinder results to MEME format file, e.g. for input into TOMTOM
 #' 
@@ -343,12 +344,22 @@ get_component_motifs <- function(component, positive, topn=250, random=FALSE){
 #'
 #' @export
 
-export_all_pwms <- function(results_all, file){
+export_all_pwms <- function(results_all, file, motifs_per_file=505){
   
   meme_header <- paste0("MEME version 4\n\nALPHABET= ACGT\n\nstrands: + -\n\nBackground letter frequencies (from uniform background):\nA 0.25000 C 0.25000 G 0.25000 T 0.25000\n")
-  write.table(meme_header, file,row.names=F, col.names = F, quote = F) # write header
+  
+  counter <- 1
   
   for(i in 1:length(results_all)){
+    
+    batch <- counter %/% motifs_per_file
+    
+    if(!file.exists(paste0(file,batch))){
+      write.table(meme_header, paste0(file,batch),row.names=F, col.names = F, quote = F) # write header
+    }
+    
+    
+    
     print(names(results_all[i]))
     
     if(!is.null(results_all[[i]])){ #  & mode(results[[j]][[i]])!="character"
@@ -358,9 +369,12 @@ export_all_pwms <- function(results_all, file){
                              "\n\nletter-probability matrix: alength= 4 w= ",
                              ncol(pwm)," nsites= 20 E= 0")
       
-      write.table(motif_header, file,row.names=F, col.names = F, quote = F, append = T)
+      write.table(motif_header, paste0(file,batch), row.names=F, col.names = F, quote = F, append = T)
       
-      write.table(format(t(pwm), digits=5), file, row.names=F, col.names = F, quote = F, append = T)
+      write.table(format(t(pwm), digits=5), paste0(file,batch), row.names=F, col.names = F, quote = F, append = T)
+      
+      counter <- counter + 1
+      
     }
     
   }
