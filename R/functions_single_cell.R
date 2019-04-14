@@ -1100,7 +1100,18 @@ reverse_normalisation <- function(dge, sign=TRUE, cells=cell_subset, lib_correct
 
 
 
-# sort matrix to highest correlations are along the diagonal
+#' Sort matrix to highest correlations are along the diagonal
+#'
+#' @param mat numeric matrix to be sorted
+#' @param order1 order of rows
+#' 
+#' @details For a given row order, sorts the columns so that each row
+#' has the highest correlation (in a greedy fashion)
+#' 
+#' @return numeric matrix
+#' 
+#' @export
+#' 
 sort_matrix <- function(mat=cross_cor, order1=max_cor_per_compoent){
   mix_comps <- rownames(mat)
   
