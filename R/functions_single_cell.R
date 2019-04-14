@@ -996,6 +996,40 @@ manhatten_plot <- function(enrichments, topn=1, repel_force=1, legend_position=c
 }
 
 
+
+#' Calculate log colour scale
+#' 
+#' Instead of taking log of the values and plotting that,
+#' log the colour scale instead
+#' 
+#' @param values numeric vector, could be matrix or vector of values you will plot
+#' used to calculate range for asymetrical 
+#' @param scale use this to rescale the range, to change what part of the log scale you're on
+#' 
+#' 
+
+log_colour_scale <- function(values=vvv3, scale=0.05, midpoint="white"){
+  newcols <- brewer.pal(11, "RdYlBu")
+  newcols[6] <- midpoint
+  #newcols <- colorRampPalette(c(newcols[1],newcols[3],newcols[6],newcols[9],newcols[11]), interpolate="spline", space="Lab")(2000)
+  newcols <- colorRampPalette(newcols, interpolate="spline", space="Lab")(2000)
+  
+  range = max(abs(values)) * scale
+  logcolindex1 <- floor((log(seq(1, range, length.out = 1000))/log(range))*1000)
+  # index2 corrected for range being skewed to positive  values
+  logcolindex2 <- floor((log(seq(1, range, length.out = floor(abs(min(values)/max(values))*1000)))/log(range))*1000)
+  
+  # visualise scales
+  #cols <- function(a) image(1:length(a), 1, as.matrix(1:length(a)), col=a, axes=T , xlab="", ylab="")
+  #cols(newcols)
+  #cols(newcolscale)
+  
+  indexes <- c(abs(logcolindex1-1000)[1000:1],logcolindex2+1000)
+  newcolscale = newcols[indexes][(length(indexes)-1):1]
+  return(newcolscale)
+}
+
+
 #' Calculate 2D density
 #'
 #' @param x numeric vector;
