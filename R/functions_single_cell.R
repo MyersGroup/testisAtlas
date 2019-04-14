@@ -1100,6 +1100,27 @@ reverse_normalisation <- function(dge, sign=TRUE, cells=cell_subset, lib_correct
 
 
 
+# sort matrix to highest correlations are along the diagonal
+sort_matrix <- function(mat=cross_cor, order1=max_cor_per_compoent){
+  mix_comps <- rownames(mat)
+  
+  mix_order <- character()
+  
+  for (i in seq_along(order1)){
+    tmp2 <- names(which.max(abs(mat[mix_comps, names(order1)[i] ])))
+    if(is.null(tmp2)){
+      tmp2 <- mix_comps
+    }
+    mix_order <- c(mix_order, tmp2)
+    mix_comps <- mix_comps[!mix_comps %in% tmp2]
+  }
+  
+  
+  gene_loading_correlation = t(mat[mix_order, names(order1)][nrow(mat):1,]) #names(max_cor_per_compoent)
+  
+  return(gene_loading_correlation)
+}
+
 
 
 #' Plot ROC curve for imputation rankings
