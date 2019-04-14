@@ -861,17 +861,17 @@ match_cells2 <- function(test_groups=NULL, cell_subset=NULL, cell_metadata=datat
 #' 
 #' @export
 
-single_component_enrichment <- function(component, genes = Mybl1_genes, factorisation=results, pos=T, threshold=200, bg_genes=NULL, test="fisher"){
+single_component_enrichment <- function(gene_vector=results$loadings[[1]][1,], genes = Mybl1_genes,  pos=T, threshold=200, bg_genes=NULL, test="fisher"){
   
   if(is.null(bg_genes)){
-    bg_genes <- names(factorisation$loadings[[1]][1,])
+    bg_genes <- names(gene_vector)
   }
   
-  ranks <- sort(rank((if(pos){-1}else{1}) * factorisation$loadings[[1]][component, bg_genes])[genes], na.last=T)
+  ranks <- sort(rank((if(pos){-1}else{1}) * gene_vector[bg_genes])[genes], na.last=T)
   
   #names(tmp) <- bg_genes
   
-  yes <- sum(ranks < threshold)
+  yes <- sum(ranks <= threshold)
   
   contingency_table <- matrix(c(yes,
                                 length(genes) - yes,
@@ -926,15 +926,20 @@ single_component_enrichment <- function(component, genes = Mybl1_genes, factoris
 #' 
 #' @import data.table
 
-component_enrichment <- function(genes, threshold=500, factorisation=results, bg_genes=NULL, test="fisher"){
-  pos_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, factorisation=factorisation, pos = T, threshold = threshold, bg_genes=bg_genes, test=test))
-  neg_ad_e <- lapply(1:50, function(x) single_component_enrichment(x, genes = genes, factorisation=factorisation, pos = F, threshold = threshold, bg_genes=bg_genes, test=test))
+component_enrichment <- function(genes, threshold=500, loadings_matrix=results$loadings[[1]], orderSDA=T ,bg_genes=NULL, test="fisher"){
+  
+  stopifnot(nrow(loadings_matrix) < ncol(loadings_matrix))
+  
+  n <- nrow(loadings_matrix)
+  
+  pos_ad_e <- lapply(1:n, function(x) single_component_enrichment(loadings_matrix[x,], genes = genes, pos = T, threshold = threshold, bg_genes=bg_genes, test=test))
+  neg_ad_e <- lapply(1:n, function(x) single_component_enrichment(loadings_matrix[x,], genes = genes, pos = F, threshold = threshold, bg_genes=bg_genes, test=test))
   
   combined <- c(pos_ad_e,neg_ad_e)
-  names(combined) <- c(paste0(1:50,"P"),paste0(1:50,"N"))
+  names(combined) <- c(paste0(1:n,"P"),paste0(1:n,"N"))
   
   tmp <- data.table(
-    component = factor(names(combined), levels=names(combined)[c(rbind(component_order_all,component_order_all+50))]),
+    component = names(combined),
     p.value = sapply(combined, function(x) x$fisher_test$p.value),
     OR = sapply(combined, function(x) x$fisher_test$estimate),
     hits = sapply(combined, function(x) x$counts[1]),
@@ -943,11 +948,19 @@ component_enrichment <- function(genes, threshold=500, factorisation=results, bg
   
   #t(sapply(combined, function(x) c("p.value"=x$fisher_test$p.value, "OR"=x$fisher_test$estimate[[1]], "hits"=x$counts[1]))),
   
-  tmp$name <- rep(component_order_dt$name,2)
-  
-  tmp[order(component), rank := 1:100]
-  tmp[rank >= 41, Type := "Meiotic"]
-  tmp[rank < 41, Type := "Somatic"]
+  if(orderSDA){
+    
+    tmp[, component := factor(component, levels=component[c(rbind(component_order_all,component_order_all+50))])]
+    
+    tmp$name <- rep(component_order_dt$name,2)
+    
+    tmp[order(component), rank := 1:100]
+    tmp[rank >= 41, Type := "Meiotic"]
+    tmp[rank < 41, Type := "Somatic"]
+  }else{
+    tmp$name <- tmp$component
+    tmp$Type <- "Unk"
+  }
   
   return(tmp)
 }
