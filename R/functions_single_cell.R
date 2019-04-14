@@ -1133,6 +1133,150 @@ sort_matrix <- function(mat=cross_cor, order1=max_cor_per_compoent){
 }
 
 
+#' Plot correlation heatmap comparing two sets of loadings
+#'
+#' @param f1 gene loadings from factorisation method 1
+#' @param f2 gene loadings from factorisation method 1
+#' @param names string; names of f1 and f2 used in heatmap
+#' @param method correlation method, note kendall not allowed
+#' @param return_cor logical; should the ordered correlation matrix be returned,
+#' if FALSE (default) heatmap is plotted using ComplexHeatmap package
+#' 
+#' @return ggplot2 object
+#' 
+#' @export
+#' @import ComplexHeatmap
+#' 
+compare_factorisations <- function(f1=nnmf_decomp$H, f2=results$loadings[[1]], names=c("f1","f2"), method="spearman", return="hm", split=c(F,F), inject_matrix=NULL, randomise=FALSE){
+  
+  if(method=="kendall"){
+    stop("kendall is too slow, not allowed it will crash R")
+  }
+  
+  
+  # check if whole results is passed, or just loadings
+  if(is.list(f1)){
+    f1loadings <- f1$loadings[[1]]
+    f1scores <- f1$scores
+  }else{
+    f1loadings <- f1
+  }
+  
+  if(is.list(f2)){
+    f2loadings <- f2$loadings[[1]]
+    f2scores <- f2$scores
+  }else{
+    f2loadings <- f2
+  }
+  
+  # subset gene loadings to each has the same set of genes
+  if(ncol(f1loadings)>ncol(f2loadings)){
+    common_genes <- colnames(f1loadings)[colnames(f1loadings) %in% colnames(f2loadings)]
+    f1loadings <- f1loadings[,common_genes]
+    f2loadings <- f2loadings[,common_genes]
+  }else{
+    common_genes <- colnames(f2loadings)[colnames(f2loadings) %in% colnames(f1loadings)]
+    f1loadings <- f1loadings[,common_genes]
+    f2loadings <- f2loadings[,common_genes]
+  }
+  
+  if(randomise){
+    f2loadings <- f2loadings[,sample(1:ncol(f2loadings))]
+  }
+
+  # split positive and negative loadings
+  if(split[1]){
+    f1loadings <- t(split_loadings(f1loadings))
+    if(is.list(f1)){
+      f1scores <- split_loadings(t(f1scores))
+    }
+  }
+  if(split[2]){
+    f2loadings <- t(split_loadings(f2loadings))
+    if(is.list(f2)){
+      f2scores <- split_loadings(t(f2scores))
+    }
+  }
+  
+  
+  cross_cor <- abs(cor(t(f1loadings), t(f2loadings),
+                       method = method))
+  
+  #pt_order <- colnames(cross_cor)[component_order_all[50:1]]
+  
+  if(!is.null(inject_matrix)){
+    cross_cor <- inject_matrix
+  }
+  
+  max_cor_per_compoent <- sort(apply(cross_cor, 2, max), decreasing = T)
+  
+  gene_loading_correlation = sort_matrix(cross_cor, max_cor_per_compoent)
+  
+  max_cor_per_compoent_cols <- apply(gene_loading_correlation, 2, max)
+  
+  names(dimnames(gene_loading_correlation)) <- names[2:1]
+  
+  # create side annotation for heatmap
+  make_annotation <- function(SDAscores, max_cor_per_compoent, side="row", return=return){
+    
+    tmp2 <- data.table(sum_abs_cell_score = colMeans(abs(SDAscores))[names(max_cor_per_compoent)],
+                       cells_in_component = colSums(abs(SDAscores)>1)[names(max_cor_per_compoent)],
+                       score_sum_2 = colMeans(SDAscores^2)[names(max_cor_per_compoent)],
+                       score_sum_med_2 = apply(SDAscores^2, 2, function(x) quantile(x, probs=0.98))[names(max_cor_per_compoent)],
+                       max_cor_per_compoent,
+                       percent_nonWT_cells = 1 - (apply(abs(SDAscores), 2, function(x) sum(grepl("WT|mj|SPG|SPD|SPCII|SPCI",names(which(x>1))))) / 
+                                                   apply(abs(SDAscores), 2, function(x) length(which(x>1))))[names(max_cor_per_compoent)],
+                       mutant_contribution = 1 - (apply(abs(SDAscores), 2, function(x) sum(x[grepl("WT|mj|SPG|SPD|SPCII|SPCI",names(x))])) / 
+                                                    apply(abs(SDAscores), 2, function(x) sum(x)))[names(max_cor_per_compoent)],
+                       max_cell_score = apply(abs(SDAscores), 2, max)[names(max_cor_per_compoent)],
+                       component=names(max_cor_per_compoent))
+    
+    if(return=="hm"){
+      ha = HeatmapAnnotation(df = tmp2[,.(sum_abs_cell_score, max_cell_score)],
+                             col = list(sum_abs_cell_score=circlize::colorRamp2(c(min(tmp2$sum_abs_cell_score), max(tmp2$sum_abs_cell_score)), c("white", "red")),
+                                        max_cell_score = circlize::colorRamp2(c(0, max(max(tmp2$max_cell_score),0.1)), c("white", "blue"))),
+                                        #mutant_contribution = circlize::colorRamp2(c(min(tmp2$mutant_contribution), max(max(tmp2$mutant_contribution),0.1)), c("white", "black"))),
+                             annotation_legend_param=list(legend_direction = "horizontal",
+                                                          legend_width = unit(5, "cm"), title_position = "lefttop"),
+                             which = side,
+                             show_legend = if(side=="row"){TRUE}else{FALSE}
+      )
+      
+      return(ha)
+    }else{
+      return(tmp2)
+    }
+    
+  }
+  
+  if(return=="cor"){ # return cross correlation matrix
+    return(gene_loading_correlation)
+    
+  }else if(return=="hm"){ # return heatmap
+    hm = Heatmap(gene_loading_correlation,
+                 col = viridisLite::viridis(100),
+                 cluster_rows = F,
+                 cluster_columns = F,
+                 heatmap_legend_param = list(legend_direction = "horizontal", title_position = "lefttop",legend_width = unit(5, "cm")),
+                 row_title = paste("Components from",names[2]),
+                 column_title = paste("Components from",names[1]),
+                 name = paste("Gene loading",method,"correlation"),
+                 row_names_max_width = unit(10, "npc"),
+                 bottom_annotation = if(is.list(f1)){make_annotation(f1scores, max_cor_per_compoent_cols, "column", return)})
+    
+    if(is.list(f2)){
+      return(draw(hm + make_annotation(f2scores, max_cor_per_compoent, "row", return), heatmap_legend_side = "bottom", annotation_legend_side = "bottom"))
+    }else{
+      return(draw(hm, heatmap_legend_side = "bottom", annotation_legend_side = "bottom"))
+    }
+    
+  }else{ # reutrn annotation df
+    return(rbind(make_annotation(f1scores, max_cor_per_compoent_cols, "row", return),
+                 make_annotation(f2scores, max_cor_per_compoent, "row", return)))
+  }
+  
+}
+
 
 #' Plot ROC curve for imputation rankings
 #'
