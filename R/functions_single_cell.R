@@ -346,6 +346,86 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
 }
 
 
+#' Plot tricolor tSNE
+#'
+#' @param df; string vector of two or three gene names
+#' @param variables; string vector of two or three variable
+#'  (gene) names present in df to create colours from
+#'
+#' @return vector of colour rbg hex codes
+#' 
+#' @export
+#' 
+#' @import data.table
+#' 
+ternaryColours <- function(df, variables){
+  df <- copy(df)
+  for(i in variables){
+    #df[, (i):= get(i) + abs(min(get(i)))] # shift so min value is 0
+    df[get(i)<0, (i):= 0]
+    df[, (i) := get(i) / max(unlist(list(1,get(i))))] # rescale to max of 1
+  }
+  return(
+    rgb(red   = df[,variables[1], with=F][[1]],
+        blue  = df[,variables[2], with=F][[1]],
+        green = if(length(variables)==3){df[,variables[3], with=F][[1]]}else{0}
+    )
+  )
+}
+
+
+#' Plot tricolor tSNE
+#'
+#' @param genes; string vector of two or three gene names
+#' @param returndf; logical, should the data be returned, or a plot (default)
+#' @param predict; which factorisation to use for predicted expression
+#' @param ptsize; numeric, size of the points in the plot
+#' @param jitter; numeric, how jittered should be points be (to avoid overplotting)
+#'
+#' @return The Y matrix from Rtsne output, rotated by angle
+#' 
+#' @details print tsne with ternary colour scheme for expression
+#' 
+#' @export
+#' 
+#' @import ggplot2 data.table
+
+tricolour_tsne <- function(genes, returndf=F, predict="SDA", ptsize=1.5, jitter=0.25){
+  if(predict=="SDA"){
+    tmp <- merge(datat, sda_predict(genes))
+  }else if(predict=="NNMF"){
+    tmp <- merge(datat, nmf_predict(genes))
+  }else if(predict=="NNMF2"){
+    tmp <- merge(datat, nmf_predict(genes, nnmf_decomp5))
+  }else{
+    tmp <- merge(datat, expression_dt(genes))
+  }
+  
+  tmp$rgb <- ternaryColours(tmp, genes)
+  
+  if(returndf==T){
+    return(tmp)
+  }else{
+    
+    set.seed(42) # for jitter consistency
+    
+    p <- ggplot(tmp, aes(Tsne1_QC1, Tsne2_QC1)) +
+      geom_jitter(aes(colour=rgb), stroke=0, size=ptsize, height=jitter, width=jitter) +
+      scale_colour_identity() +
+      annotate("text", -Inf, Inf, hjust = -0.5, vjust = 2, label = genes[1], colour="red", fontface="bold") +
+      annotate("text", -Inf, Inf, hjust = -0.5, vjust = 4, label = genes[2], colour="blue", fontface="bold") +
+      theme_dark()
+    
+    if(length(genes)==3){
+      return(p + annotate("text", -Inf, Inf, hjust = -0.5, vjust = 6, label = genes[3], colour="green", fontface="bold"))
+    }else{
+      return(p)
+    }
+    
+  }
+}
+
+
 # for plotting mutliple tsne plots, remove duplicated extra axes
 simplify <- ggplot2::theme(legend.position = "none",
                   axis.title.x=element_blank(),
