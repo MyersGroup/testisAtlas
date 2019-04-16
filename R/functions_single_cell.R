@@ -346,6 +346,8 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
 }
 
 
+
+
 #' Plot tricolor tSNE
 #'
 #' @param df; string vector of two or three gene names
@@ -459,7 +461,25 @@ sda_predict <- function(genes, factorisation=results, name_extension=""){
 }
 
 
+nmf_predict <- function(genes, factorisation=nnmf_decomp, name_extension=""){
+  # use NNMF parameters to create posterior prediction
+  
+  predictions <- factorisation$W %*% factorisation$H[, genes,drop=FALSE]
+  predictions <- data.table(predictions, keep.rownames = T)
+  setnames(predictions, c("cell",paste0(names(predictions)[-1],name_extension)))
+  setkey(predictions, cell)
+  return(predictions)
+}
 
+pca_predict <- function(genes, factorisation=pcaresult, name_extension=""){
+  # use PCA parameters to create posterior prediction
+  
+  predictions <- factorisation$projection %*% t(factorisation$loadings[genes,,drop=FALSE])
+  predictions <- data.table(predictions, keep.rownames = T)
+  setnames(predictions, c("cell",paste0(names(predictions)[-1],name_extension)))
+  setkey(predictions, cell)
+  return(predictions)
+}
 
 
 #' Create data table of gene expression for a subset of genes
