@@ -405,13 +405,13 @@ save(NNMF_AUCs, file = "../data/imputation/imputed_ranks_NNMF.rds")
 ## Plot AUC
 
 ```{r}
-cellAUCs <- readRDS("../data/tmp_cache/cellAUCs.rds")
-load("../data/tmp_cache/imputed_ranks.rds")
+cellAUCs <- readRDS("../data/imputation/cellAUCs.rds")
+load("../data/imputation/imputed_ranks.rds")
 
 density_auc <- get_density(cellAUCs$mean, cellAUCs$predict, kern=0.025)
 density_auc_t <- get_density(cellAUCs$train, cellAUCs$predict, kern=0.025)
 
-plot_train <- ggplot(cbind(cellAUCs, density_auc), aes(train, predict, color=density_auc_t)) +
+plot_train <- ggplot(cbind(cellAUCs, density_auc_t), aes(train, predict, color=density_auc_t)) +
   geom_point(size=0.1) +
   geom_abline(colour="red") +
   scale_colour_viridis(option="inferno") + 
@@ -603,6 +603,13 @@ c <- ggplot(merge(datat, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, co
   guides(colour=guide_colourbar(barwidth=5, barheight=0.5, title.position="top")) +
   labs(x="", y="", colour="Ratio of Imputed to\n Average Expression AUC")
 
+c2 <- ggplot(merge(datat, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
+  geom_point(size=1, stroke=0) + 
+  scale_color_viridis(direction = -1) +
+  labs(x="tSNE1", y="tSNE2", colour="Ratio of Imputed to\n Average Expression AUC") +
+  theme(legend.position = "bottom") +
+  guides(colour=guide_colourbar(barwidth=15, barheight=0.5, title.position="top"))
+
 d <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=predict/train)) +
   geom_point(size=0.2) + 
   scale_color_viridis(direction = -1) +
@@ -703,6 +710,18 @@ right_panel <- plot_grid(plotCellAUC(5749, cumsum_predict, cumsum_train, cumsum_
 
 png(width = 4250, height = 2500, res = 300, file = "../results/imputation/imputationAUC2.png")
 plot_grid(imputation_plot,right_panel, labels = c("A"), rel_widths = c(2,3))
+dev.off()
+```
+
+for presentations
+
+```{r}
+png(width = 1500*1.7, height = 1500, res = 300, file = "../results/imputation/imputationAUC_cellwise.png")
+plot_grid(plot_train, lib_size_plot)
+dev.off()
+
+png(width = 1500*1.7, height = 1500, res = 250, file = "../results/imputation/imputationAUC_average.png")
+plot_grid(plot_mean, c2)
 dev.off()
 ```
 
