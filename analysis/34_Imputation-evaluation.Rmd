@@ -143,7 +143,7 @@ run_SDA(sda_location = "../sda",
 library(SDAtools)
 
 # predicted with mask
-results_train <- load_results(results_folder = "../results/conradV3_sda_train_0.8_1/", data_path = "../data/conradV3/") #data/SDA #data/count_matrices/
+results_train <- load_results(results_folder = "../data/SDA/conradV3_sda_train_0.8_1/", data_path = "../data/count_matrices/") #data/SDA #data/count_matrices/
 rownames(results_train$loadings[[1]]) <- paste0("V",1:50)
 rownames(results_train$pips[[1]]) <- paste0("V",1:50)
 
@@ -248,7 +248,56 @@ predicted_train_NNMF <- NNMF_training$W %*% NNMF_training$H
 str(predicted_train_NNMF)
 ```
 
+# MAGIC
 
+```{r}
+
+normalised <- readRDS("../data/imputation/train_0.8_normalised.rds")
+
+library(Rmagic)
+MAGIC_data <- Rmagic::magic(as.matrix(normalised), n.jobs=3)
+
+MAGIC_data$params$data <- NULL
+saveRDS(MAGIC_data, file = "../data/imputation/MAGIC_data.rds")
+
+MAGIC_AUCs <- calculateAUCs(as.matrix(MAGIC_data$result))
+
+saveRDS(MAGIC_AUCs[[1]], file = "../data/imputation/cellAUCs_MAGIC.rds")
+
+save(MAGIC_AUCs, file = "../data/imputation/imputed_ranks_MAGIC.rds")
+
+
+# MAGIC expression jumps around quite a lot...
+ggplot(datat[sda_predict("Prdm9")], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(datat[nmf_predict("Prdm9")], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(datat[magic_predict("Prdm9",MAGIC_data)], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+
+ggplot(datat[magic_predict("Ssxb1",MAGIC_data)], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(datat[nmf_predict("Ssxb1")], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(datat[sda_predict("Ssxb1")], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+```
+
+# Data Compression
+
+```{r}
+MAGIC_data <- readRDS("../data/imputation/MAGIC_data.rds")
+
+results_train2 <- results_train
+results_train2$loadings[[1]] <- as.numeric(results_train2$pips[[1]]>0.5) * results_train2$loadings[[1]]
+results_train2$loadings[[1]] <- Matrix(results_train2$loadings[[1]], sparse = TRUE)
+
+format(object.size(MAGIC_data$result), units="Mb", digits=1)
+format(object.size(results_train[c("scores","loadings")]), units="Mb", digits=1)
+format(object.size(data), units="Mb", digits=1)
+
+format(object.size(results_train2[c("scores","loadings")]), units="Mb", digits=1)
+
+format(object.size(results_train[c("loadings")]), units="Mb", digits=1)
+format(object.size(results_train2[c("loadings")]), units="Mb", digits=1)
+```
+
+
+# DCA
 
 ```{r}
 # pip3 install dca --user wells
@@ -262,13 +311,49 @@ str(predicted_train_NNMF)
 # adata.obs_names = cellinfo.Cell
 # adata.var_names = geneinfo.Gene
 
+raw_data <- readRDS("../data/imputation/raw_data_train.rds")
+normalised <- readRDS("../data/imputation/train_0.8_normalised.rds")
+
+write.csv(as.matrix(normalised), "../data/imputation/counts_train_normalised.csv")
+
+write.csv(as.matrix(t(raw_data[rownames(normalised), colnames(normalised)])), "../data/imputation/counts_train.csv")
+
+library(data.table)
+
+write.csv(as.matrix(t(raw_data[rownames(normalised), colnames(normalised)])), "../data/imputation/counts_train.csv")
+
+str(fread("../data/imputation/counts_train.csv"))
+
+
+
+#  ~.local/bin/dca ../data/imputation/counts_train.csv ../data/imputation/DCAresults
+
+
+dcapredict <- fread("../data/imputation/DCAresults/mean.tsv")
+
+dcapredict_m <- t(as.matrix(dcapredict[,-c("V1"),with=F]))
+
+colnames(dcapredict_m) <- dcapredict$V1
+
+# Not sure this will work due to different normalisation within DCA
+DCA_AUCs <- calculateAUCs(dcapredict_m)
+
+
+saveRDS(DCA_AUCs[[1]], file = "../data/imputation/cellAUCs_DCA.rds")
+
+save(DCA_AUCs, file = "../data/imputation/imputed_ranks_DCA.rds")
+
+
 
 ```
 
+Not sure calculateAUC will work due to different normalisation within DCA
 
 # Function to calculate ranks & AUCs
 
 ```{r}
+
+# NB this function wastes time by recaculating train and average AUCs
 
 calculateAUCs <- function(predicted_train, 
                           raw_data_test_file="../data/imputation/raw_data_test.rds",
@@ -402,11 +487,12 @@ save(NNMF_AUCs, file = "../data/imputation/imputed_ranks_NNMF.rds")
 ```
 
 
-## Plot AUC
+
+
+## Plot AUC for each cell
 
 ```{r}
 cellAUCs <- readRDS("../data/imputation/cellAUCs.rds")
-load("../data/imputation/imputed_ranks.rds")
 
 density_auc <- get_density(cellAUCs$mean, cellAUCs$predict, kern=0.025)
 density_auc_t <- get_density(cellAUCs$train, cellAUCs$predict, kern=0.025)
@@ -440,22 +526,22 @@ cellAUCs_SDA_shifted <- readRDS("../data/imputation/cellAUCs_SDA_shifted.rds")
 cellAUCs_PCA <- readRDS("../data/imputation/cellAUCs_PCA.rds")
 cellAUCs_ICA <- readRDS("../data/imputation/cellAUCs_ICA.rds")
 cellAUCs_NNMF <- readRDS("../data/imputation/cellAUCs_NNMF.rds")
-
-
+cellAUCs_MAGIC <- readRDS("../data/imputation/cellAUCs_MAGIC.rds")
+cellAUCs_DCA <- readRDS("../data/imputation/cellAUCs_DCA.rds")
 
 cellAUCs <- merge(cellAUCs, cellAUCs_PCA, by="cell", suffixes = c("",".PCA"))
 cellAUCs <- merge(cellAUCs, cellAUCs_ICA, by="cell", suffixes = c("",".ICA"))
 cellAUCs <- merge(cellAUCs, cellAUCs_NNMF, by="cell", suffixes = c("",".NNMF"))
-cellAUCs <- merge(cellAUCs, cellAUCs_SDA_shifted, by="cell", suffixes = c("",".SDA_shifted"))
+cellAUCs <- merge(cellAUCs, cellAUCs_MAGIC, by="cell", suffixes = c("",".MAGIC"))
+#cellAUCs <- merge(cellAUCs, cellAUCs_SDA_shifted, by="cell", suffixes = c("",".SDA_shifted"))
 
 ggplot(cellAUCs, aes(train, predict)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
-ggplot(cellAUCs, aes(train, predict.SDA_shifted)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
-ggplot(cellAUCs, aes(train, predict.PCA)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
-ggplot(cellAUCs, aes(train, predict.ICA)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
-ggplot(cellAUCs, aes(train, predict.NNMF)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
+#ggplot(cellAUCs, aes(train, predict.SDA_shifted)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
 ```
 
 ```{r}
+
+# fraction cells better or not vs SDA
 
 cellAUCs[,mean(predict>predict.PCA)]
 # 0.74
@@ -468,51 +554,43 @@ cellAUCs[,mean(predict<predict.NNMF)]
 # 0.79
 
 
-# X vs Y
+# X vs Y plot
 ggplot(cellAUCs, aes(predict.PCA, predict)) + geom_point(stroke=0, size=1, alpha=0.3) + geom_abline(intercept = 0,slope=1,col='red')
 
 ggplot(cellAUCs, aes(predict.ICA, predict)) + geom_point(stroke=0, size=1, alpha=0.3) + geom_abline(intercept = 0,slope=1,col='red')
 
 ggplot(cellAUCs, aes(predict.NNMF, predict)) + geom_point(stroke=0, size=1, alpha=0.3) + geom_abline(intercept = 0,slope=1,col='red')
 
-# density difference
+# density difference plot
 ggplot(cellAUCs, aes(predict.PCA - predict)) + geom_density()
 ggplot(cellAUCs, aes(predict.ICA - predict)) + geom_density()
 ggplot(cellAUCs, aes(predict.NNMF - predict)) + geom_density()
 
-# Overlaping Densities
-tmp <- melt(cellAUCs, id="cell", variable.name = "Method", value.name = "AUC")[Method %in% c("predict","predict.PCA","predict.ICA","predict.NNMF")]
+# Overlaping Densities plot
+tmp <- melt(cellAUCs, id="cell", variable.name = "Method", value.name = "AUC")[Method %in% c("predict","train","mean","predict.PCA","predict.ICA","predict.NNMF","predict.MAGIC")]
 
 tmp[,Method := gsub("predict\\.?","",Method)]
+tmp[,Method := gsub("train","Unimputed",Method)]
+tmp[,Method := gsub("mean","Mean_Cell",Method)]
 tmp[Method=="",Method := "SDA"]
+tmp[, Method := factor(Method, levels=c("Unimputed","Mean_Cell","SDA","NNMF","ICA","PCA","MAGIC"))]
 
-pdf("../results/other_factorisations/compare_imputation.pdf")
-ggplot(tmp,
+compare_imputation <- ggplot(tmp,
        aes(AUC, colour=Method)) +
   geom_density() +
-  scale_color_brewer(palette = "Set1") + 
-  xlim(0.82,1) +
-  theme(legend.position = "bottom")
+  scale_color_manual(values=c("#E41A1C", "black",brewer.pal(7, "Set1")[-c(6,1)])) + 
+  theme(legend.position = "none") +
+  facet_zoom(xlim = c(0.91,0.94), zoom.size = 1)
+
+saveRDS(compare_imputation, "../data/plots/compare_imputation.rds")
+
+pdf("../results/other_factorisations/compare_imputation.pdf")
+compare_imputation
 dev.off()
 
-# compare ECDF
-ggplot(tmp,
-       aes(AUC, colour=Method)) +
-  stat_ecdf(geom = "step") +
-  scale_color_brewer(palette = "Set1") + 
-  xlim(0.85,0.97) +
-  theme(legend.position = "bottom")
-
-
-ggplot(cellAUCs, aes(train,predict - predict.PCA)) + geom_hex(bins=100) + scale_fill_viridis(option="inferno") + geom_hline(yintercept = 0, col="red")
-
-# where in tSNE
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
-  geom_point(size=1, stroke=0, data = datat[cell %in% cellAUCs[predict.PCA<=predict]$cell]) +
-  geom_point(size=1, stroke=0, data = datat[cell %in% cellAUCs[predict.PCA>predict]$cell], colour="red")
-
-
 ```
+
+which cells are better worse in NNMF vs SDA
 
 ```{r, fig.width=3}
 ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict < 0.99)) +
@@ -522,63 +600,77 @@ ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict < 
 ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict > 1.01)) +
   geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
   scale_color_manual(values=c("lightgrey","red")) + theme_minimal()
+```
 
-ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict > 1.01)) +
-  geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
-  scale_color_manual(values=c("lightgrey","red")) + theme_minimal() + theme(legend.position="bottom")
+# Compare imputed expression of example gene
 
-ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF-predict > 0.01)) +
-  geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
-  scale_color_manual(values=c("lightgrey","red")) + theme_minimal() + theme(legend.position="bottom")
+All methods are similar
 
-ggplot(datat[cellAUCs], aes(library_size, log(predict.NNMF/predict))) +
-  geom_point(size=0.5, stroke=0, alpha=0.2) +
-  theme_minimal() + scale_x_log10() + geom_hline(yintercept = 0, col="red", size=0.2)
+```{r, fig.height=4, fig.width=4}
+
+example_gene = "Smok2b"
+
+pred_exp_example <- data.table("Unimputed"=(normalised[,c(example_gene)]), cell=rownames(normalised))
+setkey(pred_exp_example, cell)
+pred_exp_example <- pred_exp_example[sda_predict(example_gene, results_train, ".SDA")][nmf_predict(example_gene, NNMF_training, ".NNMF")][ica_predict(example_gene,  ica_training, ".ICA")][pca_predict(example_gene, pca_training, ".PCA")][magic_predict(example_gene, MAGIC_data,".MAGIC")]
+
+setnames(pred_exp_example, names(pred_exp_example), gsub(paste0(example_gene,"."),"",names(pred_exp_example)))
+
+ex_imputed <- ggplot(melt(pred_exp_example, id.vars = "cell", value.name = example_gene, variable.name = "Method")[datat, on="cell"][!is.na(Method)],
+       aes(-PseudoTime, get(example_gene), colour=Method)) + 
+  geom_point(stroke=0, size=0.3, alpha=0.5)+
+  scale_colour_manual(values = brewer.pal(7, "Set1")[-6])+
+  facet_wrap(~Method, ncol=1, scales = "free_y") +
+  ylab(paste0(example_gene, " Imputed Expression")) +
+  theme(legend.position = "none")
 ```
 
 
-## Example Curves
+# Example Curves
+
+## extract a few cells for examples
 
 ```{r}
 
-a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
-a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
-a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
-a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
-a=sample(1:20000,1);plotCellAUC(a, cumsum_predict, cumsum_train, cumsum_mean);print(a)
+set.seed(42)
+sample_cells <- c(5749, sample(1:20036, size = 99, replace = F))
+
+load(file = "../data/imputation/imputed_ranks_NNMF.rds")
+NNMF_cumsum_pred <- NNMF_AUCs[[2]][,sample_cells]
+load(file = "../data/imputation/imputed_ranks_ICA.rds")
+ICA_cumsum_pred <- ICA_AUCs[[2]][,sample_cells]
+load(file = "../data/imputation/imputed_ranks_PCA.rds")
+PCA_cumsum_pred <- cumsum_predict[,sample_cells]
+load(file = "../data/imputation/imputed_ranks.rds")
+SDA_cumsum_pred <- cumsum_predict[,sample_cells]
+load(file = "../data/imputation/imputed_ranks_MAGIC.rds")
+MAGIC_cumsum_pred <- MAGIC_AUCs[[2]][,sample_cells]
+
+saveRDS(list("Unimputed" = cumsum_train[,sample_cells],
+             "Mean_Cell" = cumsum_mean[,sample_cells],
+             "NNMF" = NNMF_AUCs[[2]][,sample_cells],
+             "ICA" = ICA_AUCs[[2]][,sample_cells],
+             "PCA" = PCA_cumsum_pred,
+             "SDA" = SDA_cumsum_pred,
+             "MAGIC" = MAGIC_cumsum_pred), "../data/imputation/imputed_ranks_sample_all_methods.rds")
 
 ```
-
-## Failures
-
-In which cells do we do worse than imputation?
 
 ```{r}
 
-str(cellAUCs[train>predict])
+imputed_ranks <- readRDS("../data/imputation/imputed_ranks_sample_all_methods.rds")
 
-plotCellAUCg(which(rownames(raw_data_train)=="GTCCATAGTCAT.Cul4a_2017-03-30"))
-
-plotCellAUC(which(rownames(raw_data_train)=="GTCCATAGTCAT.Cul4a_2017-03-30"), cumsum_predict, cumsum_train, cumsum_mean)
-
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
-  geom_point(size=0.2) +
-  geom_point(size=1, data = datat[cell %in% cellAUCs[train>predict]$cell], colour="red")
-
-str(cellAUCs[test>predict])
-
-plotCellAUCg(which(rownames(raw_data_train)=="ATGACGGTGCGC.CNP_2016-12-15"))
-
-plotCellAUC(which(rownames(raw_data_train)=="ATGACGGTGCGC.CNP_2016-12-15"), cumsum_predict, cumsum_train, cumsum_mean)
-
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1)) +
-  geom_point(size=0.2) +
-  geom_point(size=0.5, data = datat[cell %in% cellAUCs[mean>predict]$cell], colour="red")
+plotCellAUC(1, imputed_ranks)
+plotCellAUC(4, imputed_ranks)
+plotCellAUC(6, imputed_ranks)
 ```
 
-## tSNE
 
-In general which cells are better with / without imputation
+# tSNE
+
+Which cells are better with / without imputation
+
+vs the mean cell apprach
 
 ```{r}
 setkey(cellAUCs, cell)
@@ -610,26 +702,10 @@ c2 <- ggplot(merge(datat, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, c
   theme(legend.position = "bottom") +
   guides(colour=guide_colourbar(barwidth=15, barheight=0.5, title.position="top"))
 
-d <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=predict/train)) +
-  geom_point(size=0.2) + 
-  scale_color_viridis(direction = -1) +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
-  labs(x="t-SNE 1", y="t-SNE 2", colour="Ratio of Imputed Expression AUC\n to Cellwise Training Data AUC")
-
-e <- ggplot(merge(datat, cellAUCs), aes(Tsne1_QC1, Tsne2_QC1, colour=log(library_size))) +
-  geom_point(size=0.2) + 
-  scale_color_viridis(direction = -1) +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
-  labs(x="t-SNE 1", y="t-SNE 2", colour="Log Library Size (Total UMI Counts)")
-
 c
-d
-e
 ```
+
+vs the no imputation
 
 ```{r}
 density_lib <- get_density(log(merge(datat, cellAUCs)$library_size), merge(datat, cellAUCs)[,predict/train], kern=0.07)
@@ -639,7 +715,7 @@ ggplot(merge(datat, cellAUCs), aes(log(library_size), predict/train, colour=dens
   scale_colour_viridis() +
   theme_minimal() +
   geom_hline(yintercept = 1, colour="red") +
-  labs(y="Ratio of Imputed Expression AUC\n to Cellwise Training Data AUC", x="Log Library Size (Total UMI Counts)")
+  labs(y="Ratio of SDA Imputed AUC\n to Unimputed AUC", x="Log Library Size (Total UMI Counts)")
 
 lib_size_plot <- ggplot(merge(datat, cellAUCs), aes(log10(library_size), predict/train, colour=-PseudoTime)) +
   geom_point(size=0.1)+
@@ -649,17 +725,11 @@ lib_size_plot <- ggplot(merge(datat, cellAUCs), aes(log10(library_size), predict
   guides(colour=guide_colourbar(barwidth=10,label.position="bottom")) +
   theme(legend.position = "bottom") +
   geom_hline(yintercept = 1, colour="black") +
-  labs(y="Ratio of Imputed Expression AUC\n to Cellwise Training Data AUC", x="Log10 Library Size (Total UMI Counts)")
+  labs(y="Ratio of SDA Imputed AUC\n to Unimputed AUC", x="Log10 Library Size (Total UMI Counts)")
 
 lib_size_plot
 ```
 
-```{r, fig.width=6}
-genes_tmp <- c("Zbtb16","Prdm9","Piwil1","Ccna1","Ssxb1","Lrrd1","Gapdhs")
-
-imputation_plot <- imputed_vs_raw(genes_tmp)
-imputation_plot
-```
 
 ## 80:20
 
@@ -698,30 +768,30 @@ plot_mean_2 <- ggdraw() +
 ```
 
 
-save figure
+# save figure
 
 ```{r}
 
-right_panel <- plot_grid(plotCellAUC(5749, cumsum_predict, cumsum_train, cumsum_mean),
-                         plot_train,
-                         lib_size_plot,
-                         plot_mean_2,
-                         ncol = 2, labels = c("B","C","D","E"))
+genes_tmp <- c("Zbtb16","Prdm9","Piwil1","Ccna1","Ssxb1","Lrrd1","Gapdhs")
 
-png(width = 4250, height = 2500, res = 300, file = "../results/imputation/imputationAUC2.png")
-plot_grid(imputation_plot,right_panel, labels = c("A"), rel_widths = c(2,3))
+imputation_plot <- imputed_vs_raw(genes_tmp)
+imputation_plot
+
+right_panelA <- plot_grid(plotCellAUC(1, imputed_ranks[c(1:2,6,3:5,7)]) + scale_colour_manual(values=c("#E41A1C", "black",brewer.pal(7, "Set1")[-c(6,1)])),
+                         compare_imputation, ncol=2, labels=c("B","C"))
+right_panelB <- plot_grid(gonia_SDA_zoom, gonia_NNMF, ncol=2, rel_widths = c(3,4.5), labels = c("D",""))
+right_panelC <- plot_grid(Rhox2h_prediction, blood_SDA_vs_NNMF, ncol=2, rel_widths = c(3,2), labels = c("E","F"))
+
+right_panel <- plot_grid(right_panelA, right_panelB, right_panelC, ncol=1)
+
+
+pdf(width = 13, height = 11, file = "../results/imputation/imputation.pdf")
+plot_grid(imputation_plot,
+          right_panel,
+          labels = c("A",""),
+          ncol=2)
 dev.off()
-```
 
-for presentations
-
-```{r}
-png(width = 1500*1.7, height = 1500, res = 300, file = "../results/imputation/imputationAUC_cellwise.png")
-plot_grid(plot_train, lib_size_plot)
-dev.off()
-
-png(width = 1500*1.7, height = 1500, res = 250, file = "../results/imputation/imputationAUC_average.png")
-plot_grid(plot_mean, c2)
-dev.off()
+#pdf(width = 4250, height = 2500, res = 300, file = "../results/imputation/imputationAUC2.png")
 ```
 
