@@ -1421,37 +1421,33 @@ rotate_SDA <- function(X=results9_WT, reference=results1){
 
 #' Plot ROC curve for imputation rankings
 #'
-#' @param i integer or string; number or name of cell
-#' @param cumsum_predict gene rank by cell matrix, cumulative sum of predicted for each cell
-#' @param cumsum_train gene rank by cell matrix, cumulative sum of train for each cell
-#' @param cumsum_mean mean
+#' @param i integer or string; number or name of cell in the matrices
+#' @param mt named list of  gene rank by cell matricies, cumulative sum of predicted for each cell
 #' 
 #' @return ggplot2 object
 #' 
 #' @export
 #' @import ggplot2
 #' 
-plotCellAUC <- function(i, cumsum_predict, cumsum_train, cumsum_mean){
+plotCellAUC <- function(i, mt){
   
-  aucg <- data.table(frac_genes = seq(1,length(cumsum_predict[,i]),1)/length(cumsum_predict[,i]),
-                     Imputed = cumsum_predict[,i],
-                     Cellwise = cumsum_train[,i],
-                     Average = cumsum_mean[,i])
+  aucg <- data.table(frac_genes = seq(1,length(mt[[1]][,i]),1)/length(mt[[1]][,i]),
+                     sapply(mt, function(x) x[,i]))
   
-  aucg <- melt(aucg, id.vars = "frac_genes", variable.name = "Source of Expression Ranking", value.name = "Cumulative Test data reads")
+  aucg <- melt(aucg, id.vars = "frac_genes", variable.name = "Method", value.name = "Cumulative Test data reads")
   
   return(
-    ggplot(aucg, aes(frac_genes, `Cumulative Test data reads`, colour=`Source of Expression Ranking`)) + 
+    ggplot(aucg, aes(frac_genes, `Cumulative Test data reads`, colour=Method)) + 
       geom_line() + 
       xlab("Fraction of Genes (Ranked high to low)") + 
       theme_minimal() +
       theme(legend.position = "bottom") +
-      scale_color_brewer(palette = "Set1") +
-      annotate("label",
-               label = paste0("Imputed AUC: ",signif(sum(cumsum_predict[,i])/ length(cumsum_mean[,i]),3),
-                              "\nCellwise AUC: ",signif(sum(cumsum_train[,i])/ length(cumsum_mean[,i]),3),
-                              "\nAverage AUC: ",signif(sum(cumsum_mean[,i])/ length(cumsum_mean[,i]),3)),
-               x = 0.6, y = 0.25)
+      scale_color_brewer(palette = "Set1") #+
+      # annotate("label",
+      #          label = paste0("Imputed AUC: ",signif(sum(cumsum_predict[,i])/ length(cumsum_mean[,i]),3),
+      #                         "\nCellwise AUC: ",signif(sum(cumsum_train[,i])/ length(cumsum_mean[,i]),3),
+      #                         "\nAverage AUC: ",signif(sum(cumsum_mean[,i])/ length(cumsum_mean[,i]),3)),
+      #          x = 0.6, y = 0.25)
   )
 }
 
