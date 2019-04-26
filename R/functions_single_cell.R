@@ -420,6 +420,7 @@ simplify <- ggplot2::theme(legend.position = "none",
 
 sda_predict <- function(genes, factorisation=results, name_extension=""){
   # use SDA parameters to create posterior prediction kind of
+  stopifnot(!is.null(genes))
   
   predictions <- factorisation$scores %*% factorisation$loadings[[1]][, genes,drop=FALSE]
   predictions <- data.table(predictions, keep.rownames = T)
@@ -428,9 +429,20 @@ sda_predict <- function(genes, factorisation=results, name_extension=""){
   return(predictions)
 }
 
+ica_predict <- function(genes, factorisation=nnmf_decomp, name_extension=""){
+    # use ICA parameters to create posterior prediction
+    stopifnot(!is.null(genes))
+    
+    predictions <- factorisation$S %*% factorisation$A[, genes,drop=FALSE]
+    predictions <- data.table(predictions, keep.rownames = T)
+    setnames(predictions, c("cell",paste0(names(predictions)[-1],name_extension)))
+    setkey(predictions, cell)
+    return(predictions)
+  }
 
 nmf_predict <- function(genes, factorisation=nnmf_decomp, name_extension=""){
   # use NNMF parameters to create posterior prediction
+  stopifnot(!is.null(genes))
   
   predictions <- factorisation$W %*% factorisation$H[, genes,drop=FALSE]
   predictions <- data.table(predictions, keep.rownames = T)
@@ -441,6 +453,7 @@ nmf_predict <- function(genes, factorisation=nnmf_decomp, name_extension=""){
 
 pca_predict <- function(genes, factorisation=pcaresult, name_extension=""){
   # use PCA parameters to create posterior prediction
+  stopifnot(!is.null(genes))
   
   predictions <- factorisation$projection %*% t(factorisation$loadings[genes,,drop=FALSE])
   predictions <- data.table(predictions, keep.rownames = T)
@@ -449,6 +462,13 @@ pca_predict <- function(genes, factorisation=pcaresult, name_extension=""){
   return(predictions)
 }
 
+magic_predict <- function(gene, MAGIC_data, name_extension=""){
+  predictions <- MAGIC_data$result[,gene]
+  names(predictions) <- rownames(MAGIC_data$result)
+  predictions <- as.data.table(predictions, keep.rownames = T)
+  setnames(predictions,"rn","cell")
+  setnames(predictions,"predictions",paste0(gene,name_extension))
+}
 
 #' Create data table of gene expression for a subset of genes
 #'
