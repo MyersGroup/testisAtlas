@@ -272,12 +272,12 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
     
     
     if(colourscale=="diverging"){
-      newcols <- brewer.pal(11, "RdYlBu")
-      newcols[6] <- "grey60"
-      p <- p + scale_colour_gradientn(colours = newcols[11:1],
-                                      trans="asinh",
-                                      limits=c(-max(abs(factorisation$scores[,i])),max(abs(factorisation$scores[,i]))),
-                                      guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"}))
+      
+      p <- p + scale_colour_gradientn(colours = log_colour_scale(range(tmp$score), scale=1, midpoint = "grey60", interpolate = "linear", asymetric = F),
+                                      limits=c(-max(abs(tmp$score)),max(abs(tmp$score))),
+                                      guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"),
+                                                              title.position = if(stages){"top"}else{"left"},
+                                                              nbin=100))
     }else{
       p <- p + scale_colour_viridis(direction = invert,
                                     guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"}))
