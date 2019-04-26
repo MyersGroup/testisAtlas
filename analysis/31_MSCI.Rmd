@@ -263,6 +263,50 @@ ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=(sex_predictions / autosomal_predi
 
 # X VS Y
 
+# Modify Real Data plot X & Y sim through time
+Let's use our real data to simulate a case in which there is obvious non sharing of sex transcripts
+
+```{r}
+
+
+datat[,Y_predictions_sim := Y_predictions]
+datat[,X_predictions_sim := X_predictions]
+
+set.seed(42)
+# start at peudotime 10k
+n=10000
+datat[PseudoTime<=n, male_simulated := sample(c(T,F), n, T)]
+
+# gradually remove X chrom from males
+datat[PseudoTime<=n & male_simulated, Y_predictions_sim := Y_predictions]
+n2 = nrow(datat[PseudoTime<=n & male_simulated])
+datat[PseudoTime<=n & male_simulated, X_predictions_sim := (X_predictions)*(PseudoTime/n) + rnorm(n2,0,3)]
+
+# gradually remove Y chrom from females
+datat[PseudoTime<=n & !male_simulated, X_predictions_sim := X_predictions]
+n2 = nrow(datat[PseudoTime<=n & !male_simulated])
+datat[PseudoTime<=n & !male_simulated, Y_predictions_sim := (Y_predictions)*(PseudoTime/n) + rnorm(n2,0,0.5)]
+```
+
+The X chromosome expression very clearly splits into two populations, 1) the males which do not express it (perhaps there's some left over transcripts, it's not clear how fast they should decay), and 2) the females which do.
+
+For the Y chromosome we have the inverse situation, although it's not as clear as the expression is allready very low even in males.
+
+```{r}
+
+X_nonsharing_prediction <- ggplot(datat[somatic4==FALSE], aes(-PseudoTime, X_predictions_sim/autosomal_predictions, colour = male_simulated)) +
+  geom_point(alpha=0.3, size=1, stroke=0) +
+  ylab("Ratio of Predicted total X Chromosome\n
+       Expression to Autosomal Expression") + 
+  theme_minimal() + theme(legend.position="bottom") +
+  guides(colour = guide_legend(override.aes = list(size=10, alpha=1),title="Is Simulated Male?"))
+
+X_nonsharing_prediction
+
+ggplot(datat[somatic4==FALSE], aes(-PseudoTime, Y_predictions_sim/autosomal_predictions, colour = male_simulated)) +
+    geom_point(alpha=0.3, size=1, stroke=0) + theme(legend.position = "bottom")
+```
+
 ```{r, fig.width=6}
 
 str(Y_genes)
