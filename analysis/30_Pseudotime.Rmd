@@ -79,8 +79,27 @@ ggplot(datat, aes(Tsne1, Tsne2, color=PseudoTime)) +
 # Component scores through Pseudotime
 The component scores and gene loadings show a cascade of expression programmes as spermatogenesis progresses.
 
-```{r, fig.width=6}
+```{r}
+tmp <- datat[,paste0("V",1:50), with=FALSE]
+names(tmp) <- component_order_dt$name
+tmp <- as.matrix(tmp)[order(-datat$PseudoTime,datat$hclust_group),component_order_dt[order(-pseudotime_average,name)]$name]
 
+colnames(tmp) <- paste0("V",component_order_dt[order(-pseudotime_average,name)]$component_number," ",colnames(tmp))
+t=20
+tmp[tmp>t] <- t
+tmp[tmp<(-t)] <- (-t)
+pdf("../results/scores_heatmap.pdf", width = 12, height = 9)
+draw(Heatmap(t(tmp[,!grepl("Single Cell",colnames(tmp))]),
+        col = log_colour_scale(tmp, scale = 0.5),
+        cluster_columns = F, cluster_rows = F,
+        heatmap_legend_param = list(title = "Cell Score", legend_direction="horizontal")),
+heatmap_legend_side="bottom")
+dev.off()
+```
+
+# Components overlap and vary continuously
+
+```{r, fig.width=7, fig.height=4}
 components_w_pseudotime <- paste0("V",component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$component_number)
 
 # Plot component loading by pseudotime
@@ -88,45 +107,51 @@ merge_sda3_melt <- melt(datat[somatic4==FALSE, c("cell", "PseudoTime", component
 
 levels(merge_sda3_melt$Component) <- paste(levels(merge_sda3_melt$Component), component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$name)
 
-# rename components
-# merge_sda3_melt[,Component := plyr::revalue(Component, QC_meiotic_components)]
-# order components
-# merge_sda3_melt[, Component := factor(Component, levels = QC_meiotic_components)]
-# component_order <- as.character(merge_sda3_melt[,.(maxval=max(abs(value)), PseudoTime, value),by=Component][maxval==abs(value)][order(-PseudoTime)]$Component)
+tmp <- merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(4,12,13,16,19,21,25,28)]]
 
-tmp <- asinh(datat[somatic4==FALSE, components_w_pseudotime, with=FALSE])
+tmp[as.integer(Component) %in% c(4,13,16,19,25), value := value*(-1)]
 
-names(tmp) <- paste(names(tmp), component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$name)
+scores_pseudotime <- ggplot(tmp, aes(-PseudoTime, value, colour=Component, group=Component)) +
+  geom_point_rast(alpha=0.4, size=1, stroke=0) +
+  geom_smooth(size=1, method = "gam", formula = y ~ s(x, k = 20), se = F) +#colour="black",
+  ylab("Cell Component Score") +
+  xlab("Pseudotime") +
+  theme_minimal() +
+  scale_colour_manual(values=RColorBrewer::brewer.pal(9,"Set1")[-6])+
+ # theme(legend.position = "bottom") +
+  ylim(-2,8)
+#+ guides(colour = guide_legend(nrow=3))
 
-# tmp[tmp>10] <- 10
-# tmp[tmp<(-10)] <- (-10)
+scores_pseudotime
 
-tmp2 <- tmp
+ggsave(scores_pseudotime, width=16/1.7, height=9/1.7, filename = "../results/overlaping_components2.png")
 
-tmp2[abs(tmp2)<1] <- 0
+```
 
-aheatmap(t(as.matrix(tmp2)),
-           breaks=-0.2,
-           color = "-RdBu:50",
-           cexRow=0.5,
-         labCol=NA,
-         Rowv = NA,
-         legend=T,
-  Colv = order(-datat[somatic4==FALSE]$PseudoTime))
+```{r}
+tmp <- merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(4,16,19,25,28)]]#
 
-saveRDS(tmp2, "../data/tmp_cache/scores_heatmap_data.rds")
+tmp[as.integer(Component) %in% c(4,13,16,19,25), value := value*(-1)]
 
-pdf("../results/scores_heatmap.pdf", width = 6, height = 4)
-aheatmap(t(as.matrix(tmp2)),
-           breaks=-0.2,
-           color = "-RdBu:50",
-           cexRow=0.5,
-         labCol=NA,
-         Rowv = NA,
-         legend=F,
-  Colv = order(-datat[somatic4==FALSE]$PseudoTime))
-dev.off()
+component_colours <- c(RColorBrewer::brewer.pal(12,"Paired"),"black","white")# ,"yellow")
+component_colours <- c("#6A3D9A", "#33A02C", "#FB9A99", "#B15928",
+                       "white", "#A6CEE3", "#FDBF6F", "#E31A1C",
+                       "#1F78B4", "#CAB2D6", "#B2DF8A", "black", 
+                       "#FF7F00", "#FFFF99")
 
+
+scores_pseudotime <- ggplot(tmp, aes(-PseudoTime, value, colour=Component, group=Component)) +
+  geom_point_rast(alpha=0.4, size=1, stroke=0) +
+  geom_smooth(size=1, method = "gam", formula = y ~ s(x, k = 20), se = F) +#colour="black",
+  ylab("Cell Component Score") +
+  xlab("Pseudotime") +
+  theme_minimal() +
+  scale_colour_manual(values=component_colours[c(2,8,9,12,13)])+ #RColorBrewer::brewer.pal(9,"Set1")[-6]
+ theme(legend.position = "none") +
+  ylim(-2,8)
+#+ guides(colour = guide_legend(nrow=3))
+
+scores_pseudotime
 ```
 
 
@@ -146,13 +171,15 @@ scores_pseudotime <- ggplot(merge_sda3_melt, aes(-PseudoTime, value, colour=Comp
 scores_pseudotime
 
 # selected scores faceted
+# 1, 30
+#brewer.pal(3, "Set1")[3]
 
-scores_pseudotime <- ggplot(merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(2, 4, 8, 10,12,13, 16, 19, 21, 24, 25, 28)]], aes(-PseudoTime, value, colour=Component)) +
-  geom_point(alpha=0.1, size=0.2) +
-  geom_smooth(colour="black", size=0.2, method = "gam", formula = y ~ s(x, k = 50)) +
+scores_pseudotime <- ggplot(merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(2, 4, 8, 10,12,13, 16, 19, 21, 24, 25, 28)]], aes(-PseudoTime, value)) +
+  geom_point(alpha=0.1, size=0.2, aes(colour=Component)) +
+  geom_smooth(colour="black", size=0.4, method = "gam", formula = y ~ s(x, k = 50)) +
   ylab("Cell Component Score") +
   xlab("Pseudotime") +
-  facet_wrap(~Component, scales="free_y") +
+  facet_wrap(~Component, scales="free_y", ncol=4) +
   theme_minimal() +
   theme(legend.position = "none")
 
@@ -161,80 +188,62 @@ scores_pseudotime
 pdf("../results/scores_pseudotime_facet.pdf", width = 16, height = 9)
 scores_pseudotime
 dev.off()
-#24, late acrosomal - if not abs
 
-scores_pseudotime <- ggplot(merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(4, 8, 10,12,13, 16,17, 19, 21,  25, 28)]], aes(-PseudoTime, abs(value), colour=Component)) +
-  geom_smooth(size=1.5, se=FALSE, method = "gam", formula = y ~ s(x, k = 30)) +
-  ylab("Cell Component Score") +
-  xlab("Pseudotime") +
-  ggtitle("Component score through pseudotime") +
-  theme_grey() + 
-  scale_color_manual(values = c(brewer.pal(name="Paired",12),"black"))
+```
 
-scores_pseudotime
 
-pdf("../results/scores_pseudotime_line.pdf", width = 16, height = 9)
-scores_pseudotime
+# Structure-esque plot
+
+```{r, fig.width=6}
+tmp <- merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(2,4,6,8,10,12,13,16,19,21,24,25,28,30)]]
+
+tmp[as.integer(Component) %in% c(4,6,8,13,16,19,25,30), value := value*(-1)]
+
+tmp[, cell2 := factor(cell, levels = merge_sda3_melt[order(-PseudoTime)][Component=="V5 Leptotene"]$cell)]
+tmp[,value_pos := max(c(0,value)),by=.(cell,Component)]
+
+#component_colours <- c(RColorBrewer::brewer.pal(9,"Set1"),"skyblue", "black","white")
+component_colours <- c(RColorBrewer::brewer.pal(12,"Paired"),"black","white")
+component_colours <- c("#6A3D9A", "#33A02C", "#FB9A99", "#B15928",
+                       "white", "#A6CEE3", "#FDBF6F", "#E31A1C",
+                       "#1F78B4", "#CAB2D6", "#B2DF8A", "black", 
+                       "#FF7F00", "#FFFF99")
+
+structure <- ggplot(tmp, aes(cell2, value_pos, fill=Component, colour=Component)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = component_colours) +
+  scale_colour_manual(values = component_colours) +
+  labs(x="Pseudotime ordered cells", y="Normalised Cell Component Score") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.position = "bottom")+
+  guides(colour = guide_legend(ncol = 2), fill = guide_legend(ncol = 2)) +
+  scale_y_continuous(expand=c(0,0))
+
+structure
+
+saveRDS(structure, file = "../data/plots/structure_plot.rds")
+
+pdf("../results/structure.pdf", height = 7, width = 10)
+structure
 dev.off()
-
 ```
 
+Non-normalised Structure plot
 
 ```{r, fig.width=6}
 
-ggplot(merge_sda3_melt[Component=="V5 Leptotene"], aes(-PseudoTime, value)) +
-  geom_point(alpha=0.8, size=0.2) +
-  ylab("Cell Component Score") +
-  xlab("Pseudotime") +
-  ggtitle("V5 component score through pseudotime")
-
-```
-
-
-# structure-esq plot
-
-```{r, fig.width=6}
-
-merge_sda3_melt[, cell2 := factor(cell, levels = merge_sda3_melt[order(-PseudoTime)][Component=="V5 Leptotene"]$cell)]
-
-component_colours <- c(brewer.pal(12, "Paired"),"black") #,"grey","magenta1","green1","white"
-component_colours <- c(rep(brewer.pal(12, "Paired"),2), "black", "grey","magenta1","green1","white", "blue")
-
-ggplot(merge_sda3_melt, aes(cell2, value, fill=Component, colour=Component)) +
+ggplot(tmp, aes(cell2, value, fill=Component, colour=Component)) +
   geom_col() +
   scale_fill_manual(values = component_colours) +
   scale_colour_manual(values = component_colours) +
   labs(x="Pesudotime ordered cells", y="Cell Component Score") +
-  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.position = "bottom" )
-
-ggplot(merge_sda3_melt, aes(cell2, value, fill=Component, colour=Component)) +
-  geom_col(position = "fill") +
-  scale_fill_manual(values = component_colours) +
-  scale_colour_manual(values = component_colours) +
-  labs(x="Pesudotime ordered cells", y="Cell Component Score") +
-  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.position = "bottom" )
-
-ggplot(merge_sda3_melt, aes(cell2, abs(value), fill=Component, colour=Component)) +
-  geom_col(position = "fill") +
-  scale_fill_manual(values = component_colours) +
-  scale_colour_manual(values = component_colours) +
-  labs(x="Pesudotime ordered cells", y="Cell Component Score") +
-  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.position = "bottom" )
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.position = "bottom" ) +
+  ylim(0,NA)
 ```
 
 
 # Gene Expression through Pseudotime
 
 
-## Imputed vs Not
-
-```{r, fig.width=6}
-
-genes_tmp <- c("Prdm9","Zcwpw1","Ccnb3","Piwil1","Zfp39","Ssxb1","Zfp37","Gapdhs") #Hormad2
-
-imputed_vs_raw(genes_tmp)
-
-```
 
 ## Pre-Leptotene vs Leptotene (V2 vs V5)
 
@@ -278,58 +287,6 @@ ggplot(merge_sda3_melt[Component %in% c("V2 Pre-leptotene","V5 Leptotene") & Pse
   ggtitle("V5 Smoothed component score over pseudotime")
 ```
 
-## Prdm9 vs Esx1 vs Sall4
-
-```{r, fig.width=6}
-tmp <- datat[,c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
-tmp <- merge(tmp, sda_predict(c("Prdm9","Esx1","Ctcfl","Gfra1","Sall4"), name_extension = "")) #compare_two_genes,
-
-tmp2 <- tmp
-
-tmp2[Prdm9<0, Prdm9:=0]
-tmp2[,Prdm9 := Prdm9/max(Prdm9)]
-
-tmp2[Ctcfl<0, Ctcfl:=0]
-tmp2[,Ctcfl := Ctcfl/max(Ctcfl)]
-
-tmp2[Esx1<0, Esx1:=0]
-tmp2[,Esx1 := Esx1/max(Esx1)]
-
-tmp2[Gfra1<0, Gfra1:=0]
-tmp2[,Gfra1 := Gfra1/max(Gfra1)]
-
-tmp2[Sall4<0, Sall4:=0]
-tmp2[,Sall4 := Sall4/max(Sall4)]
-
-ggplot(tmp2, aes(Tsne1_QC1, Tsne2_QC1)) +
-  geom_point(colour=rgb(red=tmp2$Prdm9, green=tmp2$Sall4, blue=tmp2$Esx1), size=1) +
-  ggtitle("t-SNE - experiment") +
-  theme_dark() + theme(panel.background = element_rect(fill = "grey20", colour = NA))
-
-tmp3 <- tmp2[Tsne1_QC1 > (-8) & Tsne1_QC1<25 & Tsne2_QC1>25]
-
-# ggplot(tmp2, aes(Tsne1_QC1, Tsne2_QC1)) +
-#   geom_point(colour=rgb(red=tmp2$Prdm9, green=tmp2$Sall4, blue=tmp2$Ctcfl), size=2) +
-#   ggtitle("t-SNE - experiment") +
-#   theme_dark() + theme(panel.background = element_rect(fill = "grey20", colour = NA))
-# 
-# ggplot(tmp2, aes(Tsne1_QC1, Tsne2_QC1)) +
-#   geom_point(colour=rgb(red=tmp2$Prdm9, green=tmp2$Sall4, blue=tmp2$Ctcflm), size=2) +
-#   ggtitle("t-SNE - experiment") +
-#   theme_dark() + theme(panel.background = element_rect(fill = "grey20", colour = NA))
-# 
-# ggplot(tmp2, aes(Tsne1_QC1, Tsne2_QC1)) +
-#   geom_point(colour=rgb(red=tmp2$Prdm9, green=tmp2$Sall4, blue=tmp2$Ctcfl2), size=2) +
-#   ggtitle("t-SNE - experiment") +
-#   theme_dark() + theme(panel.background = element_rect(fill = "grey20", colour = NA))
-
-ggplot(tmp3, aes(Tsne1_QC1, Tsne2_QC1)) +
-  geom_point(colour=rgb(red=tmp3$Prdm9, green=tmp3$Sall4, blue=tmp3$Esx1), size=2) +
-  ggtitle("t-SNE - experiment") +
-  theme_dark() + theme(panel.background = element_rect(fill = "grey20", colour = NA))
-
-#  facet_zoom(x = Tsne1_QC1 > (-8) & Tsne1_QC1<25, y= Tsne2_QC1>25, zoom.size = 1)
-```
 
 ```{r, fig.width=6}
 # plot example genes with predictions
