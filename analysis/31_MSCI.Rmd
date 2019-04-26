@@ -478,3 +478,46 @@ ggplot(melt_genes(sample(autosomal_genes, length(sex_genes))), aes(-PseudoTime, 
 #   theme(legend.position = "none")
 ```
 
+
+```{r}
+v42_loadings_plot <- genome_loadings(results$loadings[[1]][42,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
+  ylab("Gene Loading (Component 42)") +
+  scale_y_reverse() +
+  scale_size_continuous(range = c(1, 3))
+```
+
+
+# Publication Figure
+
+# Figure 2 (MSCI ratio & Escape genes)
+
+```{r}
+
+msci_pseudotimeY <- readRDS("../data/plots/msci_pseudotimeY.rds")
+msci_pseudotimeX <- readRDS("../data/plots/msci_pseudotimeX.rds")
+X_escapees_plot <- readRDS("../data/plots/X_escapees_plot.rds")
+
+right <- plot_grid(X_nonsharing_prediction,
+                   v42_loadings_plot,
+                   ncol=1, labels = c("B","E"))
+
+left <- plot_grid(msci_pseudotimeX,
+                  plot_grid(X_escapees_plot,
+                            print_tsne(42, point_size = 0.3) + ggtitle(""),
+                            ncol=2, labels = c("C","D")),
+                  ncol=1, rel_heights = c(3,2),
+                  labels = c("A",""))
+
+pdf(width = 15, height = 10, file = "../results/Figure_2_MSCI.pdf")
+plot_grid(left, right, ncol=2)
+dev.off() 
+
+pdf(width = 15, height = 9, file = "../results/Figure_2_Supplement.pdf")
+plot_grid(plotlist = list(msci_pseudotimeY,
+                       X_escapees_plot + facet_wrap(~Gene, scales='free_y')),
+          labels = c("A","B"), rel_widths = c(2,3))
+dev.off()
+
+
+```
+
