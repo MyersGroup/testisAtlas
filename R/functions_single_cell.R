@@ -1095,28 +1095,41 @@ manhatten_plot <- function(enrichments, topn=1, repel_force=1, legend_position=c
 #' @param values numeric vector, could be matrix or vector of values you will plot
 #' used to calculate range for asymetrical 
 #' @param scale use this to rescale the range, to change what part of the log scale you're on
-#' 
+#' @param midpoint colour of central value (0)
+#' @param interpolate passed to colorRampPalette
+#' @param asymetric logical; should 0 be at the center of offset to account for range of values
+#' @param print logical; should colour scale be printed or should vector of hex values be returned
 #' 
 
-log_colour_scale <- function(values=vvv3, scale=0.05, midpoint="white"){
+log_colour_scale <- function(values=vvv3, scale=0.05, midpoint="white", interpolate="spline", asymetric=T, print=F){
   newcols <- brewer.pal(11, "RdYlBu")
   newcols[6] <- midpoint
   #newcols <- colorRampPalette(c(newcols[1],newcols[3],newcols[6],newcols[9],newcols[11]), interpolate="spline", space="Lab")(2000)
-  newcols <- colorRampPalette(newcols, interpolate="spline", space="Lab")(2000)
+  n=1000
+  newcols <- colorRampPalette(newcols, interpolate=interpolate, space="Lab")(2*n)
   
   range = max(abs(values)) * scale
-  logcolindex1 <- floor((log(seq(1, range, length.out = 1000))/log(range))*1000)
+  logcolindex1 <- floor((log(seq(1, range, length.out = n))/log(range))*n)
+  
   # index2 corrected for range being skewed to positive  values
-  logcolindex2 <- floor((log(seq(1, range, length.out = floor(abs(min(values)/max(values))*1000)))/log(range))*1000)
+  if(asymetric){
+    index2length = floor(abs(min(values)/max(values))*n)
+  }else{
+    index2length = n
+  }
   
-  # visualise scales
-  #cols <- function(a) image(1:length(a), 1, as.matrix(1:length(a)), col=a, axes=T , xlab="", ylab="")
-  #cols(newcols)
-  #cols(newcolscale)
+  logcolindex2 <- floor((log(seq(1, range, length.out = n))/log(range))*n)
   
-  indexes <- c(abs(logcolindex1-1000)[1000:1],logcolindex2+1000)
+  indexes <- c(abs(logcolindex1-n)[n:1],logcolindex2+n)
   newcolscale = newcols[indexes][(length(indexes)-1):1]
-  return(newcolscale)
+  
+  if(print){
+    # visualise scales
+    cols <- function(a) image(1:length(a), 1, as.matrix(1:length(a)), col=a, axes=T , xlab="", ylab="")
+    return(cols(newcolscale))
+  }else{
+    return(newcolscale)
+  }
 }
 
 
