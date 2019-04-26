@@ -811,9 +811,9 @@ imputed_vs_raw <- function(genes_tmp, cell_metadata=datat, factorisation=results
           geom_point(alpha=0.5, size=0.7, shape=20, stroke=0, colour=RColorBrewer::brewer.pal(3, name="Set1")[2]) +
           xlab("Pseudotime") + ylab("") +
           facet_wrap(~variable, scales = "free_y", ncol=1, strip.position = "right") +
-          ggtitle("Imputed") +
+          ggtitle("SDA Imputed") +
           theme_minimal()  + theme(strip.text.y = element_blank())
-      , ncol=2)
+      , ncol=2, rel_widths = c(6,5))
     )
   }else{
     
