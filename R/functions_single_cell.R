@@ -108,39 +108,6 @@ clustered_heatmap <- function(cell_metadata=datat, name, annotation.col=NULL, co
   )
 }
 
-# depreceated, use print_tsne(preditc=T) instead
-# print_marker2 <- function(gene){
-#   gene <- paste0(gene,"")
-#   ggplot(tmp[order(get(gene))], aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
-#     geom_point(size=0.05) +
-#     scale_color_viridis(direction=-1) +
-#     ggtitle(gene)
-# }
-
-# depreceated, use print_tsne(preditc=T) instead
-# print_marker2 <- function(gene){
-#   gene <- paste0(gene,"_predict")
-#   ggplot(tmp[order(get(gene))], aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
-#     geom_point(size=0.05) +
-#     scale_color_viridis(direction=-1) +
-#     ggtitle(gene)
-# }
-
-# depreceated, use print_tsne() instead
-# print_marker <- function(gene){
-#   
-#   if(!gene %in% colnames(data)){
-#     return("Gene not found")
-#   }
-#   
-#   tmp <- merge(datat, expression_dt(gene))[order(get(gene))]
-#   
-#   ggplot(tmp, aes(Tsne1_QC1, Tsne2_QC1, color=get(gene))) +
-#     geom_point(size=0.05) +
-#     scale_color_viridis(direction=-1) +
-#     ggtitle(gene)
-# }
-
 
 #' Plot scores
 #'
@@ -260,12 +227,6 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
       tmp[, score := score * (-1)]
     }
     
-    if(tmp[,score][tmp[,which.max(abs(score))]] < 0 ){
-      invert = 1
-    }else{
-      invert = -1
-    }
-    
     p <- ggplot(tmp[order(abs(score))], aes(get(dim1), get(dim2))) +
       geom_point(size=point_size, stroke=0, aes(colour=score), position = position_jitter(width = jitter, height = jitter, seed=42L)) +
       ggtitle(paste(i,ifelse(exists("component_order_dt"),component_order_dt[component_number==i]$name,"")))
@@ -279,8 +240,15 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
                                                               title.position = if(stages){"top"}else{"left"},
                                                               nbin=100))
     }else{
+      
+      if(tmp[,score][tmp[,which.max(abs(score))]] < 0 ){
+        invert = 1
+      }else{
+        invert = -1
+      }
       p <- p + scale_colour_viridis(direction = invert,
-                                    guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"), title.position = if(stages){"top"}else{"left"}))
+                                    guide = guide_colourbar(paste0("Cell score\n(Component ",i,")"),
+                                                            title.position = if(stages){"top"}else{"left"}))
     }
     
     
