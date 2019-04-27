@@ -107,7 +107,7 @@ wget https://download3.rstudio.org/ubuntu-14.04/x86_64/shiny-server-1.5.8.913-am
 sudo gdebi shiny-server-1.5.8.913-amd64.deb
 
 # install CRAN hosted repositories
-sudo su - -c "R -e \"install.packages(c('shiny', 'ggplot2', 'data.table', 'viridis', 'remotes', 'bigmemory'), repos='http://cran.rstudio.com/')\""
+sudo su - -c "R -e \"install.packages(c('shiny', 'ggplot2', 'data.table', 'viridis', 'remotes', 'bigmemory','shinycssloaders'), repos='http://cran.rstudio.com/')\""
 
 # the following are required for the scales package which is a dependency of SDAtools
 sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable --yes
