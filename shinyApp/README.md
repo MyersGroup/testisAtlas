@@ -58,7 +58,7 @@ Based on the authentication possibility and slightly favourable pricing of AWS I
 ## Setting up an AWS instance
 
 To set up an instance log in to the AWS dashboard. Go to EC2 > Launch Instance.
-Choose "Ubuntu Server 16.04 LTS (HVM), SSD Volume Type" (or My AMI if you've already done this and saved an image).
+Choose "Ubuntu Server 18.04 LTS (HVM), SSD Volume Type" (or My AMI if you've already done this and saved an image).
 Chose the default options but for the security group use: 
 
 ```
@@ -82,29 +82,25 @@ ssh -i "your_private_key_here.pem" ubuntu@ec2-<YOUR PUBLIC DNS ADDRESS HERE>.eu-
 ```{bash}
 
 # Update Ubuntu
+sudo add-apt-repository ppa:marutter/rrutter3.5
 sudo apt-get update
 sudo apt-get -y install \
-    nginx \
-    gdebi-core \
-    apache2-utils \
-    libssl-dev \
-    libcurl4-gnutls-dev \
-    libcairo2-dev \
-    libgdal-dev \
-    libgeos-dev \
-    libproj-dev \
-    libxml2-dev \
-    libxt-dev \
-    libv8-dev
-
-# Install R and shiny-server
-sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
-gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
-gpg -a --export E084DAB9 | sudo apt-key add -
-sudo apt-get update
-sudo apt-get -y install r-base
-wget https://download3.rstudio.org/ubuntu-14.04/x86_64/shiny-server-1.5.8.913-amd64.deb
-sudo gdebi shiny-server-1.5.8.913-amd64.deb
+     gdebi-core \
+     r-base \
+     libcurl4-openssl-dev \
+     libxml2-dev \
+     libssl-dev \
+     libcurl4-gnutls-dev \
+     libcairo2-dev \
+     libgdal-dev \
+     libgeos-dev \
+     libproj-dev \
+     libxml2-dev \
+     libxt-dev \
+     libv8-dev
+ 
+wget https://download3.rstudio.org/ubuntu-14.04/x86_64/shiny-server-1.5.9.923-amd64.deb
+sudo gdebi shiny-server-1.5.9.923-amd64.deb
 
 # install CRAN hosted repositories
 sudo su - -c "R -e \"install.packages(c('shiny', 'ggplot2', 'data.table', 'viridis', 'remotes', 'bigmemory','shinycssloaders'), repos='http://cran.rstudio.com/')\""
@@ -115,7 +111,8 @@ sudo apt-get --yes --force-yes update -qq
 sudo apt-get install -y libudunits2-dev libgeos++-dev
 
 # install github hosted packages
-sudo su - -c "R -e \"remotes::install_github(c('myersgroup/testisAtlas', 'andrewsali/shinycssloaders'))\""
+sudo su - -c "R -e \"remotes::install_github(c('myersgroup/testisAtlas'))\""
+sudo su - -c "R -e \"remotes::install_github('eliocamp/ggnewscale', ref='e3fee0106c')\""
 ```
 
 ## Upload the shiny app files
@@ -123,68 +120,17 @@ sudo su - -c "R -e \"remotes::install_github(c('myersgroup/testisAtlas', 'andrew
 ```{bash}
 sudo chmod 777 /srv/shiny-server
 
-scp -v -i "your_private_key_here.pem" -r <PATH TO SHINY APP FOLDER HERE>/testisAtlas ubuntu@ec2-<YOUR PUBLIC DNS ADDRESS HERE>.eu-west-1.compute.amazonaws.com:/srv/shiny-server/
-
+scp -v -i "your_private_key_here.pem" -r <PATH TO SHINY APP FOLDER HERE>/testisAtlas/shinyApp ubuntu@ec2-<YOUR PUBLIC DNS ADDRESS HERE>.eu-west-1.compute.amazonaws.com:/srv/shiny-server/
 ```
 
-## Enable password authentication
-
-Modify the nginx configuration file
-
-```{bash}
-sudo service nginx stop
-sudo vi /etc/nginx/sites-available/default
-```
-
-Replace everything with the following
-
-```{bash}
-server {
-    listen 80;
-
-    location / {
-    proxy_pass http://localhost:3838/;
-    proxy_redirect http://localhost:3838/ $scheme://$host/;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    auth_basic "Username and Password are required";
-    auth_basic_user_file /etc/nginx/.htpasswd;
- }
-}
-```
-
-update the shiny-server to block unauthenticated requests via port 3838
+# Point shiny-server to the app
 
 ```{bash}
 sudo systemctl stop shiny-server
 sudo nano /etc/shiny-server/shiny-server.conf
 
-#add /testisAtlas to site_dir
-#add 127.0.0.1 after 3838
-
-access_log /var/log/shiny-server/access.log short;
-```
-
-Add authentication details (username here is "demo")
-
-```{bash}
-cd /etc/nginx
-sudo htpasswd -c /etc/nginx/.htpasswd demo
-<Type your chosen password when prompted>
-```
-
-If you want to run the app on a t2.micro instance you will also have to run the setup_low_memory_mode.R script at this point (more details above).
-
-Restart the web-server and shiny server
-
-```{bash}
-sudo service nginx stop
-sudo service nginx start
-
-sudo systemctl stop shiny-server
+# add /testisAtlas to site_dir
 sudo systemctl start shiny-server
 ```
-
 
 Done!
