@@ -82,11 +82,7 @@ server <- function(input, output, session) {
     
     p <- p + annotate("text", x=-Inf, y=-Inf, hjust=0, vjust=-1, label="Jung & Wells et. al. 2018", colour='grey')
     
-    if(input$diverging_colour){
-      return(p + scale_fill_gradient2())
-    }else{
-      return(p) 
-    }
+    return(p)
     
   })
   
@@ -152,7 +148,6 @@ ui <- fluidPage(
       checkboxInput("show_predict", "Show imputed expression?", value=TRUE),
       checkboxInput("show_arrow", "Display Pseudotime Arrow?"),
       checkboxInput("show_stages", "Annotate Stages?", value=TRUE),
-      checkboxInput("diverging_colour", "Diverging Colour Scale?"),
       checkboxInput("umap", "Umap Projection?"),
       sliderInput("decimal", "Point size:",
                   min = 0.1, max = 2, value = 1, step = 0.05),
