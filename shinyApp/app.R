@@ -127,8 +127,30 @@ server <- function(input, output, session) {
     }
 	
 	genome_loadings(results$loadings[[1]][tmp,], label_both = TRUE, max.items = input$n_genes, label.size = 4, gene_locations=rna_locations) +
-	ylab(paste("Gene Loading (Component",tmp,")")) + theme_minimal() + theme(legend.position = "none") +
-      coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = FALSE)
+	ylab(paste("Gene Loading (Component",tmp,")")) + theme_minimal() + theme(legend.position = "none")
+    
+  })
+  
+  output$whichComp <- renderPlot({
+    
+    tmp <- trimws(input$genes)
+    
+    if(!is.na(as.numeric(tmp))){
+      stop("Please enter a gene name")
+    }else{
+      tmp <- strsplit(tmp, " ")[[1]]
+      tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
+      
+      if(length(tmp)==0){
+        tmp <- c("Prdm9")
+      }else if(length(which(!tmp %in% gene_symbols$external_gene_name))!=0){
+        stop(paste("Gene Symbol not recognised:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
+      }else if(length(which(!tmp %in% colnames(data)))!=0){
+        stop(paste("Gene not detected:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
+      }
+    }
+    
+    highest_components(results, tmp)
     
   })
 
@@ -172,7 +194,9 @@ ui <- fluidPage(
                            ))
                   ),
                   tabPanel("Gene Loadings",
-                           plotOutput("loadings"))
+                           plotOutput("loadings")),
+                  tabPanel("Which Component",
+                           plotOutput("whichComp"))
       )
     )
   )
