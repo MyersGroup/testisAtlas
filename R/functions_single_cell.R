@@ -271,7 +271,8 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
     
     p <- ggplot(tmp, aes(get(dim1), get(dim2))) +
       geom_point(size=point_size, stroke=0, aes(colour=get(gene)), position = position_jitter(width = jitter, height = jitter, seed=42L)) +
-      scale_colour_viridis(direction=-1, guide = guide_colourbar(paste0(gene," Expression"), title.position = if(stages){"top"}else{"left"})) +
+      scale_color_gradient2(mid="lightgrey", high="midnightblue", low="lightgrey",
+                            guide = guide_colourbar(paste0(gene," Expression"), title.position = if(stages){"top"}else{"left"})) +
       ggtitle(gene)
   }
   
