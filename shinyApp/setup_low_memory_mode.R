@@ -5,6 +5,13 @@ data <- as.matrix(data)
 data <- as.big.matrix(data, backingfile = "data.big")
 data <- attach.big.matrix("data.big.desc")
 
+# keep these as easter eggs
+#datat$group <- NULL
+#datat$msci_ratio <- NULL
+#datat$PseudoTime <- NULL
+datat$log_library_size <- log10(datat$library_size)
+datat$somatic <- datat$somatic4
+
 datat$Tsne1 <- NULL
 datat$Tsne1_QC2 <- NULL
 datat$Tsne2 <- NULL
@@ -26,12 +33,6 @@ datat$PseudoTime2 <- NULL
 datat$hclust_group <- NULL
 datat$`mt-Rnr2` <- NULL
 datat$`mt-Rnr2_pred` <- NULL
-
-
-# keep these as easter eggs
-#datat$group <- NULL
-#datat$msci_ratio <- NULL
-#datat$PseudoTime <- NULL
 
 str(datat)
 
