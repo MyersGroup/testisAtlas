@@ -47,13 +47,18 @@ server <- function(input, output, session) {
       tmp <- as.numeric(tmp)
     }else{
       tmp <- strsplit(tmp, " ")[[1]]
-      tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
       
       if(length(tmp)==0){
         tmp <- c("Prdm9")
-      }else if(length(which(!tmp %in% gene_symbols$external_gene_name))!=0){
+      }
+      
+      if(!tmp %in% colnames(datat)){
+        tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
+      }
+      
+      if(length(which(!tmp %in% c(gene_symbols$external_gene_name,colnames(datat))))!=0){
         stop(paste("Gene Symbol not recognised:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
-      }else if(length(which(!tmp %in% colnames(data)))!=0){
+      }else if(length(which(!tmp %in% c(colnames(data),colnames(datat))))!=0){
         stop(paste("Gene not detected:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
       }
     }
