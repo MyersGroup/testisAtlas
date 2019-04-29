@@ -212,7 +212,9 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
       ggtitle(paste(i))
     
     if(is.numeric(tmp$feature)){
-      p <- p + scale_fill_viridis(guide = guide_colourbar(i))
+      p <- p + scale_fill_viridis(guide = guide_colourbar(i), direction = -1)
+    }else if(is.logical(tmp$feature)){
+      p <- p + scale_fill_brewer(palette = "Set1")
     }else{
       p <- p + scale_fill_brewer(palette = "Paired") +
         guides(fill = guide_legend(override.aes = list(size=3, alpha=1), title = i))
