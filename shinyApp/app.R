@@ -29,7 +29,43 @@ if(low_memory_mode){
   load_component_orderings()
 }
 
+results$loadings_ranks <- t(sapply(rownames(results$loadings[[1]]), function(i) rank(abs(results$loadings[[1]][i,]))))
+
 gene_symbols <- readRDS("Ensembl_92_gene_symbols.rds")
+
+# clip outlying cell
+datat[msci_ratio>0.15,msci_ratio := 0.12]
+
+gene_or_component <- function(tmp, allways_component=F){
+  gene <<- NULL
+  if(!is.na(as.numeric(tmp))){
+    tmp <- as.numeric(tmp)
+  }else{
+    tmp <- strsplit(tmp, " ")[[1]]
+    
+    if(length(tmp)==0){
+      tmp <- c("Prdm9")
+    }
+    
+    if(!tmp %in% colnames(datat)){
+      tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
+    }
+    
+    if(length(which(!tmp %in% c(gene_symbols$external_gene_name,colnames(datat))))!=0){
+      stop(paste("Gene Symbol not recognised:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
+    }else if(length(which(!tmp %in% c(colnames(data),colnames(datat))))!=0){
+      stop(paste("Gene not detected:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
+    }
+    
+    if(allways_component){
+      gene <<- tmp
+      tmp <- which.max(results$loadings_ranks[,gene])
+    }
+    
+  }
+  
+  return(tmp)
+}
 
 options(shiny.sanitize.errors = FALSE)
 
@@ -41,27 +77,7 @@ server <- function(input, output, session) {
 
   output$distPlot <- renderPlot({
     
-    tmp <- trimws(input$genes)
-    
-    if(!is.na(as.numeric(tmp))){
-      tmp <- as.numeric(tmp)
-    }else{
-      tmp <- strsplit(tmp, " ")[[1]]
-      
-      if(length(tmp)==0){
-        tmp <- c("Prdm9")
-      }
-      
-      if(!tmp %in% colnames(datat)){
-        tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
-      }
-      
-      if(length(which(!tmp %in% c(gene_symbols$external_gene_name,colnames(datat))))!=0){
-        stop(paste("Gene Symbol not recognised:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
-      }else if(length(which(!tmp %in% c(colnames(data),colnames(datat))))!=0){
-        stop(paste("Gene not detected:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
-      }
-    }
+    tmp <- gene_or_component(trimws(input$genes))
     
     if(!input$umap){
     p <- print_tsne(tmp,
@@ -118,16 +134,16 @@ server <- function(input, output, session) {
   
   output$loadings <- renderPlot({
     
-    tmp <- input$genes
+    tmp <- gene_or_component(input$genes, allways_component = T)
     
-    if(!is.na(as.numeric(tmp))){
-      tmp <- as.numeric(tmp)
+    if(!is.null(gene)){
+      title <- paste("Component",tmp,"(",component_order_dt[component_number==tmp]$name,")","- highest ranked loading for",gene)
     }else{
-		stop("Please enter a component number")
+      title <- paste("Component",tmp,"(",component_order_dt[component_number==tmp]$name,")")
     }
-	
-	genome_loadings(results$loadings[[1]][tmp,], label_both = TRUE, max.items = input$n_genes, label.size = 4, gene_locations=rna_locations) +
-	ylab(paste("Gene Loading (Component",tmp,")")) + theme_minimal() + theme(legend.position = "none")
+    
+	genome_loadings(results$loadings[[1]][tmp,], label_both = TRUE, max.items = input$n_genes, label.size = 4, gene_locations=rna_locations, highlight_genes = gene, label_genes = gene) +
+	ylab(paste("Gene Loading (Component",tmp,")")) + theme_minimal() + theme(legend.position = "none") + ggtitle(title)
     
   })
   
@@ -172,7 +188,7 @@ ui <- fluidPage(
       checkboxInput("show_stages", "Annotate Stages?", value=TRUE),
       checkboxInput("umap", "Umap Projection?"),
       sliderInput("decimal", "Point size:",
-                  min = 0.1, max = 2, value = 1, step = 0.05),
+                  min = 0.1, max = 3, value = 1.5, step = 0.1),
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("Genome Loadings Settings:")),
       sliderInput("n_genes", "Number of genes to label:",
