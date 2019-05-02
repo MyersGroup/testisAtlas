@@ -212,9 +212,9 @@ ui <- fluidPage(
                            ))
                   ),
                   tabPanel("Gene Loadings",
-                           plotOutput("loadings")),
+                           withSpinner(plotOutput("loadings"))),
                   tabPanel("Which Component",
-                           plotOutput("whichComp"))
+                           withSpinner(plotOutput("whichComp")))
       )
     )
   )
