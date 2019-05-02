@@ -193,7 +193,9 @@ ui <- fluidPage(
       tags$div(class="header", checked=NA, tags$h4("Genome Loadings Settings:")),
       sliderInput("n_genes", "Number of genes to label:",
                   min = 0, max = 100, value = 20, step = 1),
-      tags$head(tags$style("#distPlot{height:88vh !important;}")),
+      tags$head(tags$style("#distPlot{height:85vh !important;}")),
+      tags$head(tags$style("#loadings{height:85vh !important;}")),
+      tags$head(tags$style("#whichComp{height:85vh !important;}")),
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("About:")),
       tags$div(p(HTML(paste0('For more information see our ',a(target="_blank", href = 'https://doi.org/10.1101/393769', 'paper')))))
