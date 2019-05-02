@@ -38,14 +38,15 @@ datat[msci_ratio>0.15,msci_ratio := 0.12]
 
 gene_or_component <- function(tmp, allways_component=F){
   gene <<- NULL
+  
+  if(tmp==""){
+    tmp <- c(5)
+  }
+  
   if(!is.na(as.numeric(tmp))){
     tmp <- as.numeric(tmp)
   }else{
     tmp <- strsplit(tmp, " ")[[1]]
-    
-    if(length(tmp)==0){
-      tmp <- c("Prdm9")
-    }
     
     if(!tmp %in% colnames(datat)){
       tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
@@ -96,7 +97,7 @@ server <- function(input, output, session) {
         coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = T)
     }
     
-    p <- p + annotate("text", x=-Inf, y=-Inf, hjust=0, vjust=-1, label="Jung & Wells et. al. 2018", colour='grey')
+    p <- p + annotate("text", x=-Inf, y=-Inf, hjust=0, vjust=-1, label="Jung & Wells et. al. 2019", colour='grey')
     
     return(p)
     
@@ -151,6 +152,10 @@ server <- function(input, output, session) {
     
     tmp <- trimws(input$genes)
     
+    if(tmp==""){
+      tmp <- c(5)
+    }
+    
     if(!is.na(as.numeric(tmp))){
       stop("Please enter a gene name")
     }else{
@@ -158,7 +163,7 @@ server <- function(input, output, session) {
       tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
       
       if(length(tmp)==0){
-        tmp <- c("Prdm9")
+        tmp <- c(5)
       }else if(length(which(!tmp %in% gene_symbols$external_gene_name))!=0){
         stop(paste("Gene Symbol not recognised:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
       }else if(length(which(!tmp %in% colnames(data)))!=0){
@@ -175,11 +180,13 @@ server <- function(input, output, session) {
 
 ui <- fluidPage(
   titlePanel("Mouse Testis Single Cell RNAseq Atlas"),
+  #tags$head(includeHTML(("header.html"))),
   sidebarLayout(
     sidebarPanel(
-      textInput("genes", "Input gene name / component number:", placeholder = "Prdm9"),
+      textInput("genes", "Input a gene name or component number:", placeholder = "5"),
       tags$div(class="label", style="text-align:centered; color:black; font-size:100%;", checked=NA, tags$strong("OR")),
       actionButton("rand_gene", "Show me a random gene!"),
+      helpText("Special words: msci_ratio, log_library_size, somatic, group, PseudoTime"),
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("tSNE Settings:")),
       helpText("To Zoom, select a reigon and double click, to reset double click."),
