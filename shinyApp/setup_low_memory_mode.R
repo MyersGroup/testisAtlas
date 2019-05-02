@@ -10,7 +10,6 @@ data <- attach.big.matrix("data.big.desc")
 #datat$msci_ratio <- NULL
 #datat$PseudoTime <- NULL
 datat$log_library_size <- log10(datat$library_size)
-datat$somatic <- datat$somatic4
 
 datat$Tsne1 <- NULL
 datat$Tsne1_QC2 <- NULL
@@ -21,6 +20,8 @@ datat$library_size <- NULL
 datat$somatic <- NULL
 datat$somatic2 <- NULL
 datat$somatic3 <- NULL
+# keep somatic4 as somatic
+datat$somatic <- datat$somatic4
 datat$somatic4 <- NULL
 datat$sex <- NULL
 datat$sex_predictions <- NULL
