@@ -106,13 +106,15 @@ components_w_pseudotime <- paste0("V",component_order_dt[!is.na(pseudotime_avera
 merge_sda3_melt <- melt(datat[somatic4==FALSE, c("cell", "PseudoTime", components_w_pseudotime), with=FALSE], id.vars = c("cell","PseudoTime"), variable.name = "Component")
 
 levels(merge_sda3_melt$Component) <- paste(levels(merge_sda3_melt$Component), component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$name)
+```
 
+```{r, fig.width=7, fig.height=4}
 tmp <- merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(4,12,13,16,19,21,25,28)]]
 
 tmp[as.integer(Component) %in% c(4,13,16,19,25), value := value*(-1)]
 
 scores_pseudotime <- ggplot(tmp, aes(-PseudoTime, value, colour=Component, group=Component)) +
-  geom_point_rast(alpha=0.4, size=1, stroke=0) +
+  geom_point(alpha=0.4, size=1, stroke=0) +
   geom_smooth(size=1, method = "gam", formula = y ~ s(x, k = 20), se = F) +#colour="black",
   ylab("Cell Component Score") +
   xlab("Pseudotime") +
@@ -152,6 +154,8 @@ scores_pseudotime <- ggplot(tmp, aes(-PseudoTime, value, colour=Component, group
 #+ guides(colour = guide_legend(nrow=3))
 
 scores_pseudotime
+
+saveRDS(scores_pseudotime,"../data/plots/scores_pseudotime.rds")
 ```
 
 
@@ -176,7 +180,7 @@ scores_pseudotime
 
 scores_pseudotime <- ggplot(merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(2, 4, 8, 10,12,13, 16, 19, 21, 24, 25, 28)]], aes(-PseudoTime, value)) +
   geom_point(alpha=0.1, size=0.2, aes(colour=Component)) +
-  geom_smooth(colour="black", size=0.4, method = "gam", formula = y ~ s(x, k = 50)) +
+  geom_smooth(colour="black", size=0.4, method = "gam", formula = y ~ s(x, bs = "ad", k=300)) +
   ylab("Cell Component Score") +
   xlab("Pseudotime") +
   facet_wrap(~Component, scales="free_y", ncol=4) +
@@ -344,31 +348,5 @@ aheatmap(asinh(t(as.matrix(tmp_m[order(-PseudoTime)][,c(top.genes), with=FALSE])
 ```{r}
 
 saveRDS(datat,"../data/tmp_cache/datat.rds")
-
-```
-
-
-```{r, fig.width=6}
-
-# manual diff expression for clump of cells
-
-# datat[,odd2:=FALSE]
-# datat[((Tsne1-(-20))^2 + 0.2*(Tsne2-(-5))^2) < 5^2, odd2:= TRUE]
-# 
-# datat[odd==TRUE]$cell
-# 
-# outside <- Matrix::colMeans(data[datat[odd==TRUE]$cell,])
-# inside <- Matrix::colMeans(data[datat[odd2==TRUE]$cell,])
-# 
-# Cul4a <- Matrix::colMeans(data[datat[group=="Cul4a"]$cell,])
-# wt <- Matrix::colMeans(data[datat[group=="WT"]$cell,])
-# 
-# odd_comparison <- data.table(inside, outside, Cul4a, wt, gene = names(outside) )
-# 
-# odd_comparison[, fold_change := (outside+0.5) / (inside+0.5)]
-# odd_comparison[, fold_change_group := (Cul4a+0.5) / (wt+0.5)]
-# odd_comparison[order(-fold_change)]
-# odd_comparison[order(-fold_change_group)]
-# odd_comparison[order(fold_change)]
 
 ```
