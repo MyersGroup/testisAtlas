@@ -324,6 +324,8 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
 #' @param df; string vector of two or three gene names
 #' @param variables; string vector of two or three variable
 #'  (gene) names present in df to create colours from
+#' @param shift; logical, should the values be shifted so most 
+#' negative becomes 0, for truely bi-signed variables (default: F)
 #'
 #' @return vector of colour rbg hex codes
 #' 
@@ -331,10 +333,12 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
 #' 
 #' @import data.table
 #' 
-ternaryColours <- function(df, variables){
+ternaryColours <- function(df, variables, shift=FALSE){
   df <- copy(df)
   for(i in variables){
-    #df[, (i):= get(i) + abs(min(get(i)))] # shift so min value is 0
+    if(shift){
+      df[, (i):= get(i) + abs(min(get(i)))] # shift so min value is 0  
+    }
     df[get(i)<0, (i):= 0]
     df[, (i) := get(i) / max(unlist(list(1,get(i))))] # rescale to max of 1
   }
@@ -363,26 +367,26 @@ ternaryColours <- function(df, variables){
 #' 
 #' @import ggplot2 data.table
 
-tricolour_tsne <- function(genes, returndf=F, predict="SDA", ptsize=1.5, jitter=0.25){
-  if(predict=="SDA"){
-    tmp <- merge(datat, sda_predict(genes))
-  }else if(predict=="NNMF"){
-    tmp <- merge(datat, nmf_predict(genes))
-  }else if(predict=="NNMF2"){
-    tmp <- merge(datat, nmf_predict(genes, nnmf_decomp5))
-  }else{
-    tmp <- merge(datat, expression_dt(genes))
-  }
+tricolour_tsne <- function(genes, returndf=F, predict="SDA", cell_metadata=datat, ptsize=1.5, jitter=0.25){
   
-  tmp$rgb <- ternaryColours(tmp, genes)
+  if(predict=="SDA"){
+    cell_metadata <- merge(cell_metadata, sda_predict(genes))
+  }else if(predict=="NNMF"){
+    cell_metadata <- merge(cell_metadata, nmf_predict(genes))
+  }else if(predict=="NNMF2"){
+    cell_metadata <- merge(cell_metadata, nmf_predict(genes, nnmf_decomp5))
+  }else{
+    cell_metadata <- merge(cell_metadata, expression_dt(genes))
+  }
+  cell_metadata$rgb <- ternaryColours(cell_metadata, genes)
   
   if(returndf==T){
-    return(tmp)
+    return(cell_metadata)
   }else{
     
     set.seed(42) # for jitter consistency
     
-    p <- ggplot(tmp, aes(Tsne1_QC1, Tsne2_QC1)) +
+    p <- ggplot(cell_metadata, aes(Tsne1_QC1, Tsne2_QC1)) +
       geom_jitter(aes(colour=rgb), stroke=0, size=ptsize, height=jitter, width=jitter) +
       scale_colour_identity() +
       annotate("text", -Inf, Inf, hjust = -0.5, vjust = 2, label = genes[1], colour="red", fontface="bold") +
