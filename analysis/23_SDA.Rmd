@@ -540,6 +540,76 @@ plot_grid(NULL, component_tsne, NULL, marker_tsne, ncol=2, rel_widths = c(1,25))
 dev.off()
 ```			
 
+# Top Genes by compoentn
+
+Not the same
+
+```{r, fig.height=6}
+
+component_subset <- c("V31","V33","V2","V5","V38","V23","V13","V42","V20","V30","V35","V15","V17","V18")
+is_negative <- diag(c(1,-1,-1,-1,1,1,-1,-1,-1,1,1,-1,1,-1))
+
+rownames(is_negative) <- component_subset
+
+sign_corrected_loadings_subset <- is_negative %*% results$loadings[[1]][component_subset,]
+
+top_20_genes <- sapply(component_subset, function(x) (names(sort(sign_corrected_loadings_subset[x,],T))[1:10]))
+
+avoid_overlap <- function(x) 
+{
+  ind <- seq_along(x) %% 2 == 0
+  x[ind] <- paste0(x[ind],"--------------") #————————
+  x[!ind] <- paste0(x[!ind],"-") #-
+  x
+}
+#                              
+tmp2 <- t(scale(t(sign_corrected_loadings_subset), center = F, scale = T))[,unique(c(top_20_genes))] #sign_corrected_loadings_subset[,unique(c(top_20_genes))] #
+
+colnames(tmp2) <- avoid_overlap(colnames(tmp2))
+
+# do heatmap in ggplot so can easily combine figures
+genes_melt <- melt(data.table(t(tmp2), keep.rownames = T),
+                   id.vars = "rn",
+                   variable.name = "Component",
+                   value.name = "Scaled_Gene_Loading")
+
+setnames(genes_melt, "rn","Gene")
+genes_melt$Gene <- factor(genes_melt$Gene, colnames(tmp2))
+
+
+top_genes_plot <- ggplot(genes_melt, aes(Component, Gene, fill=Scaled_Gene_Loading))+
+  geom_tile() +
+  scale_fill_gradientn(colours = log_colour_scale(range(genes_melt$Scaled_Gene_Loading), asymetric = T)) +
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        axis.ticks.y=element_blank(),
+        axis.text.y=element_text(size=11, margin=margin(0,-6,0,0)),
+        panel.grid.major.y = element_blank()
+        )+
+  ylab(NULL)
+top_genes_plot
+
+saveRDS(top_genes_plot, "../data/plots/top_genes_plot.rds")
+
+# can't easily include this in panel with other ggplot objects
+# Heatmap(t(tmp2),
+#         name = "Column scaled \ngene loadings \nfor the top \n10 genes of\n each component",
+#         cluster_rows = F,
+#         col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)), #viridisLite::viridis(100),
+#         cluster_columns = F,
+#         split = rep(1:10, each=10))
+
+# Heatmap(cor(t(results$loadings[[1]][component_subset,])),
+#         name = "Correlation of gene loadings",
+#         col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),)
+
+library(UpSetR)
+
+top_250_genes <- sapply(component_subset, function(x) (names(sort(-abs(results$loadings[[1]][x,])))[1:250]))
+
+upset(fromList(as.list(data.table(top_250_genes))), order.by = "freq", nsets = 10)
+```
+
 ## Define Somatic Cells via Hard Clustering
 
 ```{r, fig.width=10}

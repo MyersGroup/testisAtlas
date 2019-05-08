@@ -40,7 +40,7 @@ GO_data[[paste0("V",i,"P")]] <- GO_enrichment(i, side="P")
 # reduce size taken up
 # lapply(names(GO_data), function(x) GO_data[[x]]@geneSets <<- list())
 
-saveRDS(GO_data, "../data/GO_enrichment.rds")
+saveRDS(GO_data, "../data/go/GO_enrichment.rds")
 
 # Convert to single data.table
 
@@ -50,7 +50,7 @@ for(i in names(GO_data)){
 
 GO_data_dt <- data.table(do.call("rbind", GO_data))
 
-saveRDS(GO_data_dt, "../data/GO_enrichment_dt.rds")
+saveRDS(GO_data_dt, "../data/go/GO_enrichment_dt.rds")
 
 # plot example result
 
@@ -60,3 +60,124 @@ head(GO_data[["V30P"]][c(2,7,8,10)], 20)
 
 ```
 
+
+# The enrichments are not the same
+
+```{r, fig.height=10}
+GO_enrichment <- readRDS("../data/go/GO_enrichment.rds")
+GO_data <- readRDS("../data/go/GO_enrichment_dt.rds")
+
+GO_data[,prank := rank(pvalue), by=Component]
+
+component_subset_oneside <- c("V31P","V33N","V2N","V5N","V38P","V23P","V13N","V42N","V20N","V30P","V35P","V15N","V17P","V18N")
+top_GOs <- lapply(component_subset_oneside,
+                  function(x) GO_data[Component==x][order(pvalue)][1:30]$Description)
+names(top_GOs) <- component_subset_oneside
+
+
+tmp  <- GO_data[Component %in% component_subset_oneside & Description %in% unique(unlist(top_GOs))]
+
+tmp$GO_category <- factor(tmp$Description, levels=unique(unlist(top_GOs)))
+tmp$Component <- factor(tmp$Component, levels=component_subset_oneside)
+
+tmp$capped_log10pvalue <- sapply(-log10(tmp$pvalue), function(x) min(x, 15))
+
+
+avoid_overlap <- function(x) 
+{
+  ind <- seq_along(x) %% 2 == 0
+  x[ind] <- paste0(x[ind], "     ")
+  x
+}
+
+
+
+
+# NB changed LDL!!!!!!!!!
+# try dotplots
+custom_GOs <- c("ribosome biogenesis","somatic cell DNA recombination",
+                "receptor internalization","cellular response to LDL particle stimulus",
+                "meiotic cell cycle","meiotic chromosome segregation","synapsis",
+                "mRNA splicing, via spliceosome","reciprocal meiotic recombination",
+                "piRNA metabolic process","negative regulation of transposition",
+                "spermatogenesis","male gamete generation",
+                "spindle checkpoint","negative regulation of mitotic nuclear division",
+                "cell wall macromolecule catabolic process","fusion of sperm to egg plasma membrane involved in single fertilization",
+                "regulation of humoral immune response","regulation of complement activation",
+                "flagellated sperm motility","sperm chromatin condensation")
+
+ggplot(tmp[GO_category %in% custom_GOs], aes(Component, GO_category, colour=capped_log10pvalue, size=Enrichment)) +
+  geom_point() +
+  scale_size(range = c(0, 30)) + 
+  scale_color_viridis()+ 
+  theme(legend.position = "bottom")
+
+ggplot(tmp[GO_category %in% unique(unlist(top_GOs))], aes(Component, GO_category, colour=capped_log10pvalue, size=Enrichment)) +
+  geom_point() +
+  scale_size(range = c(0, 30)) + 
+  scale_color_viridis()+ 
+  theme(legend.position = "bottom")
+```
+
+
+
+```{r, fig.height=11}
+
+# Shorten descriptions to fit
+GO_data$Description <- gsub("low-density lipoprotein","LDL",GO_data$Description)
+GO_data$Description <- gsub("via transesterification reactions with bulged adenosine as nucleophile",
+                                                    "via adenosine transesterification",GO_data$Description)
+GO_data$Description <- gsub("cellular process involved in reproduction in multicellular organism","reproduction in multicellular organism",GO_data$Description)
+
+plot_GO_enrichments <- function(n=30){
+
+  top_GOs <- lapply(component_subset_oneside,
+                    function(x) GO_data[Component==x][order(pvalue)][1:n]$Description)
+  names(top_GOs) <- component_subset_oneside
+  
+  tmp2 <- GO_data[Component %in% component_subset_oneside][Description %in% unique(unlist(top_GOs))][,.(pvalue, Component, Description)]
+  tmp2$GO_term <- factor(tmp2$Description, levels=unique(unlist(top_GOs)))
+  tmp2$Component <- factor(tmp2$Component, levels=component_subset_oneside)
+  tmp2[pvalue< 10^(-15), pvalue:=10^(-15)]
+  tmp2 <- tidyr::complete(tmp2, Component, GO_term)
+  
+  #rev(brewer.pal(11, "RdYlBu"))
+  
+  return(
+    ggplot(tmp2, aes(Component, GO_term, fill = -log10(pvalue))) +
+      geom_tile() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+            legend.position = c(-1,-0.07), legend.direction = "horizontal") +
+      scale_fill_gradientn(colours=viridis::viridis(100)[round(sqrt(seq(from = 1,to = 100,length.out = 10))/sqrt(100)*100)],
+                           na.value = viridis::viridis(100)[1])#"#313695")
+  )
+
+}
+
+saveRDS(plot_GO_enrichments(5), "../data/plots/GO_plot.rds")
+
+pdf("../results/GO_bycomponent.pdf", width=15, height=25)
+plot_GO_enrichments(5)
+dev.off()
+
+upset(fromList(top_GOs), order.by = "freq", nsets = 10)
+
+```
+
+
+```{r}
+# GO_matrix <- dcast(GO_data[Component %in% component_subset_oneside], formula = Description ~ Component, value.var = "pvalue")
+# 
+# tmp <- as.matrix(GO_matrix[,-"Description", with=F])
+# tmp <- tmp[,component_subset_oneside]
+# rownames(tmp) <- GO_matrix$Description
+# tmp[is.na(tmp)] <- max(tmp, na.rm = T)
+# 
+# capped <- -log10(tmp[unique(unlist(top_GOs)),])
+# capped[capped>15] <- 15
+# 
+# tmp <- melt(data.table(capped, keep.rownames = T), id.vars = "rn", variable.name = "Component", value.name = "capped_log10pvalue")
+# setnames(tmp, "rn", "GO_category")
+# tmp$GO_category <- factor(tmp$GO_category, levels=rev(unique(unlist(top_GOs))))
+# tmp$Component <- factor(tmp$Component, levels=component_subset_oneside)
+```
