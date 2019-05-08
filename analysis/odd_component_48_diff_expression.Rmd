@@ -1,0 +1,139 @@
+---
+title: "Odd Component 48"
+output: html_notebook
+---
+
+
+```{r}
+#library(testisAtlas)
+devtools::load_all("../")
+library(ggplot2)
+library(data.table)
+#library(ggforce)
+library(ggrepel)
+
+load("../data/tmp_cache/cached_objects.rds")
+
+```
+
+Define two clusters
+
+```{r}
+
+datat[,subset:="Other"]
+datat[((Tsne1_QC1-(34))^2 + (Tsne2_QC1-(9))^2) < 5^2, subset:= "Normal"]
+datat[((Tsne1_QC1-(45))^2 + (Tsne2_QC1-(9))^2) < 5^2, subset:= "Odd_48"]
+
+# Label Odd Cells
+print_tsne('subset') + scale_color_brewer(palette = "Set1")
+```
+
+Do differential expression
+
+```{r}
+
+# Unimputed
+diff_expression <- data.table(
+  odd = Matrix::colMeans(data[datat[subset=="Odd_48"]$cell,]),
+  normal = Matrix::colMeans(data[datat[subset=="Normal"]$cell,]),
+  gene = colnames(data))
+
+# Imputed
+diff_expression <- data.table(
+  odd = colMeans(results$scores[datat[subset=="Odd_48"]$cell,] %*% results$loadings[[1]]),
+  normal = colMeans(results$scores[datat[subset=="Normal"]$cell,] %*% results$loadings[[1]]),
+  gene = colnames(data))
+
+diff_expression[,ratio := (odd+1)/(normal+1)]
+
+# XY Scatter plot
+ggplot(diff_expression, aes(normal, odd, label=gene)) +
+  geom_point() +
+  geom_label_repel(data=diff_expression[order(-ratio)][1:10])
+
+head(diff_expression[order(-ratio)], 100)
+
+head(diff_expression[order(ratio)], 100)
+
+```
+
+```{r}
+print_tsne("Catsperg1")
+print_tsne("Kcnq1ot1")
+print_tsne("Magi2")
+print_tsne("4930581F22Rik")
+```
+
+```{r}
+print_tsne("Ldha")
+print_tsne("Ift27")
+print_tsne("Rnls")
+print_tsne("Sf3b5")
+print_tsne("Mael")
+print_tsne("Psmc3ip")
+print_tsne("H2afz")
+print_tsne("Mrpl55")
+```
+
+```{r}
+print_tsne("Mrpl55", predict = T)
+print_tsne("Mael", predict = T)
+print_tsne("Ldha", predict = T)
+```
+
+
+Export for MouseMine analysis
+
+```{r}
+write.table(head(diff_expression[order(ratio)], 250)$gene, file = "../data/48_underexpressed.txt", row.names = F, quote = F, col.names = F)
+
+write.table(head(diff_expression[order(-ratio)], 250)$gene, file = "../data/48_overexpressed.txt", row.names = F, quote = F, col.names = F)
+
+
+write.table(names(head(sort(results$loadings[[1]][48,]),250)), file = "../data/48_neg_loadings.txt", row.names = F, quote = F, col.names = F)
+
+write.table(names(head(sort(-results$loadings[[1]][48,]),250)), file = "../data/48_pos_loadings.txt", row.names = F, quote = F, col.names = F)
+
+
+write.table(diff_expression[order(ratio)]$gene, file = "../data/48_ranked.txt", row.names = F, quote = F, col.names = F)
+
+
+```
+
+reminder of c48 scores
+
+```{r}
+print_tsne(48)
+```
+
+c48 gene loadings
+
+```{r}
+library(SDAtools)
+rna_locations <- load_gene_locations(path = "../data/", name = "merge_mouse_V3b")
+load("../data/archive/gene_annotations.rds")
+genome_loadings(results$loadings[[1]][48,], gene_locations = rna_locations)
+print_gene_list(48)
+print_loadings_scores(48)
+```
+
+Are the clusters different wrt other components?
+
+```{r, fig.height=20, fig.width=5}
+ #/ colSums(abs(results$scores[datat[subset=="Odd_48"]$cell,]))
+
+tmp <- melt(data.table(results$scores[datat[subset!="Other"]$cell,], keep.rownames = T), id.vars = "rn", variable.name = "Component")
+
+tmp[rn %in% datat[subset=="Odd_48"]$cell, type := "Odd"]
+tmp[rn %in% datat[subset=="Normal"]$cell, type := "Normal"]
+
+ggplot(tmp, aes(Component, value, colour=type)) +
+  geom_boxplot() +
+  coord_flip()
+
+ggplot(tmp, aes(type, value)) +
+    geom_boxplot() +
+    facet_wrap(~Component, scales="free_y")
+
+```
+
