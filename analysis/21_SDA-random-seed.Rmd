@@ -49,6 +49,22 @@ highest_components(results1, "Prdm9")
 highest_genes(results1, component = 5)
 ```
 
+
+```{r}
+results_1k <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", iteration = 1000, data_path = "../data/count_matrices/")
+rownames(results_1k$loadings[[1]]) <- paste0("V",1:50)
+str(results_1k)
+
+pdf("../results/1k_vs_10k.pdf")
+compare_factorisations(results$loadings[[1]],
+                       results_1k$loadings[[1]],
+                       method = "pearson",
+                       names=c("10k Iterations","1k Iterations"))
+dev.off()
+
+```
+
+
 # Different Seed 1
 
 ```{r}
@@ -168,6 +184,41 @@ highest_genes(results8, component = 30)
 
 ```
 
+# 75 Components
+
+```{r}
+
+results2 <- load_results(results_folder = "../data/SDA/conradV3_sda_2/", data_path = "../data/count_matrices//")
+rownames(results2$loadings[[1]]) <- paste0("V",1:75)
+rownames(results2$pips[[1]]) <- paste0("V",1:75)
+
+str(results2)
+max(results2$free_energy)
+check_convergence(results2)
+
+plot_maximums(results1, labels = F)
+plot_maximums(results2, labels = F)
+
+highest_components(results2, "Acrv1")
+plot(results1$loadings[[1]][30,], results2$loadings[[1]][39,])
+highest_genes(results2, component = 39)
+
+highest_components(results2, "Prdm9")
+plot(results1$loadings[[1]][5,], results2$loadings[[1]][45,])
+highest_genes(results2, component = 45)
+
+
+compare_factorisations(results1$loadings[[1]], results2$loadings[[1]], method = "pearson")
+```
+
+```{r, fig.width=8, fig.height=8}
+compare_factorisations(results1, results2, method = "pearson")
+
+results2_rot <- rotate_SDA(results2, results1)
+```
+
+
+
 # 200 Components
 
 ```{r}
@@ -185,6 +236,20 @@ highest_genes(results8, component = 30)
 # 	      num_blocks = 128,
 # 	      num_openmp_threads = 12)
 
+
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_10",
+        data = "../data/conradV3/V3_SDAmerged_mouse_V3_SDA.data",
+        num_comps = 100,
+        max_iter = 5000,
+        save_freq = 500,
+        set_seed = "79151 17351",
+        N = 20322,
+        eigen_parallel = TRUE,
+	      num_blocks = 128,
+	      num_openmp_threads = 12)
+
+
 # Even more components
 run_SDA(sda_location = "../../SDA/build/sda",
         out = "../results/conradV3_sda_3",
@@ -198,9 +263,9 @@ run_SDA(sda_location = "../../SDA/build/sda",
 	      num_blocks = 128,
 	      num_openmp_threads = 12)
 
-results3 <- load_results(results_folder = "../data/conradV3/conradV3_sda_3/", data_path = "../data/conradV3/")
-rownames(results3$loadings[[1]]) <- paste0("V",1:200)
-rownames(results3$pips[[1]]) <- paste0("V",1:200)
+results3 <- load_results(results_folder = "../data/SDA/conradV3_sda_10/", data_path = "../data/count_matrices/")
+rownames(results3$loadings[[1]]) <- paste0("V",1:100)
+rownames(results3$pips[[1]]) <- paste0("V",1:100)
 
 str(results3)
 max(results3$free_energy)
