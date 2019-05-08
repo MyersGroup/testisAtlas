@@ -1121,7 +1121,7 @@ log_colour_scale <- function(values=vvv3, scale=0.05, midpoint="white", interpol
     index2length = n
   }
   
-  logcolindex2 <- floor((log(seq(1, range, length.out = n))/log(range))*n)
+  logcolindex2 <- floor((log(seq(1, range, length.out = index2length)) / log(range)) * n) #n should be index2length if not using full range of colours
   
   indexes <- c(abs(logcolindex1-n)[n:1],logcolindex2+n)
   newcolscale = newcols[indexes][(length(indexes)-1):1]
