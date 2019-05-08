@@ -1,0 +1,43 @@
+---
+title: "Update R object cache"
+output: html_notebook
+---
+
+```{r}
+sda_umap <- readRDS("../data/umap.rds")
+
+str(sda_umap)
+
+datat <- merge(datat,
+               cbind(data.table(sda_umap),
+                     cell=rownames(results$scores))
+)
+```
+
+```{r}
+load_component_orderings()
+
+# rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
+# rna_locations[,.N,by=chromosome_name][order(-N)]
+```
+
+
+```{r}
+
+load("../data/tmp_cache/cached_objects.rds")
+
+load("../data/gene_annotations/gene_annotations.rds")
+
+object_list <- c("datat",
+                 "principal_curves",
+                 "results",
+                 "rna_locations",
+                 "chromosome.lengths",
+                 "gtex_summary",
+                 "fantom_summary_subset",
+                 "infertility_genes",
+                 "data")
+
+save(list=object_list, file = "../data/tmp_cache/cached_objects.rds", compress = FALSE)
+
+```
