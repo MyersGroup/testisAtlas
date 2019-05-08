@@ -4,16 +4,12 @@
 \alias{single_component_enrichment}
 \title{Calculate enrichment for a set of genes in a single component}
 \usage{
-single_component_enrichment(component, genes = Mybl1_genes,
-  factorisation = results, pos = T, threshold = 200,
-  bg_genes = NULL, test = "fisher")
+single_component_enrichment(gene_vector = results$loadings[[1]][1, ],
+  genes = Mybl1_genes, pos = T, threshold = 200, bg_genes = NULL,
+  test = "fisher")
 }
 \arguments{
-\item{component}{number or name of component}
-
 \item{genes}{character vector of gene set to look for enrichment for}
-
-\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
 \item{pos}{logical; if TRUE (default) the positive gene loadings are ranked highest}
 
@@ -22,6 +18,10 @@ single_component_enrichment(component, genes = Mybl1_genes,
 \item{bg_genes}{which genes to use as the 'background' default uses all genes in the results object from SDA}
 
 \item{test}{string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)}
+
+\item{component}{number or name of component}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 }
 \value{
 

@@ -19,7 +19,7 @@ print_gene_list(i, n = 100, factorisation = results,
 
 \item{gtex}{data.table with column Gene.Name, Human_Orthologue, and fold_difference_gtex}
 
-\item{infertility_genes;}{charachter vector of gene symbols of known infertility genes}
+\item{infertility;}{charachter vector of gene symbols of known infertility genes}
 }
 \value{
 print of data.table

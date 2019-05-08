@@ -4,12 +4,14 @@
 \alias{export_all_pwms}
 \title{Export PWMs in MEME format}
 \usage{
-export_all_pwms(results_all, file)
+export_all_pwms(results_all, file, motifs_per_file = 505)
 }
 \arguments{
 \item{results_all}{list of outputs from MotifFinder}
 
 \item{file}{string; name of file to save PWMs to}
+
+\item{motifs_per_file}{integer; split the motifs into seperate files so you can run TOMTOM in parallel}
 }
 \value{
 nothing, results written to file

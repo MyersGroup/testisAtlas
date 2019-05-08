@@ -5,10 +5,11 @@
 \title{Plot tSNE}
 \usage{
 print_tsne(i, factorisation = results, cell_metadata = datat,
-  expression_matrix = data, princurves = principal_curves,
-  dim1 = "Tsne1_QC1", dim2 = "Tsne2_QC1", flip = FALSE,
-  predict = FALSE, curve = FALSE, stages = FALSE, point_size = 1,
-  log = FALSE, principal_curve = "df_9", curve_width = 0.5)
+  jitter = 0, colourscale = "diverging", expression_matrix = data,
+  princurves = principal_curves, dim1 = "Tsne1_QC1",
+  dim2 = "Tsne2_QC1", flip = FALSE, predict = FALSE, curve = FALSE,
+  stages = FALSE, point_size = 1, log = FALSE,
+  principal_curve = "df_9", curve_width = 0.5)
 }
 \arguments{
 \item{i}{; either a numeric value corresponding to the component to plot, a gene name,

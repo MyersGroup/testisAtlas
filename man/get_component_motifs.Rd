@@ -4,7 +4,7 @@
 \alias{get_component_motifs}
 \title{For an SDA component, find motifs /de novo/}
 \usage{
-get_component_motifs(component, positive, random = FALSE)
+get_component_motifs(component, positive, topn = 250, random = FALSE)
 }
 \arguments{
 \item{component}{numeric; component number in results$loadings[[1]]}

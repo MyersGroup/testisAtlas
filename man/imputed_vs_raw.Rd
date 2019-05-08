@@ -4,18 +4,20 @@
 \alias{imputed_vs_raw}
 \title{Plot gene expression through pseudotime (Raw & Imputed)}
 \usage{
-imputed_vs_raw(genes_tmp, cell_metadata = datat,
-  factorisation = results, expression_matrix = data, facet = T)
+imputed_vs_raw(genes, cell_metadata = datat, factorisation = results,
+  expression_matrix = data, facet = T)
 }
 \arguments{
+\item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}
+
 \item{cell_metadata}{data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.}
 
 \item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 
+\item{expression_matrix}{matrix; rows=cells, columns=genes, unimputed but normalised (scaled) expression values}
+
 \item{facet}{logical; if TRUE (default) each column is a faceted plot,
 if FALSE just two plots are returned imputed & raw}
-
-\item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}
 }
 \value{
 A ggplot2 object

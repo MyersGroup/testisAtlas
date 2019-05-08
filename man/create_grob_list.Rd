@@ -6,6 +6,11 @@
 \usage{
 create_grob_list(fn = print_marker2, input = hist_subset)
 }
+\arguments{
+\item{fn;}{function which returns ggplot object}
+
+\item{input;}{vector to be fed to the function}
+}
 \description{
 Create list of grobs from a function and input
 }

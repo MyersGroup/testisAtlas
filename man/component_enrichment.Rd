@@ -4,7 +4,8 @@
 \alias{component_enrichment}
 \title{Calculate enrichment for a set of genes for each component}
 \usage{
-component_enrichment(genes, threshold = 500, factorisation = results,
+component_enrichment(genes, threshold = 500,
+  loadings_matrix = results$loadings[[1]], orderSDA = T,
   bg_genes = NULL, test = "fisher")
 }
 \arguments{
@@ -12,11 +13,11 @@ component_enrichment(genes, threshold = 500, factorisation = results,
 
 \item{threshold}{numeric; how many genes should be included in the top genes list used to calculate enrichment}
 
-\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
-
 \item{bg_genes}{which genes to use as the 'background' default uses all genes in the results object from SDA}
 
 \item{test}{string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)}
+
+\item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 }
 \value{
 A data.table with a row for each component (+ve & -ve seperately) with columns giving the p.value of enrichment,

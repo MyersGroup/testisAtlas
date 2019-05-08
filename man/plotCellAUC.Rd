@@ -4,16 +4,12 @@
 \alias{plotCellAUC}
 \title{Plot ROC curve for imputation rankings}
 \usage{
-plotCellAUC(i, cumsum_predict, cumsum_train, cumsum_mean)
+plotCellAUC(i, mt)
 }
 \arguments{
-\item{i}{integer or string; number or name of cell}
+\item{i}{integer or string; number or name of cell in the matrices}
 
-\item{cumsum_predict}{gene rank by cell matrix, cumulative sum of predicted for each cell}
-
-\item{cumsum_train}{gene rank by cell matrix, cumulative sum of train for each cell}
-
-\item{cumsum_mean}{mean}
+\item{mt}{named list of  gene rank by cell matricies, cumulative sum of predicted for each cell}
 }
 \value{
 ggplot2 object

@@ -220,7 +220,7 @@ print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, 
         guides(fill = guide_legend(override.aes = list(size=3, alpha=1), title = i))
     }
     
-  }else if(mode(i)=="numeric"){# plot component not gene, could do this for any cell attribute in datat - future TODO
+  }else if(mode(i)=="numeric"){# plot component
     
     tmp <- cell_metadata[,c(paste0("V",i), dim1, dim2),with=FALSE]
     names(tmp)[1] <- "score"
@@ -403,16 +403,6 @@ tricolour_tsne <- function(genes, returndf=F, predict="SDA", cell_metadata=datat
 }
 
 
-# for plotting mutliple tsne plots, remove duplicated extra axes
-simplify <- ggplot2::theme(legend.position = "none",
-                  axis.title.x=element_blank(),
-                  axis.title.y=element_blank(),
-                  axis.text.x = element_blank(),
-                  axis.text.y = element_blank(),
-                  axis.ticks = element_blank())
-
-
-
 #' Compute Imputed Expression values
 #'
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
@@ -500,10 +490,19 @@ expression_dt <- function(genes, expression_matrix=data){
 }
 
 
-
+# for plotting mutliple tsne plots, remove duplicated extra axes
+simplify <- ggplot2::theme(legend.position = "none",
+                           axis.title.x=element_blank(),
+                           axis.title.y=element_blank(),
+                           axis.text.x = element_blank(),
+                           axis.text.y = element_blank(),
+                           axis.ticks = element_blank())
 
 
 #' Create list of grobs from a function and input
+#'
+#' @param fn; function which returns ggplot object
+#' @param input; vector to be fed to the function
 #'
 #' @details 
 #' Maybe this is redundant with lapply?
@@ -702,7 +701,7 @@ print_loadings_scores <- function(i, factorisation=results, gene_locations=rna_l
 #' @param n integer; number of genes to include in the list, default=100
 #' @param fantom data.table with columns Gene.Name and fold_difference from FANTOM dataset
 #' @param gtex data.table with column Gene.Name, Human_Orthologue, and fold_difference_gtex
-#' @param infertility_genes; charachter vector of gene symbols of known infertility genes
+#' @param infertility; charachter vector of gene symbols of known infertility genes
 #' 
 #'
 #' @return print of data.table
@@ -734,7 +733,7 @@ print_gene_list <- function(i, n=100, factorisation=results, infertility=inferti
 
 #' Volcano plot of gene ontology enrichment resultd
 #'
-#' @param x R object; GO results
+#' @param data R object; GO results
 #' @param component string; name of component e.g. "V5N" (N meaning negative size loadings)
 #' @param top_n integer; how many GO terms to label
 #' @param OR_threshold numeric; threshold on odds ratio of GO terms to label (applied after top_n)
@@ -776,6 +775,7 @@ go_volcano_plot <- function(data=GO_data, component="V5N", top_n=30, label_size=
 #' @param genes character vector; Gene Symbols of the genes to compute imputed expression for
 #' @param cell_metadata data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
+#' @param expression_matrix matrix; rows=cells, columns=genes, unimputed but normalised (scaled) expression values
 #' @param facet logical; if TRUE (default) each column is a faceted plot,
 #' if FALSE just two plots are returned imputed & raw
 #' 
@@ -785,14 +785,14 @@ go_volcano_plot <- function(data=GO_data, component="V5N", top_n=30, label_size=
 #' 
 #' @import ggplot2 data.table cowplot
 
-imputed_vs_raw <- function(genes_tmp, cell_metadata=datat, factorisation=results, expression_matrix=data, facet=T){
+imputed_vs_raw <- function(genes, cell_metadata=datat, factorisation=results, expression_matrix=data, facet=T){
   library(scales)
   
-  tmp <- merge(cell_metadata[somatic4==FALSE], expression_dt(genes_tmp, expression_matrix))[,c(genes_tmp,"cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
+  tmp <- merge(cell_metadata[somatic4==FALSE], expression_dt(genes, expression_matrix))[,c(genes,"cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
   tmp$Type = "Raw (Normalised)"
   tmp <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1", "Type"))
   
-  predicted_genes <- sda_predict(genes_tmp, factorisation)
+  predicted_genes <- sda_predict(genes, factorisation)
   predicted_genes$Type = "Imputed"
   predicted_genes <- merge(cell_metadata[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1","Tsne2_QC1"), with=FALSE], predicted_genes)
   predicted_genes <- melt(predicted_genes, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1", "Type"))

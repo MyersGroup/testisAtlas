@@ -4,7 +4,8 @@
 \alias{ptorder}
 \title{Order Components by PseudoTime}
 \usage{
-ptorder(component, cell_metadata = datat, threshold = 2)
+ptorder(component, cell_metadata = datat, threshold = 2,
+  side = "both")
 }
 \arguments{
 \item{component}{string; Component name as in datat}
