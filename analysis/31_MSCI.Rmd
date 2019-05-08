@@ -375,7 +375,7 @@ plot_pseudotime_expression_panel(genes, ncol = 5, title = "Smoothed gene express
 
 
 X_escapees_plot <- ggplot(curve_data[melt_genes(genes)[!is.na(PseudoTime)], on="PseudoTime"], aes(-PseudoTime, Expression, group=Gene)) +
-    stat_smooth(geom="line", method = "gam", formula = y ~ s(x, k = 35), se=FALSE, colour="black") +
+    stat_smooth(geom="line", method = "gam", formula = y ~ s(x, bs = "ad"), se=FALSE, colour="black") +
     ylab("Gene Expression") + xlab("Pseudotime") +
     theme_minimal() +
     theme(legend.position = "none") +
