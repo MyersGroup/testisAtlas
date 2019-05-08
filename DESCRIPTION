@@ -20,7 +20,9 @@ Imports:
 	MASS,
 	princurve,
 	stringr,
-	viridis
+	viridis,
+	vegan,
+	ComplexHeatmap
 Remotes:
 	marchinilab/SDAtools,
 	myersgroup/MotifFinder,
