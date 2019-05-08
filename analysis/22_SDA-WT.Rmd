@@ -13,7 +13,7 @@ library(dropsim)
 raw_data <- readRDS("../data/merged-mouse_counts_tsne-QC_low-mt.rds")
 raw_data <- t(raw_data)
 
-datat <- readRDS("../data/tmp_cache/datat.rds")
+#datat <- readRDS("../data/tmp_cache/datat.rds")
 
 wt_groups <- c("WT","mj","SPG","SPD","SPCII","SPCI")
 
@@ -41,6 +41,67 @@ stopifnot(digest::digest(library_size) == "21c2f00d2a33fff3dab0082b78d179b2")
 saveRDS(list(dge=data, library_size=library_size), "../data/merged_mouse_normalised_tsne-QC_V3_WT.rds") # save a cache for easy reopening
 ```
 
+# v10 Mix genes
+
+normalie data
+
+```{r}
+
+dataM <- normaliseDGE(raw_data[colnames(data),wt_cells],
+                     center = FALSE,
+                     scale = TRUE,
+                     threshold = 10,
+                     min_library_size = 200,
+                     gene_subset = 1)
+
+library_size <- Matrix::colSums(raw_data[,rownames(dataM)]) # across ALL genes
+
+# Issue warning if data changes
+stopifnot(digest::digest(dataM) == "8dac076792e424cde2cc6c308cfd6db9")
+stopifnot(digest::digest(library_size) == "21c2f00d2a33fff3dab0082b78d179b2")
+
+saveRDS(list(dge=dataM, library_size=library_size), "../data/merged_mouse_normalised_tsne-QC_V3_WT_MixGenes.rds") # save a cache for easy reopening
+```
+
+run sda
+
+```{r}
+dataM <- readRDS("../data/merged_mouse_normalised_tsne-QC_V3_WT_MixGenes.rds")$dge
+export_data(as.matrix(dataM), name = "merged_mouse_V3_WT_mixgenes_SDA", path="../data/conradV3/")
+
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_10",
+        data = "../data/conradV3/merged_mouse_V3_WT_mixgenes_SDA",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "79151 17351",
+        N = 9936,
+        eigen_parallel = TRUE,
+        num_blocks = 10,
+        num_openmp_threads = 10)
+
+```
+
+load results
+
+```{r}
+results10_WT <- load_results(results_folder = "../data/SDA/conradV3_sda_10/", data_path = "../data/count_matrices/")
+str(results10_WT)
+
+rownames(results10_WT$loadings[[1]]) <- paste0("WT_",1:50)
+colnames(results10_WT$scores) <- paste0("WT_",1:50)
+
+check_convergence(results10_WT)
+
+common_genes1_10 <- colnames(results1$loadings[[1]])[colnames(results1$loadings[[1]]) %in% colnames(results10_WT$loadings[[1]])]
+```
+
+
+# v9, WT cells
+
+run sda
+
 ```{r}
 data <- readRDS("../data/conradV3/merged_mouse_normalised_tsne-QC_V3_WT.rds")$dge
 export_data(as.matrix(data), name = "merged_mouse_V3_WT_SDA", path="../data/conradV3/")
@@ -57,37 +118,44 @@ run_SDA(sda_location = "../../SDA/build/sda",
         num_blocks = 5,
         num_openmp_threads = 8)
 
+run_SDA(sda_location = "../../SDA/build/sda",
+        out = "../results/conradV3_sda_15",
+        data = "../data/conradV3/merged_mouse_V3_WT_SDA.data",
+        num_comps = 50,
+        max_iter = 10000,
+        save_freq = 1000,
+        set_seed = "77253 12763",
+        N = 9936,
+        eigen_parallel = TRUE,
+        num_blocks = 6,
+        num_openmp_threads = 6)
+
 ```
 
 
+load results
 
-
-        
 ```{r}
-library(SDAtools)
-library(ggplot2)
-library(ggrepel)
-library(data.table)
 
-results <- load_results(results_folder = "../data/SDA/conradV3_sda_9/", data_path = "../data/count_matrices/")
-str(results)
+results9_WT <- load_results(results_folder = "../data/SDA/conradV3_sda_9/", data_path = "../data/count_matrices/")
+str(results9_WT)
 
-rownames(results$loadings[[1]]) <- paste0("WT_",1:50)
-colnames(results$scores) <- paste0("WT_",1:50)
+rownames(results9_WT$loadings[[1]]) <- paste0("WT_",1:50)
+colnames(results9_WT$scores) <- paste0("WT_",1:50)
 
-check_convergence(results)
-loading_distribution(results)
-scores_distribution(results)
-plot_maximums(results)
-#plot_scree(results)
-PIP_distribution(results)
-PIP_component_distribution(results, 2)
-PIP_threshold_distribution(results)
+check_convergence(results9_WT)
+loading_distribution(results9_WT)
+scores_distribution(results9_WT)
+plot_maximums(results9_WT)
+#plot_scree(results9_WT)
+PIP_distribution(results9_WT)
+PIP_component_distribution(results9_WT, 2)
+PIP_threshold_distribution(results9_WT)
 ```
 
 ```{r}
 
-rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3_WT", path = "../data/")
+rna_locations <- load_gene_locations(colnames(results_WT$loadings[[1]]), name="merge_mouse_V3_WT", path = "../data/")
 rna_locations[,.N,by=chromosome_name][order(-N)]
 
 ```
@@ -97,354 +165,569 @@ rna_locations[,.N,by=chromosome_name][order(-N)]
 Generally correlations between any random compoents are low (good), with some pairs have high correlation (~0.8, good). Permuting the gene loadings gives a kind of null distribution of correlations which are all below 0.03. Most (11) WT components have one good match (>0.5) to the mix compoents, with 1 having two matches, and 38 no match.
 
 ```{r, fig.width=6}
-results1 <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
+results1 <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/dimnames_archive/")
 str(results1)
 
-rownames(results1$loadings[[1]]) <- paste0("Mix_",1:50)
+# add annotated component names
+rownames(results1$loadings[[1]]) <- paste0("Mix",1:50," ",names(sort(component_labels))) #paste0("Mix_",1:50)
+colnames(results1$scores) <- paste0("Mix",1:50," ",names(sort(component_labels))) #paste0("Mix_",1:50)
 
 library(ComplexHeatmap)
 
-common_genes <- colnames(results1$loadings[[1]])[colnames(results1$loadings[[1]]) %in% colnames(results$loadings[[1]])]
-
-cross_cor <- abs(cor(t(results1$loadings[[1]][,common_genes]),
-                 t(results$loadings[[1]][,common_genes]),
-                 method = "spearman"))
-
-cross_cor_rand <- abs(cor(t(results1$loadings[[1]][sample(1:50),sample(common_genes)]),
-                 t(results$loadings[[1]][,common_genes]),
-                 method = "spearman"))
-
-dt_long <- data.table(id=1:50^2, correlation=c(cross_cor), permuted_null_correlation=c(cross_cor_rand))
-
-ggplot(melt(dt_long, id.vars = "id"), aes(value)) +
-        geom_histogram(bins=1000) +
-        facet_wrap(~variable, scales = "free_y", nrow = 2) 
-
-
-max_cor_per_compoent <- sort(apply(cross_cor, 2, max), decreasing = T)
-plot(max_cor_per_compoent)
-
-table(apply(cross_cor, 2, function(x) sum(x>0.5)))
+common_genes <- colnames(results1$loadings[[1]])[colnames(results1$loadings[[1]]) %in% colnames(results9_WT$loadings[[1]])]
 ```
 
-Using heatmap of the correlation between components from WT only and mixed KO & WT we can see many pairs with high correlations with 1 or sometimes 2 components. There's quite a few with low correlations because I ran SDA with 50 components even with WT only to be fair, but there's less complexity with just WT cells so we're getting more uninteresting components / single cell (38 components have a max score > 30 vs only 11 in full (mixed WT&KO) analysis).
 
-```{r, fig.width=8}
-mix_comps <- rownames(cross_cor)
+# V9 WT vs Mix
 
-mix_order <- character()
+To get a rough idea of what correlation to expect under a null, permute genes.
 
-for (i in seq_along(max_cor_per_compoent)){
-        tmp2 <- names(which.max(cross_cor[mix_comps, names(max_cor_per_compoent)[i] ]))
-        if(is.null(tmp2)){
-                tmp2 <- mix_comps
-        }
-        mix_order <- c(mix_order, tmp2)
-        mix_comps <- mix_comps[!mix_comps %in% tmp2]
+Max correlation over 100 permutations if 3.6%
+
+```{r}
+
+max_permuted_correlation <- sapply(1:100,
+function(x) range(compare_factorisations(results9_WT,
+                       results1,
+                       names= c("WT",x),
+                       method = "pearson",
+                       randomise = T,
+                       return = "cor")))
+
+plot(sort(max_permuted_correlation[2,]), main="Max Correlation for Permuted Genes", ylab="Max Pearson Correlation", xlab="Permutation Round (sorted)")
+
+```
+
+## Replication of Preprint Figure (Spearman)
+
+As noted by the reviewer the max correlation (spearman) for WT_42 is 0.42
+
+```{r, fig.width=10, fig.height=8}
+cor_mix_vs_wt9 <- compare_factorisations(results1,
+                       results9_WT,
+                       names= c("Mixed","WT"),
+                       method = "spearman", return = "cor")
+max(cor_mix_vs_wt9["WT_42",])
+
+compare_factorisations(results1,
+                       results9_WT,
+                       names= c("Mixed","WT"),
+                       method = "spearman")
+
+pdf("../results/WT/correlation_matrix_spearman.pdf", width = 12, height = 10)
+compare_factorisations(results9_WT,
+                       results1,
+                       names= c("WT","Mixed"),
+                       method = "spearman")
+dev.off()
+```
+
+
+## WT on the bottom, Pearson
+
+Splitting components can help in some cases, e.g. Mix18 Late Spermiogenesis 1
+
+```{r, fig.width=10, fig.height=8}
+compare_factorisations(results9_WT,
+                       results1,
+                       names= c("WT","Mixed"),
+                       method = "pearson")
+
+compare_factorisations(results9_WT,
+                       results1,
+                       names= c("WT","Mixed"),
+                       method = "pearson",
+                       split=c(T,T))
+```
+
+## WT on the right
+
+```{r, fig.width=10, fig.height=8}
+compare_factorisations(results1,
+                       results9_WT,
+                       names= c("Mixed","WT"),
+                       method = "pearson")
+
+compare_factorisations(results1,
+                       results9_WT,
+                       names= c("Mixed","WT"),
+                       method = "pearson",
+                       split=c(T,T))
+```
+
+
+## Plot component metadata
+
+```{r}
+df_cor <- compare_factorisations(results1,
+                       results9_WT,
+                       names= c("Mixed","WT"),
+                       method = "pearson",
+                       return = "df")
+
+df_cor
+
+ggplot(df_cor[51:100], aes(max_cell_score, max_cor_per_compoent, label=component, colour=sum_abs_cell_score)) +
+    geom_point() +
+    scale_color_viridis() +
+    ggtitle("High Max Cell score have low Correlation")
+
+ggplot(df_cor[51:100], aes(sum_abs_cell_score, max_cor_per_compoent, label=component, colour=max_cell_score)) +
+    geom_point() +
+    scale_color_viridis() + 
+    ggtitle("More cells in a component, higher correlation?")
+
+ggplot(df_cor[1:50], aes(mutant_contribution, max_cor_per_compoent, label=component, colour=max_cell_score)) +
+    geom_point() +
+    scale_color_viridis()
+```
+
+
+# Predictions
+
+If the WT only model gives the same predicted (imputed) expression for the WT cells as the mixed analysis, this suggests nothing completely crazy has happened.
+
+```{r}
+compare_predictions <- function(gene){
+    tmp <- sda_predict(gene,results1)[cell %in% rownames(results9_WT$scores)][sda_predict(gene,results9_WT)]
+    # i is the 2nd one, (WT only)
+    plot(tmp[,get(gene)], tmp[,get(paste0("i.",gene))], pch=".", xlab="Mixed Prediction", ylab="WT only Prediction",
+         main= paste(gene, signif(cor(tmp[,get(gene)], tmp[,get(paste0("i.",gene))]), 3)))
+    abline(0,1, col='red')
+    
 }
 
-tmp2 <- data.table(score_sum_abs = colMeans(abs(results$scores))[names(max_cor_per_compoent)],
-                   cells_in_component = colSums(abs(results$scores)>1)[names(max_cor_per_compoent)],
-                   score_sum_2 = colMeans(results$scores^2)[names(max_cor_per_compoent)],
-                   score_sum_med_2 = apply(results$scores^2, 2, function(x) quantile(x, probs=0.98))[names(max_cor_per_compoent)],
-                   max_cor_per_compoent,
-                   max_cell_score = apply(abs(results$scores), 2, max)[names(max_cor_per_compoent)],
-                   component=names(max_cor_per_compoent))
-
-library(circlize)
-
-ha = rowAnnotation(df = tmp2[,.(cells_in_component, max_cell_score)],
-                   col = list(cells_in_component=colorRamp2(c(0, max(tmp2$cells_in_component)), c("white", "red")),
-                              max_cell_score=colorRamp2(c(0, 95), c("white", "blue"))),
-                   annotation_legend_param=list(legend_direction = "horizontal",
-                                                legend_width = unit(5, "cm"), title_position = "lefttop")
-                   )
-
-#, col = list(score_sum_count = colorRamp2(quantile(tmp2$score_sum_count, seq(0, 1, by = 0.25)), viridis(5)),
-                                                                     #max_score = colorRamp2(quantile(tmp2$max_score, seq(0, 1, by = 0.25)), viridis(5,direction = -1)))
-
-#max_score = viridisLite::viridis(100), 
-#colorRamp2(c(0, 20), c("white", "red"))
-
-gene_loading_correlation = t(cross_cor[mix_order, names(max_cor_per_compoent)][50:1,])
-
-hm = Heatmap(gene_loading_correlation,
-        col = viridisLite::viridis(100),
-        cluster_rows = F,
-        cluster_columns = F,
-        row_title = "Components from WT only",
-        column_title = "Components from WT & KO Combined",
-        name = "Gene loading correlation",
-        heatmap_legend_param = list(legend_direction = "horizontal",
-                                    legend_width = unit(5, "cm"), title_position = "lefttop"))
-
-pdf(width = 12, height = 10, file = "../results/WT_vs_Mixed.pdf")
-draw(hm + ha, heatmap_legend_side = "bottom")
-dev.off()
-
-draw(hm + ha, heatmap_legend_side = "bottom")
+compare_predictions("Ssxb1")
+compare_predictions("Piwil1")
+compare_predictions("Prm1")
+compare_predictions("Acrv1")
+compare_predictions("Gfra1")
+compare_predictions("Nanos3")
+compare_predictions("Dcn")
+compare_predictions("Ccna1")
+compare_predictions("Esx1")
+compare_predictions("Aard")
 ```
 
-The component with high sum of squared scores (high contribution) have high correlations. Also those with high max score (indicating ovefitting with a single high cell in one component) have low correlations.
 
-```{r, fig.width=6}
+# Some Mix components can be receated as a linear combination of WT only components
+
+Indeed a linear combination of WT_49, WT_42 and WT_24 gives a new correlation of 93%
+
+```{r}
+combolm42 <- lm(results1$loadings[[1]]["Mix42 Pachytene",] ~ t(results9_WT$loadings[[1]]))
+summary(combolm42)
+plot(predict.lm(combolm42), results1$loadings[[1]]["Mix42 Pachytene",], pch=".")
+cor(predict.lm(combolm42), results1$loadings[[1]]["Mix42 Pachytene",])
+cor(-results9_WT$loadings[[1]]["WT_24",]*0.911 + results9_WT$loadings[[1]]["WT_49",]*0.875 + results9_WT$loadings[[1]]["WT_42",]*0.629, results1$loadings[[1]]["Mix42 Pachytene",])
+
+
+```
+
+## Procrustes Rotation
+
+This linear combination thing has a more general case, that is the procrustes rotation of the loadings matrix to find all the linear combinations at once.
+
+Similar result, 90% correlation.
+
+```{r}
+
+row_9WT_list <- rotate_SDA(results9_WT, results1)
+
+tmp <- which.max(abs(cor(rot_9WT$Yrot,results1$loadings[[1]]["Mix42 Pachytene",])))
+plot(rot_9WT$Yrot[,42],results1$loadings[[1]]["Mix42 Pachytene",], pch=".")
+cor(rot_9WT$Yrot[,42],results1$loadings[[1]]["Mix42 Pachytene",])
+
+tmp <- which.max(abs(cor(rot_9WT$Yrot,results1$loadings[[1]]["Mix9 Respiration",])))
+plot(rot_9WT$Yrot[,9],results1$loadings[[1]]["Mix9 Respiration",], pch=".")
+cor(rot_9WT$Yrot[,9],results1$loadings[[1]]["Mix9 Respiration",])
+```
+
+
+```{r, fig.width=8, fig.height=8}
+pdf("../results/WT/correlation_matrix.pdf", width = 12, height = 10)
+compare_factorisations(results9_WT,
+                       results1,
+                       c("WT","Mixed"),
+                       method = "pearson")
+dev.off()
+
+
+pdf("../results/WT/correlation_matrix_rotated.pdf", width = 12, height = 10)
+compare_factorisations(row_9WT_list,
+                       results1,
+                       c("WT","Mixed"),
+                       method = "pearson")
+dev.off()
+
+rot_mix_cor <- compare_factorisations(row_9WT_list,
+                       results1,
+                       c("WT","Mixed"),
+                       method = "pearson", return = "cor")
+
+mix_cor <- compare_factorisations(results9_WT,
+                       results1,
+                       c("WT","Mixed"),
+                       method = "pearson", return = "cor")
+```
 
 
 
-ggplot(tmp2, aes(score_sum_2, max_cor_per_compoent, label=component)) +
-        geom_point() + 
-        geom_label_repel(data=tmp2[max_cor_per_compoent>0.4])
+```{r, fig.height=4, fig.width=6}
+tmp <- data.table(
+  Component=sort(rownames(mix_cor)),
+  Rotated=apply(rot_mix_cor, 1, max)[sort(rownames(mix_cor))],
+  Raw=apply(mix_cor, 1, max)[sort(rownames(mix_cor))]
+)
 
-ggplot(tmp2, aes(max_score, max_cor, label=component)) +
-        geom_point() + 
-        geom_label_repel(data=tmp2[max_cor>0.4])
+#qplot(tmp$Raw, tmp$Rotated) + geom_abline(intercept = 0, slope = 1)
 
-# ggplot(tmp2, aes(score_sum_abs, max_cor, label=component)) +
-#         geom_point() + 
-#         geom_label_repel(data=tmp2[max_cor>0.4])
+tmp[, Difference := Rotated-Raw]
+
+tmp <- melt(tmp, id.vars = c("Component","Difference"), variable.name = "Type", value.name = "Correlation")
+
+tmp[, Component := factor(Component, levels=tmp[Type=="Rotated"][order(Correlation)]$Component)]
+
+rot_diff <- ggplot(tmp,
+       aes(Component, Correlation, group=Component)) +
+  geom_line(aes(colour=Difference>0), arrow = arrow(ends="first",type="closed", length=unit(0.25,"cm"))) +
+  scale_color_manual(values=c("red","black")) +
+  geom_point(shape=21, stroke=0, size=2, aes(fill=Type)) +
+  scale_fill_brewer(palette = "Set1") +
+  coord_flip()
+
+pdf("../results/WT/rotation_correlation_difference.pdf", width=11, height = 8)
+rot_diff
+dev.off()
+
+```
+
+## Factor Congruence
+
+"Given two sets of factor loadings, report their degree of congruence (vector cosine). Although first reported by Burt (1948), this is frequently known as the Tucker index of factor congruence."
+
+```{r, fig.width=8, fig.height=8}
+cong_9WT <- psych::factor.congruence(rot_9WT$Yrot, rot_9WT$X)
+cong_9WT <- sort_matrix(cong_9WT, sort(apply(abs(cong_9WT), 2, max), decreasing = T))
+Heatmap(cong_9WT,
+        cluster_rows = FALSE, cluster_columns = FALSE)
+
+```
+
+The rotation matrix gives a read out of which components have been split into which others
+
+For example Mix42 Pachytene (as we saw previously), is a mixture of WT 42, 24, and 49
+
+```{r, fig.width=8, fig.height=8}
+Heatmap(sort_matrix(rot_9WT$rotation, sort(apply(abs(rot_9WT$rotation), 2, max), decreasing = T)),
+        cluster_rows = FALSE, cluster_columns = FALSE)
+```
+
+
+## Sparsity
+
+But the rotation make it non sparse
+
+Could threshold the rotation matrix
+
+```{r}
+plot(sort(rot_9WT$rotation)); abline(h=0); abline(h=1e-2, col="red"); abline(h=1e-1, col="blue"); abline(h=0.2, col="blue")
+
+reg_rot <- rot_9WT$rotation
+reg_rot[abs(reg_rot)<3.5e-1] <- 0
+
+rot_9WTsparse <- t(results9_WT$loadings[[1]][,common_genes]) %*% reg_rot
+
+colnames(rot_9WTsparse) <- paste0("WT_rot",1:50)
+
+# scores
+rot_9WTsparse_scoresrot <- results9_WT$scores %*% reg_rot
+#colnames(rot_9WT_scoresrot) <- paste0("WT_rot",1:50)
+colnames(rot_9WTsparse_scoresrot) <- paste0("WT_rot",1:50)
+
+row_9WTb_list <- list(loadings = list(t(rot_9WTsparse + rnorm(prod(dim(rot_9WTsparse)), 0, 0.00001))),
+                      scores = rot_9WTsparse_scoresrot + rnorm(prod(dim(rot_9WTsparse_scoresrot)), 0, 0.00001))
+
+
+#rownames(reg_rot) <- 1:50
+#colnames(reg_rot) <- rownames(results1$loadings[[1]])
+#rownames(reg_rot) <- paste("WT",1:50)
+
+
+
+```
+
+
+```{r}
+threshold = exp(seq(-10,0,0.1))
+
+loading_sparsity <- data.table(threshold,
+                               t(sapply(threshold, function(x) c("Rotated_WT_SDA"=mean(rot_9WT$Yrot/max(abs(rot_9WT$Yrot)) < x),
+                                                                 "Rotated_WT_SDA_reg"=mean(rot_9WTb/max(abs(rot_9WTb)) < x),
+                                                                 "Mix_SDA"=mean(results$loadings[[1]]/max(abs(results$loadings[[1]])) < x),
+                                                                 "WT_SDA"=mean(results9_WT$loadings[[1]]/max(abs(results9_WT$loadings[[1]])) < x)))))
+
+
+loading_sparsity <- melt(loading_sparsity, id.vars = "threshold", variable.name = "Method", value.name = "Fraction")
+
+gene_loading_sparsity <- ggplot(loading_sparsity, aes(threshold, Fraction, colour=Method)) +
+  geom_line() +
+  ylab("Fraction of absolute gene loadings below threshold") + 
+  xlab("Scaled Threshold (t * max(abs(gene_loadings)))") +
+  scale_x_continuous(trans = reverselog_trans())+
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal() +
+  theme(legend.position = "none") + 
+  geom_text_repel(data=loading_sparsity[threshold==threshold[51]], aes(label = Method),
+                  nudge_x = 1, nudge_y = 0.02,
+                  na.rm = TRUE, segment.colour='darkgrey', colour="black")
+
+
+gene_loading_sparsity
+
+# plot(sort(abs(sample(rot_9WT$Yrot, 10000, replace = F))), pch=".", log='y')
+# points(sort(abs(sample(results9_WT$loadings[[1]], 10000, replace = F))), col="red", pch=".", log='y')
+# abline(h=c(1e-2,1e-3))
 # 
-ggplot(tmp2, aes(score_sum_count, max_cor_per_compoent, label=component)) +
-        geom_point() +
-        geom_label_repel(data=tmp2[max_cor_per_compoent>0.4])
-
-# Heatmap(abs(cor(cbind(t(results1$loadings[[1]][,common_genes]),
-#                       t(results$loadings[[1]][,common_genes])))),
-#         col = viridisLite::viridis(100))
-
-# Heatmap(cross_cor,
-#         col = viridisLite::viridis(100),
-#         clustering_distance_rows = "maximum",
-#         clustering_distance_columns = "maximum")
+# plot(sort(abs(sample(results$loadings[[1]]/max(abs(results$loadings[[1]])), 10000, replace = F))), pch=".")
+# points(sort(sample(nnmf_decomp$H/max(abs(nnmf_decomp$H)), 10000, replace = F)), col="red", pch=".")
 ```
 
-# tSNE
+After thresholding we get a much cleaner read out
 
-This is tSNE on *all* the components (no batch effects removed).
-
-The marker genes pachytene-onwards still look good. Prior to that we don't have many cells to look at.
-
-```{r, fig.width=10}
-set.seed(42)
-tsne_data_wt <- Rtsne::Rtsne(results$scores, verbose=TRUE, pca=FALSE, perplexity = 30, max_iter=1000)
-
-marker_genes <- c("Csf1r", "Dcn","Cyp11a1","Aard","Trim7","Gfra1","Nanos1","Esx1","Ctcfl","Prdm9","Ccnb3","Piwil1","Ccna1","Ssxb1","Acrv1","Lrrd1","Fam71b","Tnp2","Prm2","mt-Rnr2")
-imputed_expression <- results$scores %*% results$loadings[[1]][,marker_genes]
-
-datat <- data.table(cell_id=1:9936, tsne_data_wt$Y, imputed_expression)
-setnames(datat, c("V1","V2"),c("tSNE1","tSNE2"))
-marker_plot_list <- list()
-
-print_wt_marker <- function(i){
-p <- ggplot(datat, aes(tSNE1, tSNE2, colour=get(i))) +
-        geom_point(size=0.5) +
-        scale_color_viridis(direction = -1) + 
-        ggtitle(i)
-return(p)
-}
-
-library(testisAtlas)
-grid.arrange(grobs=create_grob_list(fn = print_wt_marker, input = marker_genes), nrow=4, heights = c(1,1,1,1))
-
-save(results, datat, cross_cor, file = "../data/tmp_cache/SDA_WT.rds")
-
+```{r, fig.width=8, fig.height=8}
+pdf("../results/WT/rotation_matrix.pdf", width = 10, height = 8)
+Heatmap(sort_matrix(rot_9WT$rotation, sort(apply(abs(rot_9WT$rotation), 2, max), decreasing = T)),
+        col=log_colour_scale(rot_9WT$rotation, scale = 0.15),
+        cluster_rows = FALSE, cluster_columns = FALSE)
+dev.off()
 ```
 
 
-## Mj - 15
+```{r, fig.width=8, fig.height=8}
 
-Component 15 has an excellent match with mix component 6 (Mj) 
+pdf("../results/WT/rotation_matrix_sparse.pdf", width = 10, height = 8)
+Heatmap(sort_matrix(reg_rot, sort(apply(abs(reg_rot), 2, max), decreasing = T)),
+        cluster_rows = FALSE, cluster_columns = FALSE)
+dev.off()
+```
+
+And similar correlations
 
 ```{r}
+cor(rot_9WTb[,42], results1$loadings[[1]]["Mix42 Pachytene",])
+cor(rot_9WT$Yrot[,"WT_rot42"], results1$loadings[[1]]["Mix42 Pachytene",])
 
-plot(results1$loadings[[1]][6,common_genes],results$loadings[[1]][15,common_genes])
-cor(results1$loadings[[1]][6,common_genes],results$loadings[[1]][15,common_genes])
-
-genome_loadings(results$loadings[[1]]["WT_15",])
+plot(rot_9WTb[,42], results1$loadings[[1]]["Mix42 Pachytene",], pch=".")
+plot(rot_9WT$Yrot[,"WT_rot42"], results1$loadings[[1]]["Mix42 Pachytene",], pch=".")
 ```
 
-## Round Spermatid - 35
+Sparse vs Non
 
-Component 35 has an excellent match with mix component 15 (round Spermatid)
-
-```{r}
-
-plot(results1$loadings[[1]][15,common_genes],results$loadings[[1]][35,common_genes])
-cor(results1$loadings[[1]][15,common_genes],results$loadings[[1]][35,common_genes])
-
-genome_loadings(results$loadings[[1]]["WT_35",])
-```
-
-## Acrosomal - 40
-
-Component 40 has high match with mix component 30 (Acrosomal) Spaca1, Sox5, Lyzl6, Lyzl1, Spata31, Acrv1, Tex36 etc.
-
-```{r}
-
-plot(results1$loadings[[1]][30,common_genes],results$loadings[[1]][40,common_genes])
-cor(results1$loadings[[1]][30,common_genes],results$loadings[[1]][40,common_genes])
-
-genome_loadings(results$loadings[[1]]["WT_40",])
-```
-
-## Pachytene - 42
-
-Lot's of high genes in common with the pachytene components 42 and 39 from KO&WT mixed SDA - Ldhc, Pabpc1, Lyar, Ybx3, Nasp, Dkk1, Ropn1l, Phf7, Fabp9 etc.
-
-```{r}
-plot(results1$loadings[[1]][42,common_genes],results$loadings[[1]][42,common_genes])
-plot(results1$loadings[[1]][39,common_genes],results$loadings[[1]][42,common_genes])
-cor(results1$loadings[[1]][42,common_genes],results$loadings[[1]][42,common_genes])
-cor(results1$loadings[[1]][39,common_genes],results$loadings[[1]][42,common_genes])
-genome_loadings(results$loadings[[1]]["WT_42",])
-```
+```{r, fig.width=8, fig.height=8}
 
 
-
-##Differentiated Spermatogonia - 28
-
-High correlation with component 33 (diff spermatogonia) Dmrt1, Uchl1, Dazl, Mapd72
-
-```{r}
-plot(results1$loadings[[1]][33,common_genes],results$loadings[[1]][28,common_genes])
-cor(results1$loadings[[1]][33,common_genes],results$loadings[[1]][28,common_genes])
-genome_loadings(results$loadings[[1]]["WT_28",])
-```
-
-## Spermiogenesis - 7
-
-High correlation with component 17 from KO&WT mix (Spermiogenesis) - Prm1, Tnp2, Tnp1
-
-```{r}
-plot(results1$loadings[[1]][17,common_genes],results$loadings[[1]][7,common_genes])
-cor(results1$loadings[[1]][17,common_genes],results$loadings[[1]][7,common_genes])
-genome_loadings(results$loadings[[1]]["WT_7",])
-```
-
-## Spermiogenesis - 46
-
-Component 46 has high concordance with mixed component 18 & 17 - spermiogenesis (Prm2, Oaz3, Smcp, Gstm5, Dbil5, Tppp2, Gapdhs, Gsg1, Tssk6 etc.)
-
-```{r}
-plot(results1$loadings[[1]][18,common_genes],results$loadings[[1]][46,common_genes])
-cor(results1$loadings[[1]][18,common_genes],results$loadings[[1]][46,common_genes])
-plot(results1$loadings[[1]][17,common_genes],results$loadings[[1]][46,common_genes])
-cor(results1$loadings[[1]][17,common_genes],results$loadings[[1]][46,common_genes])
-genome_loadings(results$loadings[[1]]["WT_46",])
-```
-
-## Leydig - 17
-
-Component 17 has high match with 40 & 24 (Leydig) Insl3, Cyp17a1, Aldh1a1, Agt, Mgst1, Ptgds, Lcn2, Akr1cl, Cst3, Gstm1, Fabp3 etc.
-
-```{r}
-plot(results1$loadings[[1]][24,common_genes],results$loadings[[1]][17,common_genes])
-plot(results1$loadings[[1]][40,common_genes],results$loadings[[1]][17,common_genes])
-cor(results1$loadings[[1]][24,common_genes],results$loadings[[1]][17,common_genes])
-cor(results1$loadings[[1]][40,common_genes],results$loadings[[1]][17,common_genes])
-genome_loadings(results$loadings[[1]]["WT_17",])
-```
-
-## Respiration - 23
-
-Component 23 has good match with mix component 9 respiration
-
-```{r}
-
-plot(results1$loadings[[1]][9,common_genes],results$loadings[[1]][23,common_genes])
-cor(results1$loadings[[1]][9,common_genes],results$loadings[[1]][23,common_genes])
-
-genome_loadings(results$loadings[[1]]["WT_23",])
-```
-
-## Fibroblast - 39
-
-Component 39 has high correlaiton with Mix component 32 (peritubular myoid / fibroblast)
-
-```{r}
-plot(results1$loadings[[1]][32,common_genes],results$loadings[[1]][39,common_genes])
-cor(results1$loadings[[1]][32,common_genes],results$loadings[[1]][39,common_genes])
-genome_loadings(results$loadings[[1]]["WT_39",])
-```
-
-## Post division/acrosomal - 16
-
-Component 16 is a good match to the positive side of mixed component 35
-
-```{r}
-plot(results1$loadings[[1]][35,common_genes],results$loadings[[1]][16,common_genes])
-cor(results1$loadings[[1]][35,common_genes],results$loadings[[1]][16,common_genes])
-genome_loadings(results$loadings[[1]]["WT_16",])
-```
-
-
-
-## Undiff Spermatogonia - 18
-
-Component 18 has high match with 31 (undiff spermatogonia) Egr4, Zbtb16, Sdc4, Afp, Foxo1, Erap1, Tubb5, Fbxo32 etc.
-
-```{r}
-plot(results1$loadings[[1]][31,common_genes],results$loadings[[1]][18,common_genes])
-
-mix_wt <- data.table(Mix_C31_loading = results1$loadings[[1]][31,common_genes], WT_only_C18_loading = results$loadings[[1]][18,common_genes], gene=common_genes)
-
-pdf(width = 20, height = 10, file = "../results/mix_wt_example.pdf")
-plot_grid(NULL,
-          ggplot(mix_wt, aes(Mix_C31_loading, WT_only_C18_loading, label=gene)) +
-    geom_point(alpha=0.3) +
-    theme_minimal() +
-    geom_text_repel(data=mix_wt[abs(Mix_C31_loading)>0.19 | abs(WT_only_C18_loading)>0.2], force = 2),
-    labels = "AUTO")
+# some columns are zero so add a tiny bit of noise to avoid error
+pdf("../results/WT/correlation_matrix_rotated_sparse.pdf", width = 12, height = 10)
+compare_factorisations(row_9WTb_list,
+                       results1,
+                       names= c("WT","Mixed"),
+                       method = "pearson")
 dev.off()
 
-cor(results1$loadings[[1]][31,common_genes],results$loadings[[1]][18,common_genes])
-genome_loadings(results$loadings[[1]]["WT_18",])
+compare_factorisations(row_9WT_list,
+                       results1,
+                       names= c("Mixed","WT"),
+                       method = "pearson")
+
 ```
 
 
-
-
-
-## Stem Cells - 32
-
-Component 32 matches ok with mix componet 50 stem cell - Glis3, Sox11, Dusp6, Mcam, H19, Ccnd2, 
-
 ```{r}
 
-plot(results1$loadings[[1]][50,common_genes],results$loadings[[1]][32,common_genes])
-cor(results1$loadings[[1]][50,common_genes],results$loadings[[1]][32,common_genes])
 
-genome_loadings(results$loadings[[1]]["WT_32",])
+ggplot(data.table(apply(rot_mix_cor, 1, max), factor(rownames(rot_mix_cor), levels=rownames(rot_mix_cor))), aes(V2, V1)) +
+    geom_point() +
+    coord_flip()
+
+cor(rot_9WT$Yrot[,"WT_rot2"], results1$loadings[[1]]["Mix2 Pre-leptotene",], method = "spearman")
+
+mix_wt <- data.table(results1$loadings[[1]]["Mix50 Gfra1 stem cells",],
+                                 rot_9WT$Yrot[,"WT_rot50"],
+                                 gene=names(rot_9WT$Yrot[,"WT_rot5"]))
+
+ggplot(mix_wt, aes(V1, V2, label=gene)) +
+    geom_point(alpha=0.3, stroke=0) +
+    theme_minimal() +
+    geom_text_repel(data=mix_wt[abs(V1)>0.09 | abs(V2)>0.1], force = 2) +
+    labs(x="Mixed Loadings",y="WT Loadings (Rotated)")
+
+mix_wt <- data.table(results1$loadings[[1]]["Mix31 Undifferentiated Spermatogonia",],
+                                 rot_9WT$Yrot[,"WT_rot31"],
+                                 gene=names(rot_9WT$Yrot[,"WT_rot5"]))
+
+ggplot(mix_wt, aes(V1, V2, label=gene)) +
+    geom_point(alpha=0.3, stroke=0) +
+    theme_minimal() +
+    geom_text_repel(data=mix_wt[abs(V1)>0.25 | abs(V2)>0.25], force = 2) +
+    labs(x="Mixed Loadings",y="WT Loadings (Rotated)")
+    
+mix_wt <- data.table(results1$loadings[[1]]["Mix35 Late Acrosomal",],
+                                 rot_9WT$Yrot[,"WT_rot35"],
+                                 gene=names(rot_9WT$Yrot[,"WT_rot5"]))
+
+ggplot(mix_wt, aes(V1, V2, label=gene)) +
+    geom_point(alpha=0.3, stroke=0) +
+    theme_minimal() +
+    geom_text_repel(data=mix_wt[V1>0.2 | V2>0.2], force = 2) +
+    labs(x="Mixed Loadings",y="WT Loadings (Rotated)")
+
+mix_wt <- data.table(results1$loadings[[1]]["Mix20 Meiotic Divisions",],
+                                 rot_9WT$Yrot[,"WT_rot20"],
+                                 gene=names(rot_9WT$Yrot[,"WT_rot5"]))
+
+ggplot(mix_wt, aes(V1, V2, label=gene)) +
+    geom_point(alpha=0.3, stroke=0) +
+    theme_minimal() +
+    geom_text_repel(data=mix_wt[abs(V1)>(0.15) | abs(V2)>(0.15)], force = 2) +
+    labs(x="Mixed Loadings",y="WT Loadings (Rotated)")
+
+
+mix_wt <- data.table(results1$loadings[[1]]["Mix42 Pachytene",common_genes],
+                                 rot_9WT$Yrot[,"WT_rot42"],
+                     results9_WT$loadings[[1]]["WT_42",common_genes],
+                     rot_9WTb[,"WT_rot42"],
+                                 gene=names(rot_9WT$Yrot[,"WT_rot5"]))
+
+cor(mix_wt$V1, mix_wt$V3, method = "spearman")
+cor(mix_wt$V1, mix_wt$V3)
+cor(mix_wt$V1, mix_wt$V2)
+cor(mix_wt$V1, mix_wt$V4)
+
+cor(results1$loadings[[1]]["Mix42 Pachytene",common_genes],results9_WT$loadings[[1]]["WT_42",common_genes])
+
+ggplot(mix_wt, aes(V3, V1, label=gene)) +
+    geom_point(alpha=0.3, stroke=0) +
+    theme_minimal() +
+    geom_text_repel(data=mix_wt[abs(V1)>(1) | abs(V2)>(1)], force = 2) +
+    labs(x="Mixed Loadings",y="WT Loadings (Rotated)")
+
+ggplot(mix_wt, aes(V2, V1, label=gene)) +
+    geom_point(alpha=1, stroke=0, size=0.5) +
+    theme_minimal() +
+    geom_text_repel(data=mix_wt[abs(V1)>(1) | abs(V2)>(1)], force = 2) +
+    labs(x="Mixed Loadings",y="WT Loadings (Rotated)") + scale_y_reverse() + scale_x_reverse()
+
+pdf("../results/WT/Pachytene_gene_scatterplot.pdf")
+ggplot(mix_wt, aes(V4, V1, label=gene)) +
+  geom_point(alpha=1, stroke=0, size=0.5) +
+  theme_minimal() +
+  geom_text_repel(data=mix_wt[abs(V1)>(1) | abs(V2)>(1)], force = 2) +
+  labs(x="Mixed Loadings",y="WT Loadings (Rotated)") + scale_y_reverse() + scale_x_reverse()
+dev.off()
+
+# nover <- function(dt=mix_wt, i=1){
+#     nrow(mix_wt[ V1 > mix_wt[i]$V1-0.01 &
+#                 V1 < mix_wt[i]$V1+0.01 &
+#                 V4 > mix_wt[i]$V4-0.01 &
+#                 V4 < mix_wt[i]$V4+0.01 ])
+# }
+# 
+# noverlaps <- sapply(1:nrow(mix_wt), function(x) nover(i=x))
+# tmp <- cbind(mix_wt,V5=as.numeric(noverlaps))
+```
+
+```{r, fig.height=3.5, fig.width=3.5}
+mix_wt <- data.table(results1$loadings[[1]]["Mix31 Undifferentiated Spermatogonia",common_genes],
+                                 rot_9WT$Yrot[,"WT_rot31"],
+                     results9_WT$loadings[[1]]["WT_7",common_genes],
+                     rot_9WTb[,"WT_rot31"],
+                                 gene=names(rot_9WT$Yrot[,"WT_rot5"]))
+
+pdf("../results/WT/UdifSpg_gene_scatterplot.pdf")
+ggplot(mix_wt, aes(V1, V4, label=gene)) +
+  geom_point(alpha=0.5, stroke=0, size=0.7) +
+  theme_minimal() +
+  geom_text_repel(data=mix_wt[abs(V1)>(0.22) | abs(V4)>(0.22) | V4 < (-0.175) | V1 < (-0.15)], force = 2) +
+  labs(y="Mixed C31 Loadings",x="WT C31 Loadings (Rotated)")
+dev.off()
+
+pdf("../results/WT/UdifSpg_cell_scatterplot.pdf")
+ggplot(datat[data.table(rot_9WT_scoresrot[,"WT_rot31", drop=F], keep.rownames = T)],
+        aes(WT_rot31, V31, colour=PseudoTime)) +
+   geom_point(stroke=0, size=1.5) +
+   scale_colour_viridis(direction = -1) +
+   labs(y="WT: C31 (Rotated)", x="Mixed: C31 Pachytene")
+dev.off()
+
+```
+
+# Scores
+
+WT only vs Mixed scores (V42)
+
+```{r}
+plot(rot_9WTsparse_scoresrot[,"WT_rot42"], results1$scores[rownames(rot_9WTsparse_scoresrot),42], pch=".")
+plot(rot_9WT_scoresrot[,"WT_rot42"], results1$scores[rownames(rot_9WT_scoresrot),42], pch=".")
+abline(0,0.55,col='red')
+
+ggplot(datat[data.table(rot_9WT_scoresrot_sparse[,"WT_rot42", drop=F], keep.rownames = T)], aes(WT_rot42, V42, colour=PseudoTime)) + geom_point(stroke=0, size=0.5) + scale_colour_viridis()
+
+pdf("../results/WT/Pachytene_cellscore_scatter.pdf")
+ggplot(datat[data.table(rot_9WT_scoresrot[,"WT_rot42", drop=F], keep.rownames = T)],
+       aes(WT_rot42, V42, colour=PseudoTime)) +
+  geom_point(stroke=0, size=0.5) +
+  scale_colour_viridis(direction = -1) +
+  scale_y_reverse() + scale_x_reverse() +
+  labs(y="WT: C42 (Rotated)", x="Mixed: C42 Pachytene")
+dev.off()
+
+ggplot(datat[data.table(results9_WT$scores[,"WT_42", drop=F], keep.rownames = T)],
+       aes(WT_42, V42, colour=PseudoTime)) +
+  geom_point(stroke=0, size=0.5) +
+  scale_colour_viridis(direction = -1) +
+  scale_y_reverse() + scale_x_reverse() +
+  labs(y="WT: C42 (Raw)", x="Mixed: C42 Pachytene")
+
+ggplot(datat[data.table(rot_9WTsparse_scoresrot[,"WT_rot42", drop=F], keep.rownames = T)], 
+       aes(Tsne1_QC1,Tsne2_QC1, colour=cell %in% names(which(rot_9WTsparse_scoresrot[,"WT_rot42"]*0.55 < results1$scores[rownames(rot_9WTsparse_scoresrot),42])))) + 
+    geom_point() +
+    theme(legend.position = "bottom")
+
 ```
 
 
-
-## Sertoli - 30
-
-Component 30 has ok match to mixed sertoli 45 (Aard, Ldhb, Cst12) & sertoli/muscle 10 (Kazald, Jun, Cyr61)
+Scores on tSNE (compare to previous score visualisation)
 
 ```{r}
+ggplot(datat[data.table(rot_9WT_scoresrot_sparse[,"Mix42 Pachytene", drop=F], keep.rownames = T)], 
+       aes(Tsne1_QC1,Tsne2_QC1, colour=get("Mix42 Pachytene"))) + 
+    geom_point() +
+    scale_colour_viridis() +
+    theme(legend.position = "bottom")
 
-plot(results1$loadings[[1]][45,common_genes],results$loadings[[1]][30,common_genes])
-plot(results1$loadings[[1]][10,common_genes],results$loadings[[1]][30,common_genes])
-cor(results1$loadings[[1]][45,common_genes],results$loadings[[1]][30,common_genes])
-cor(results1$loadings[[1]][10,common_genes],results$loadings[[1]][30,common_genes])
-
-genome_loadings(results$loadings[[1]]["WT_30",])
+ggplot(datat[data.table(rot_9WT_scoresrot_sparse[,"Mix42 Pachytene", drop=F], keep.rownames = T)], 
+       aes(Tsne1_QC1,Tsne2_QC1, colour=V42)) + 
+    geom_point() +
+    scale_colour_viridis() +
+    theme(legend.position = "bottom")
 ```
 
+## Heatmap score correlations
 
+Not clear this is better than using loadings, despite sparsity in loadings.
 
+Perhaps would be best to combine the two somehow.
 
+```{r, fig.width=8, fig.height=8}
+compare_factorisations(t(rot_9WT_scoresrot),
+                       t(results1$scores),
+                       names= c("Mixed","WT"),
+                       method = "pearson")
 
-## Early Pachytene - 49
-
-Component 49 has high match with 13 (Early Pachy) Piwil1, 
-
-```{r}
-
-plot(results1$loadings[[1]][13,common_genes],results$loadings[[1]][49,common_genes])
-cor(results1$loadings[[1]][13,common_genes],results$loadings[[1]][49,common_genes])
-
-genome_loadings(results$loadings[[1]]["WT_49",])
+compare_factorisations(t(rot_9WT_scoresrot_sparse+ rnorm(50*9936, 0, 0.00001)),
+                       t(results1$scores),
+                       names= c("Mixed","WT"),
+                       method = "pearson")
 ```
 
