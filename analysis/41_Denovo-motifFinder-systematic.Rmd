@@ -221,6 +221,7 @@ tomtom_summary[,IC_perbase := IC_values/nchar(Query_consensus)]
 # for each denovo motif, use best tomtom match
 tomtom_summary_byquery <- tomtom_summary[,.SD[which.min(E.value)],by=Query_ID]
 
+fwrite(tomtom_summary_byquery, "../data/motifs/tomtom_summary_byQuery.tsv")
 ```
 
 
@@ -758,9 +759,9 @@ For each motif group, plot the denovo motifs
 
 # for each TF, select the best matching denovo motif, for those with min q of 0.001
 #q.value<0.001
-motif_matches <- tomtom_summary[E.value<1e-2][, .SD[which.min(p.value)], by = Target.Name][order(E.value)]
+motif_matches <- tomtom_summary[E.value<1e-3][, .SD[which.min(p.value)], by = Target.Name][order(E.value)]
 saveRDS(motif_matches, "../data/motifs/motif_matches_v3.rds")
-
+fwrite(motif_matches, "../data/motifs/tomtom_summary_byTarget.tsv")
 
 print(paste(nrow(motif_matches), "different matches"))
 # 123 (126v1) matches
