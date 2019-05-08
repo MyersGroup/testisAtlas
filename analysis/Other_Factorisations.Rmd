@@ -256,16 +256,18 @@ loading_sparsity <- melt(loading_sparsity, id.vars = "threshold", variable.name 
 gene_loading_sparsity <- ggplot(loading_sparsity, aes(threshold, Fraction, colour=Method)) +
   geom_line() +
   ylab("Fraction of absolute gene\n loadings below threshold") + 
-  xlab("Scaled Threshold (threshold * max(abs(loadings)))") +
+  xlab("Scaled Threshold \n(threshold * max(abs(loadings)))") +
   scale_x_continuous(trans = reverselog_trans())+
   scale_color_brewer(palette = "Set1") +
   theme_minimal() +
   theme(legend.position = "none") + 
   geom_text_repel(data=loading_sparsity[threshold==threshold[45]], aes(label = Method),
-                  nudge_x = 0.5, nudge_y = 0.02,
+                  nudge_x = c(0.5,0.5,-0.5,0.5), nudge_y = 0.02,
                   na.rm = TRUE, segment.colour='darkgrey', colour="black")
 
 gene_loading_sparsity
+
+saveRDS(gene_loading_sparsity, "../data/plots/gene_loading_sparsity.rds")
 
 pdf("../results/other_factorisations/gene_loading_sparsity.pdf", width = 5, height = 5)
 gene_loading_sparsity
@@ -487,6 +489,24 @@ dev.off()
 
 ```
 
+
+## Rotated SDA
+
+```{r, fig.height=8}
+rot_named_loadings <- vegan::procrustes(t(nnmf_decomp$H), t(named_loadings))
+
+colnames(rot_named_loadings$Yrot) <- paste0("V",1:50)
+
+
+pdf("../results/other_factorisations/SDA_rotated.pdf", height=9, width=10)
+compare_factorisations(t(rot_named_loadings$Yrot),
+                       nnmf_decomp$H,
+                       c("SDA Rotated","NNMF"),
+                       method = "pearson")
+dev.off()
+
+```
+
 # GGplot version
 
 ```{r, fig.width=4, fig.height=4}
@@ -539,6 +559,62 @@ plot(nnmf_decomp$H["V50",],results$loadings[[1]]["V5",])
 
 # Expression predictions
 
+## Correlate imputed expression NNMF vs SDA
+
+```{r, fig.width=5}
+
+gene_cor <- numeric(length = length(colnames(results$loadings[[1]])))
+
+for(i in seq_along(gene_cor)){
+  gene_cor[i] <- cor(nmf_predict(c(colnames(results$loadings[[1]])[i]))[,2][[1]],
+                     sda_predict(c(colnames(results$loadings[[1]])[i]))[,2][[1]])
+}
+
+names(gene_cor) <- colnames(results$loadings[[1]])
+
+saveRDS(gene_cor, "../data/imputation/NNMF_vs_SDA_Gene_correlations.rds")
+
+gene_cor <- readRDS("../data/imputation/NNMF_vs_SDA_Gene_correlations.rds")
+
+manhatten_plot(component_enrichment(names(head(sort(gene_cor),500))), topn = 14)
+manhatten_plot(component_enrichment(names(head(sort(gene_cor),500)), loadings=nnmf_decomp$H), topn = 14)
+```
+
+Gene Correlation without single cell components
+
+```{r, fig.width=5}
+named_results <- results
+
+rownames(named_results$loadings[[1]]) <- paste0("Mix",1:50," ",names(sort(component_labels)))
+colnames(named_results$scores) <- paste0("Mix",1:50," ",names(sort(component_labels)))
+
+sc_components <- grep("Single",rownames(named_results$loadings[[1]]))
+
+named_results$loadings[[1]] <- named_results$loadings[[1]][-sc_components,]
+named_results$scores <- named_results$scores[,-sc_components]
+
+gene_cor <- numeric(length = length(colnames(results$loadings[[1]])))
+
+for(i in seq_along(gene_cor)){
+  gene_cor[i] <- cor(nmf_predict(c(colnames(results$loadings[[1]])[i]))[,2][[1]],
+                     sda_predict(c(colnames(results$loadings[[1]])[i]), factorisation = named_results)[,2][[1]])
+}
+
+names(gene_cor) <- colnames(results$loadings[[1]])
+
+saveRDS(gene_cor, "../data/imputation/NNMF_vs_SDA_Gene_correlations_sans_single_cell.rds")
+
+gene_cor <- readRDS("../data/imputation/NNMF_vs_SDA_Gene_correlations_sans_single_cell.rds")
+
+plot(sort(gene_cor))
+head(sort(gene_cor))
+str(rank(gene_cor)["Gfra1"])
+manhatten_plot(component_enrichment(names(head(sort(gene_cor),500))), topn = 7)
+manhatten_plot(component_enrichment(names(head(sort(gene_cor),500)),
+                                    loadings=nnmf_decomp$H, orderSDA = F), topn = 0)
+
+```
+
 ## Blood
 
 ```{r}
@@ -577,7 +653,7 @@ ggplot(corss, aes(Csf1r, Cd3g, colour=rgb)) + scale_colour_identity() + geom_poi
 blood_SDA_vs_NNMF <- ggplot(corss, aes(Csf1r, Cd3g, colour=Method)) +
   geom_point(alpha=0.5) +
   scale_color_brewer(palette = "Set1") +
-  theme_minimal()
+  theme_minimal() + theme(legend.position = "bottom")
 
 blood_SDA_vs_NNMF
 
@@ -604,11 +680,11 @@ gonia_SDA <- tricolour_tsne(c("Gfra1","Upp1","Nanos1")) +
   ggtitle("SDA Imputed Expression") + labs(y="t-SNE 2", x="t-SNE 1")
 
 gonia_SDA_zoom <- tricolour_tsne(c("Gfra1","Upp1","Nanos1")) +
-  xlim(c(-6,5)) + ylim(c(36,43)) +
+  xlim(c(-4,5)) + ylim(c(36,44)) +
   ggtitle("SDA Imputed Expression") + labs(y="t-SNE 2", x="t-SNE 1")
 
 gonia_NNMF <- tricolour_tsne(c("Gfra1","Upp1","Nanos1"), predict = "NNMF") +
-  facet_zoom(xlim=c(-6,5), ylim=c(36,43), zoom.size = 2) +
+  facet_zoom(xlim=c(-4,5), ylim=c(36,44), zoom.size = 2) +
   ggtitle("NNMF Imputed Expression") + labs(y="t-SNE 2", x="t-SNE 1")
 # ccnd2 or gfra1
 # upp1 or foxf1
@@ -639,6 +715,26 @@ corss$rgb <- ternaryColours(corss, c("Gfra1","Upp1"))
 ggplot(corss, aes(Upp1, Gfra1, colour=rgb)) + scale_colour_identity() + geom_point() + facet_wrap(~Method, scales = "free")
 
 ggplot(corss, aes(Upp1, Gfra1, colour=Method)) +
+  geom_point() +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal()
+```
+
+```{r}
+corss <- rbind(sda_predict(c("Igfbp5","Upp1")), nmf_predict(c("Igfbp5","Upp1")))
+corss$Method <- "NNMF"
+corss[1:(nrow(corss)/2)]$Method <- "SDA"
+
+ggplot(corss, aes(Upp1, Igfbp5, colour=Method)) +
+  geom_point() +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal()
+
+corss <- rbind(sda_predict(c("Gm14019","Upp1")), nmf_predict(c("Gm14019","Upp1")))
+corss$Method <- "NNMF"
+corss[1:(nrow(corss)/2)]$Method <- "SDA"
+
+ggplot(corss, aes(Upp1, Gm14019, colour=Method)) +
   geom_point() +
   scale_color_brewer(palette = "Set1") +
   theme_minimal()
@@ -892,21 +988,27 @@ hormad_cell_score <- ggplot(tmp, aes(-PseudoTime, Cell_Score, colour=Method)) +
 
 # Compare Rhox2h Prediction
 
+hormad_gene <- "Rhox2h"
+
 datat[grepl("Hormad",experiment), Hormad_Genotype := "Hormad -/-"]
 datat[!grepl("Hormad",experiment), Hormad_Genotype := "Hormad WT"]
 
-tmp <- datat[nmf_predict(c("Rhox2h"),name_extension = "_NNMF")][sda_predict(c("Rhox2h"), name_extension = "_SDA")]
+tmp <- datat[nmf_predict(hormad_gene,name_extension = "_NNMF")][sda_predict(hormad_gene, name_extension = "_SDA")]
 
-tmp <- melt(tmp[PseudoTime>14500],id.vars = c("cell","PseudoTime","Hormad_Genotype"), measure.vars = c("Rhox2h_NNMF","Rhox2h_SDA"), variable.name = "Method", value.name = "Rhox2h")
+tmp <- melt(tmp[PseudoTime>14500],id.vars = c("cell","PseudoTime","Hormad_Genotype"), measure.vars = paste0(hormad_gene,"_",c("NNMF","SDA")), variable.name = "Method", value.name = hormad_gene)
 
-tmp[,Method := gsub("Rhox2h_","",Method)]
+tmp[,Method := gsub(paste0(hormad_gene,"_"),"",Method)]
 
-Rhox2h_prediction <- ggplot(tmp, aes(-PseudoTime, Rhox2h, colour=Method)) +
+Rhox2h_prediction <- ggplot(tmp, aes(-PseudoTime, get(hormad_gene), colour=Method)) +
   geom_point(alpha=0.5, stroke=0) +
   facet_grid(Hormad_Genotype~Method, scales="free_y") +
   scale_color_brewer(palette = "Set1", guide=FALSE) +
   geom_smooth(colour="black") +
+  ylab(paste(hormad_gene,"Imputed Expression")) +
+  scale_x_continuous(breaks = c(-15000,-16000)) +
   theme_bw()
+
+Rhox2h_prediction
 
 pdf("../results/other_factorisations/MSCA_Rhox2h.pdf", width = 7)
 Rhox2h_prediction
@@ -963,21 +1065,9 @@ rfa <- factanal(data, factors = 50, rotation = "promax")
 
 ```{r}
 
-exp_predictions <- plot_grid(gonia_SDA_zoom, gonia_NNMF, blood_SDA_vs_NNMF,
-          rel_widths = c(3,4.5,3),
-          ncol=3,
-          labels = c("E","","F"))
+right <- plot_grid(heatmapgrob, plot_grid(NULL, lib_size_plot),ncol=1, rel_heights = c(3,1), labels = c("B","C"))
 
-left <- plot_grid(gene_loading_sparsity, compare_imputation, hormad_cell_score,
-                  ncol=1,
-                  rel_heights = c(4,4,5),
-                  labels = c("A","B","C"))
-
-top <- plot_grid(left, heatmapgrob, ncol=2, rel_widths = c(2,3), labels = c("","D"))
-
-pdf("../results/NNMF_vs_SDA.pdf", height = 12, width=15)
-plot_grid(top,
-          exp_predictions,
-          ncol=1, rel_heights = c(3,1))
+pdf("../results/Imputation_Supp.pdf", height = 12, width=15)
+plot_grid(ex_imputed, right, ncol=2, rel_widths = c(1,3), labels = c("A",""))
 dev.off()
 ```
