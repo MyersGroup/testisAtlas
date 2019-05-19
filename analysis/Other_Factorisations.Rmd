@@ -675,15 +675,15 @@ tricolour_tsne(c("Gfra1","Upp1","Crabp1"), predict = "NNMF") +
   facet_zoom(xlim=c(-5,5), ylim=c(35,43), zoom.size = 2) +
   ggtitle("NNMF Prediction")
 
-gonia_SDA <- tricolour_tsne(c("Gfra1","Upp1","Nanos1")) +
+gonia_SDA <- tricolour_tsne(c("Gfra1","Lin28a","Nanos1")) +
   facet_zoom(xlim=c(-5,5), ylim=c(36,43), zoom.size = 2) +
   ggtitle("SDA Imputed Expression") + labs(y="t-SNE 2", x="t-SNE 1")
 
-gonia_SDA_zoom <- tricolour_tsne(c("Gfra1","Upp1","Nanos1")) +
+gonia_SDA_zoom <- tricolour_tsne(c("Gfra1","Lin28a","Nanos1")) +
   xlim(c(-4,5)) + ylim(c(36,44)) +
   ggtitle("SDA Imputed Expression") + labs(y="t-SNE 2", x="t-SNE 1")
 
-gonia_NNMF <- tricolour_tsne(c("Gfra1","Upp1","Nanos1"), predict = "NNMF") +
+gonia_NNMF <- tricolour_tsne(c("Gfra1","Lin28a","Nanos1"), predict = "NNMF") +
   facet_zoom(xlim=c(-4,5), ylim=c(36,44), zoom.size = 2) +
   ggtitle("NNMF Imputed Expression") + labs(y="t-SNE 2", x="t-SNE 1")
 # ccnd2 or gfra1
@@ -985,7 +985,9 @@ hormad_cell_score <- ggplot(tmp, aes(-PseudoTime, Cell_Score, colour=Method)) +
   scale_color_brewer(palette = "Set1", guide=FALSE) +
   geom_smooth(colour="black") +
   theme_bw()
+```
 
+```{r, fig.width=6}
 # Compare Rhox2h Prediction
 
 hormad_gene <- "Rhox2h"
