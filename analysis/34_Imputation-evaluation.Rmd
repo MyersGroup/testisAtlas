@@ -379,6 +379,8 @@ calculateAUCs <- function(predicted_train,
   
   mean(predicted_train==0)
   
+  # Normalise each cell by total
+  # row = cell, col = gene
   predicted_train <- predicted_train/rowSums(predicted_train)
   
   str(predicted_train)
@@ -390,14 +392,18 @@ calculateAUCs <- function(predicted_train,
   raw_data_test <- readRDS(raw_data_test_file)
   raw_data_test <- raw_data_test[rownames(predicted_train), colnames(predicted_train)]
   
+  # row = cell, gene = col
   raw_data_train <- readRDS(raw_data_train_file)
   raw_data_train <- raw_data_train[rownames(predicted_train), colnames(predicted_train)]
   
   
   
   # AUC
+  # randomise ordering, because gene order is from average high to low by default, leaking information
   set.seed(42)
   reorder = sample(1:ncol(raw_data_train))
+  
+  # row = cell, gene = col
   av_exp_order <- names(sort(Matrix::colSums(raw_data_train), T))
   
   predicted_train = predicted_train[,reorder]
@@ -776,6 +782,8 @@ genes_tmp <- c("Zbtb16","Prdm9","Piwil1","Ccna1","Ssxb1","Lrrd1","Gapdhs")
 
 imputation_plot <- imputed_vs_raw(genes_tmp)
 imputation_plot
+
+compare_imputation <- readRDS("../data/plots/compare_imputation.rds")
 
 right_panelA <- plot_grid(plotCellAUC(1, imputed_ranks[c(1:2,6,3:5,7)]) + scale_colour_manual(values=c("#E41A1C", "black",brewer.pal(7, "Set1")[-c(6,1)])),
                          compare_imputation, ncol=2, labels=c("B","C"))
