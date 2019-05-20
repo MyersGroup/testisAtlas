@@ -579,7 +579,7 @@ dev.off()
 
 component_tsne <- plot_grid(plotlist = create_grob_list(fn = function(x) print_tsne(x, point_size = 0.5), input = component_order_dt[!grep("Single",name)][order(-pseudotime_average, na.last = F)]$component_number), nrow=6)
 
-pdf("../results/component_tsne_all.pdf", width=24,height=20)
+pdf("../results/component_tsne_all.pdf", width=25,height=20)
 component_tsne
 dev.off()
 
@@ -740,4 +740,27 @@ ggplot(datat[somatic4==FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
 #   theme(legend.position = "bottom") +
 #   ggtitle("t-SNE - experiment")
 ```
+
+## Define Somatic based on single component assignments
+
+Assign cell a single component based on max abs score
+
+```{r, fig.width=6}
+
+max_component <- data.table(max_component = sapply(1:nrow(results$scores), function(x) which.max(abs(results$scores[x,]))),
+                            cell = rownames(results$scores))
+
+datat <- max_component[datat, on="cell"]
+```
+
+
+```{r, fig.width=6}
+datat[, somatic5 := F]
+datat[max_component %in% c(3,10,11,16,19,21,24,26,32,37,40,45,49) | `mt-Rnr2`>3.5 , somatic5 := T]
+
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic4)) + geom_point(stroke=0) + theme(legend.position = "bottom")
+ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic5)) + geom_point(stroke=0) + theme(legend.position = "bottom")
+
+```
+
 
