@@ -5,10 +5,10 @@ output: html_notebook
 
 
 ```{r}
-old_names <- readRDS("../data/conradV3/V3_SDAmerged_mouse_V3_SDA_dimnames.rds")
+old_names <- readRDS("../data/count_matrices/V3_SDAmerged_mouse_V3_SDA_dimnames.rds")
 
 # backup old dimnames
-saveRDS(old_names, "../data/conradV3/V3_SDAmerged_mouse_V3_SDA_dimnames_archive.rds")
+saveRDS(old_names, "../data/count_matrices/V3_SDAmerged_mouse_V3_SDA_dimnames_archive.rds")
 
 # get ENSEMBL ID for old names
 ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "http://aug2017.archive.ensembl.org", dataset = "mmusculus_gene_ensembl")
@@ -18,7 +18,7 @@ mapTab <- data.table(mapTab)
 mapTab[external_gene_name %in% mapTab[duplicated(external_gene_name)]$external_gene_name]
 
 # get new names from IDs
-ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "http://Dec2017.archive.ensembl.org", dataset = "mmusculus_gene_ensembl")
 mapTab2 <- data.table(getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
 				filter = "ensembl_gene_id", values = mapTab$ensembl_gene_id, mart = ensembl, uniqueRows=TRUE))
 
@@ -54,7 +54,8 @@ tail(tmp$external_gene_name.y)
 tail(old_names[[2]])
 
 old_names[[2]] <- tmp$external_gene_name.y
-saveRDS(old_names, "../data/conradV3/V3_SDAmerged_mouse_V3_SDA_dimnames.rds")
+saveRDS(old_names, "../data/count_matrices/V3_SDAmerged_mouse_V3_SDA_dimnames.rds")
+saveRDS(tmp, "../data/count_matrices/V3_SDAmerged_mouse_V3_SDA_dimnames_ID_mapping.rds")
 ```
 
 ```{r}
