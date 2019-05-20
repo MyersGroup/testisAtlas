@@ -161,6 +161,23 @@ abline(0,1)
 
 
 ## Genes causing infertility in KO
+
+Get MGI IDs
+
+```{r}
+# ID_mapping <- readRDS("../data/count_matrices/V3_SDAmerged_mouse_V3_SDA_dimnames_ID_mapping.rds")
+# 
+# library(biomaRt)
+# ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
+# #data.table(listAttributes(ensembl))[grepl(pattern = "Mouse",x = description)]
+# flagged_map <- getBM(attributes = c('mgi_id','ensembl_gene_id','external_gene_name'),
+# 				filter = "ensembl_gene_id", values = ID_mapping$ensembl_gene_id, mart = ensembl, uniqueRows=TRUE)
+# 
+# mgi_mapping <- data.table(flagged_map)[ID_mapping, on="ensembl_gene_id"]
+
+#infertility_genes2 <- mgi_mapping[flagged, on="mgi_id"][!is.na(external_gene_name)]$external_gene_name
+```
+
 Load genes with infertility phenotype from MGI for the purposes of annotating component gene loadings
 
 ```{bash}
@@ -169,27 +186,26 @@ Load genes with infertility phenotype from MGI for the purposes of annotating co
 curl 'http://www.informatics.jax.org/marker/report.txt?phenotype=MP%3A0001924+OR+MP%3A0001929&mcv=6238161' -o ../data/gene_annotations/MP0001924_OR_MP0001929.tsv
 ```
 
-
 ```{r, fig.width=6}
 # Load Infertility Gene Annotations
 # add underscores to strand_GRCm38	MGI_ID	Feature_Type, and add V10 to last column
 flagged <- fread("../data/gene_annotations/MP0001924_OR_MP0001929.tsv")
 
 names(flagged) <- make.names(names(flagged))
+setnames(flagged, "MGI_ID","mgi_id")
 
 library(biomaRt)
 ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "mmusculus_gene_ensembl")
 #data.table(listAttributes(ensembl))[grepl(pattern = "Mouse",x = description)]
 flagged_map <- getBM(attributes = c('mgi_id','external_gene_name'),
-				filter = "mgi_id", values = flagged$MGI.ID, mart = ensembl, uniqueRows=TRUE)
-
+				filter = "mgi_id", values = flagged$mgi_id, mart = ensembl, uniqueRows=TRUE)
 infertility_genes <- data.table(flagged_map)[external_gene_name %in% colnames(results$loadings[[1]])]$external_gene_name
 
 # also same result to just do this but in future MGI symbol may not equal our symbols
 #infertility_genes <- flagged$Symbol[flagged$Symbol %in% colnames(results$loadings[[1]])]
 str(infertility_genes)
 
-NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,infertility_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Infertility Genes", scale="row")
+NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,infertility_genes]), breaks=0, Colv = NA, cexRow = 0.7,  main="In Which Components Are Infertility Genes", scale="row")
 ```
 
 
