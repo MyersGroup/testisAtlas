@@ -212,11 +212,11 @@ aheatmap(t(results$loadings[[1]][component_order,rfx2_genes]), breaks=0, Colv = 
 ```{r}
 soh_elife <- readxl::read_xlsx("../data/previous_studies/Kojima/elife-43738-supp3-v1.xlsx", skip = 3)
 
-soh_elife$..1[6] <- "4933427D06Rik"
+soh_elife$...1[6] <- "4933427D06Rik"
 
 #Reg2, Majin, & Pramel1 not detected
 
-soh_elife_genes <- soh_elife$..1[soh_elife$..1 %in% colnames(results$loadings[[1]])]
+soh_elife_genes <- soh_elife$...1[soh_elife$...1 %in% colnames(results$loadings[[1]])]
 soh_elife_enrich <- component_enrichment(soh_elife_genes, threshold = 500)
 
 manhatten_plot(soh_elife_enrich[!component %in% gsub("V","",half_exclusion_comps)])
