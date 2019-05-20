@@ -40,7 +40,7 @@ abline(v=500, col="blue", lwd=3)
 # For best matches, find probability of given gene regulated
 
 ```{r}
-best_denovo <- readRDS("../data/best_denovo_V3.rds")
+best_denovo <- readRDS("../data/motifs/best_denovo_V3.rds")
 motif_matches <- readRDS("../data/motifs/motif_matches_v3.rds")
 
 # Load Regprobs
@@ -385,15 +385,16 @@ dt1 <- data.table("Max(P(CpG)):" = hascpg[motif_order],
 #,"Meth Sensitive?:" = meth_sens[motif_order]
 
 ha1 = HeatmapAnnotation(df = dt1,
+                        simple_anno_size = unit(1.5, "mm"),
+                        show_annotation_name = FALSE,
     col = list("Has CpG?:"=c("Yes"="purple","No"="grey"),
                "Meth Sensitive?:"=c("Yes"="dark green","No"="grey","NA"="grey28"),
                "Max(P(CpG))>0.3:"=c("TRUE"="purple","FALSE"="grey"),
                "Max(P(CpG)):"=circlize::colorRamp2(c(min(hascpg), max(hascpg)), c("white", "red"))), #colorRamp2(seq(0, 1, by = 0.25), viridisLite::viridis(5, direction = -1))
-               annotation_legend_param = list(grid_height = unit(3, "mm"),
+               annotation_legend_param = list(legend_direction="horizontal",
+                                              ncol=2,
                                               labels_gp = gpar(fontsize = 7),
-                                              legend_direction="horizontal",
-                                              ncol = 3,
-                                              title_position = "lefttop")
+                                              title_position = "leftcenter")
 )
 ```
 
@@ -412,8 +413,7 @@ Heatmap(vvv3,
         top_annotation = ha1,
         heatmap_legend_param = list(legend_direction = "horizontal", title = "t-value"),
         row_names_gp = gpar(fontsize = 4),
-        show_heatmap_legend = T,
-        top_annotation_height = unit(3, "mm")),
+        show_heatmap_legend = T),
 split = rep(c("  Somatic","", " Diploid", "Haploid"), c(18,4,32,18)),
 row_dend_gp = gpar(fontsize = 3),
 annotation_legend_side = "bottom",
@@ -442,7 +442,7 @@ rownames(vvv3) <- paste(rownames(vvv3), component_names[-half_exclusions])
         row_names_gp = gpar(fontsize = 3),
         column_names_gp = gpar(fontsize = 3),
         show_heatmap_legend = T),
-    split = rep(c("  Somatic", " Diploid", "Haploid"), c(18,32,18)),
+    split = rep(c("  Somatic","", " Diploid", "Haploid"), c(18,4,32,18)),
     heatmap_legend_side = "bottom")
   dev.off()
     
