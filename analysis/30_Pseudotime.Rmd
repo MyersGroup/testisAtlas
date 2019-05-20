@@ -185,7 +185,7 @@ tmp <- merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(2,4,6,
 
 tmp[as.integer(Component) %in% c(4,6,8,13,16,19,25,30), value := value*(-1)]
 
-tmp[, cell2 := factor(cell, levels = merge_sda3_melt[order(-PseudoTime)][Component=="V5 Leptotene"]$cell)]
+tmp[, cell2 := factor(cell, levels = merge_sda3_melt[order(-PseudoTime)][Component=="V5 (pre)Leptotene"]$cell)]
 tmp[,value_pos := max(c(0,value)),by=.(cell,Component)]
 
 #component_colours <- c(RColorBrewer::brewer.pal(9,"Set1"),"skyblue", "black","white")
