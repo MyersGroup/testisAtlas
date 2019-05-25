@@ -803,3 +803,14 @@ dev.off()
 #pdf(width = 4250, height = 2500, res = 300, file = "../results/imputation/imputationAUC2.png")
 ```
 
+
+```{r}
+
+heatmapgrob <- readRDS("../data/plots/heatmapgrob.rds")
+
+right <- plot_grid(heatmapgrob, plot_grid(NULL, lib_size_plot),ncol=1, rel_heights = c(3,1), labels = c("B","C"))
+
+pdf("../results/Imputation_Supp.pdf", height = 12, width=15)
+plot_grid(ex_imputed, right, ncol=2, rel_widths = c(1,3), labels = c("A",""))
+dev.off()
+```
