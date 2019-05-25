@@ -26,6 +26,7 @@ principal_curves[["df_8_unbootstrapped"]] <- princurve::principal.curve(as.matri
 saveRDS(principal_curves, "../data/principal_curves.rds")
 ```
 
+
 ```{r, fig.width=6}
 principal_curves <- readRDS("../data/principal_curves.rds")
 
@@ -92,6 +93,9 @@ pdf("../results/scores_heatmap.pdf", width = 12, height = 9)
 draw(Heatmap(t(tmp[,!grepl("Single Cell",colnames(tmp))]),
         col = log_colour_scale(tmp, scale = 0.5),
         cluster_columns = F, cluster_rows = F,
+        row_names_max_width = unit(10, "npc"),
+        row_gap = unit(0, "mm"), border = "grey",
+        row_split = c(1:45),
         heatmap_legend_param = list(title = "Cell Score", legend_direction="horizontal")),
 heatmap_legend_side="bottom")
 dev.off()
@@ -162,7 +166,7 @@ scores_pseudotime
 
 scores_pseudotime <- ggplot(merge_sda3_melt[Component %in% levels(merge_sda3_melt$Component)[c(2, 4, 8, 10,12,13, 16, 19, 21, 24, 25, 28)]], aes(-PseudoTime, value)) +
   geom_point(alpha=0.1, size=0.2, aes(colour=Component)) +
-  geom_smooth(colour="black", size=0.4, method = "gam", formula = y ~ s(x, bs = "ad", k=300)) +
+  geom_smooth(colour="black", size=0.4, method = "gam", formula = y ~ s(x, bs = "ad", k=250)) +
   ylab("Cell Component Score") +
   xlab("Pseudotime") +
   facet_wrap(~Component, scales="free_y", ncol=4) +
