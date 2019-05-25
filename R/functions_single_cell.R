@@ -1419,7 +1419,7 @@ rotate_SDA <- function(X=results9_WT, reference=results1){
   colnames(rot_9WT_scoresrot) <- paste0(rownames(X$loadings[[1]]),"rot")
   str(rot_9WT_scoresrot)
   
-  row_9WT_list <- list(loadings=list(t(rot_9WT$Yrot)), scores=rot_9WT_scoresrot)  
+  row_9WT_list <- list(loadings=list(t(rot_9WT$Yrot)), scores=rot_9WT_scoresrot, rotation=rot_9WT$rotation)  
   
   return(row_9WT_list)
 }
