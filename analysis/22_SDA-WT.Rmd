@@ -3,6 +3,14 @@ title: "WT SDA"
 output: html_notebook
 ---
 
+```{r}
+detach("package:testisAtlas", unload=TRUE)
+detach("package:ComplexHeatmap", unload=TRUE)
+devtools::install_github("jokergoo/ComplexHeatmap", ref="5de60f87b")
+pkgload::load_all()
+```
+
+
 This is running SDA only on WT cell (no Knock Outs). In general, we find many component are very similar across the different SDA decompositions.
 
 ```{r}
@@ -315,11 +323,11 @@ compare_predictions("Aard")
 Indeed a linear combination of WT_49, WT_42 and WT_24 gives a new correlation of 93%
 
 ```{r}
-combolm42 <- lm(results1$loadings[[1]]["Mix42 Pachytene",] ~ t(results9_WT$loadings[[1]]))
+combolm42 <- lm(results1$loadings[[1]]["Mix42 Pachytene",common_genes] ~ t(results9_WT$loadings[[1]][,common_genes]))
 summary(combolm42)
-plot(predict.lm(combolm42), results1$loadings[[1]]["Mix42 Pachytene",], pch=".")
-cor(predict.lm(combolm42), results1$loadings[[1]]["Mix42 Pachytene",])
-cor(-results9_WT$loadings[[1]]["WT_24",]*0.911 + results9_WT$loadings[[1]]["WT_49",]*0.875 + results9_WT$loadings[[1]]["WT_42",]*0.629, results1$loadings[[1]]["Mix42 Pachytene",])
+plot(predict.lm(combolm42), results1$loadings[[1]]["Mix42 Pachytene",common_genes], pch=".")
+cor(predict.lm(combolm42), results1$loadings[[1]]["Mix42 Pachytene",common_genes])
+cor(-results9_WT$loadings[[1]]["WT_24",common_genes]*0.911 + results9_WT$loadings[[1]]["WT_49",common_genes]*0.875 + results9_WT$loadings[[1]]["WT_42",common_genes]*0.629, results1$loadings[[1]]["Mix42 Pachytene",common_genes])
 
 
 ```
@@ -334,13 +342,13 @@ Similar result, 90% correlation.
 
 row_9WT_list <- rotate_SDA(results9_WT, results1)
 
-tmp <- which.max(abs(cor(rot_9WT$Yrot,results1$loadings[[1]]["Mix42 Pachytene",])))
-plot(rot_9WT$Yrot[,42],results1$loadings[[1]]["Mix42 Pachytene",], pch=".")
-cor(rot_9WT$Yrot[,42],results1$loadings[[1]]["Mix42 Pachytene",])
+which.max(abs(cor(t(row_9WT_list$loadings[[1]]),results1$loadings[[1]]["Mix42 Pachytene",common_genes])))
+plot(t(row_9WT_list$loadings[[1]])[,42],results1$loadings[[1]]["Mix42 Pachytene",common_genes], pch=".")
+cor(t(row_9WT_list$loadings[[1]])[,42],results1$loadings[[1]]["Mix42 Pachytene",common_genes])
 
-tmp <- which.max(abs(cor(rot_9WT$Yrot,results1$loadings[[1]]["Mix9 Respiration",])))
-plot(rot_9WT$Yrot[,9],results1$loadings[[1]]["Mix9 Respiration",], pch=".")
-cor(rot_9WT$Yrot[,9],results1$loadings[[1]]["Mix9 Respiration",])
+which.max(abs(cor(t(row_9WT_list$loadings[[1]]),results1$loadings[[1]]["Mix9 Respiration",common_genes])))
+plot(t(row_9WT_list$loadings[[1]])[,9],results1$loadings[[1]]["Mix9 Respiration",common_genes], pch=".")
+cor(t(row_9WT_list$loadings[[1]])[,9],results1$loadings[[1]]["Mix9 Respiration",common_genes])
 ```
 
 
@@ -407,7 +415,7 @@ dev.off()
 "Given two sets of factor loadings, report their degree of congruence (vector cosine). Although first reported by Burt (1948), this is frequently known as the Tucker index of factor congruence."
 
 ```{r, fig.width=8, fig.height=8}
-cong_9WT <- psych::factor.congruence(rot_9WT$Yrot, rot_9WT$X)
+cong_9WT <- psych::factor.congruence(t(row_9WT_list$loadings[[1]]), t(results1$loadings[[1]][,common_genes]))
 cong_9WT <- sort_matrix(cong_9WT, sort(apply(abs(cong_9WT), 2, max), decreasing = T))
 Heatmap(cong_9WT,
         cluster_rows = FALSE, cluster_columns = FALSE)
@@ -419,7 +427,7 @@ The rotation matrix gives a read out of which components have been split into wh
 For example Mix42 Pachytene (as we saw previously), is a mixture of WT 42, 24, and 49
 
 ```{r, fig.width=8, fig.height=8}
-Heatmap(sort_matrix(rot_9WT$rotation, sort(apply(abs(rot_9WT$rotation), 2, max), decreasing = T)),
+Heatmap(sort_matrix(row_9WT_list$rotation, sort(apply(abs(row_9WT_list$rotation), 2, max), decreasing = T)),
         cluster_rows = FALSE, cluster_columns = FALSE)
 ```
 
@@ -431,9 +439,9 @@ But the rotation make it non sparse
 Could threshold the rotation matrix
 
 ```{r}
-plot(sort(rot_9WT$rotation)); abline(h=0); abline(h=1e-2, col="red"); abline(h=1e-1, col="blue"); abline(h=0.2, col="blue")
+plot(sort(row_9WT_list$rotation)); abline(h=0); abline(h=1e-1, col="red"); abline(h=3.5e-1, col="blue")
 
-reg_rot <- rot_9WT$rotation
+reg_rot <- row_9WT_list$rotation
 reg_rot[abs(reg_rot)<3.5e-1] <- 0
 
 rot_9WTsparse <- t(results9_WT$loadings[[1]][,common_genes]) %*% reg_rot
@@ -445,7 +453,7 @@ rot_9WTsparse_scoresrot <- results9_WT$scores %*% reg_rot
 #colnames(rot_9WT_scoresrot) <- paste0("WT_rot",1:50)
 colnames(rot_9WTsparse_scoresrot) <- paste0("WT_rot",1:50)
 
-row_9WTb_list <- list(loadings = list(t(rot_9WTsparse + rnorm(prod(dim(rot_9WTsparse)), 0, 0.00001))),
+rot_9WTb_list <- list(loadings = list(t(rot_9WTsparse + rnorm(prod(dim(rot_9WTsparse)), 0, 0.00001))),
                       scores = rot_9WTsparse_scoresrot + rnorm(prod(dim(rot_9WTsparse_scoresrot)), 0, 0.00001))
 
 
@@ -462,8 +470,8 @@ row_9WTb_list <- list(loadings = list(t(rot_9WTsparse + rnorm(prod(dim(rot_9WTsp
 threshold = exp(seq(-10,0,0.1))
 
 loading_sparsity <- data.table(threshold,
-                               t(sapply(threshold, function(x) c("Rotated_WT_SDA"=mean(rot_9WT$Yrot/max(abs(rot_9WT$Yrot)) < x),
-                                                                 "Rotated_WT_SDA_reg"=mean(rot_9WTb/max(abs(rot_9WTb)) < x),
+                               t(sapply(threshold, function(x) c("Rotated_WT_SDA"=mean(t(row_9WT_list$loadings[[1]])/max(abs(t(row_9WT_list$loadings[[1]]))) < x),
+                                                                 "Rotated_WT_SDA_reg"=mean(rot_9WTb_list$loadings[[1]]/max(abs(rot_9WTb_list$loadings[[1]])) < x),
                                                                  "Mix_SDA"=mean(results$loadings[[1]]/max(abs(results$loadings[[1]])) < x),
                                                                  "WT_SDA"=mean(results9_WT$loadings[[1]]/max(abs(results9_WT$loadings[[1]])) < x)))))
 
@@ -497,8 +505,8 @@ After thresholding we get a much cleaner read out
 
 ```{r, fig.width=8, fig.height=8}
 pdf("../results/WT/rotation_matrix.pdf", width = 10, height = 8)
-Heatmap(sort_matrix(rot_9WT$rotation, sort(apply(abs(rot_9WT$rotation), 2, max), decreasing = T)),
-        col=log_colour_scale(rot_9WT$rotation, scale = 0.15),
+Heatmap(sort_matrix(row_9WT_list$rotation, sort(apply(abs(row_9WT_list$rotation), 2, max), decreasing = T)),
+        col=log_colour_scale(row_9WT_list$rotation, scale = 0.15),
         cluster_rows = FALSE, cluster_columns = FALSE)
 dev.off()
 ```
@@ -511,6 +519,12 @@ Heatmap(sort_matrix(reg_rot, sort(apply(abs(reg_rot), 2, max), decreasing = T)),
         cluster_rows = FALSE, cluster_columns = FALSE)
 dev.off()
 ```
+
+```{r}
+table(rowSums(reg_rot!=0))
+```
+
+9 missing, 21 same, 20 split
 
 And similar correlations
 
@@ -638,11 +652,11 @@ dev.off()
 ```
 
 ```{r, fig.height=3.5, fig.width=3.5}
-mix_wt <- data.table(results1$loadings[[1]]["Mix31 Undifferentiated Spermatogonia",common_genes],
-                                 rot_9WT$Yrot[,"WT_rot31"],
+mix_wt <- data.table(results1$loadings[[1]]["Mix31 Spermatogonial Stem Cells",common_genes],
+                                 t(row_9WT_list$loadings[[1]])[,"WT_31rot"],
                      results9_WT$loadings[[1]]["WT_7",common_genes],
-                     rot_9WTb[,"WT_rot31"],
-                                 gene=names(rot_9WT$Yrot[,"WT_rot5"]))
+                     row_9WTb_list$loadings[[1]]["WT_rot31",],
+                                 gene=names(t(row_9WT_list$loadings[[1]])[,"WT_5rot"]))
 
 pdf("../results/WT/UdifSpg_gene_scatterplot.pdf")
 ggplot(mix_wt, aes(V1, V4, label=gene)) +
