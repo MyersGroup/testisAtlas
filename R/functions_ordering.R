@@ -1,7 +1,7 @@
 
 #' Order Components by PseudoTime
 #'
-#' @param component string; Component name as in datat
+#' @param component string; Component name as in cell_data
 #' @param cell_metadata data.table with columns cell, PseudoTime, and components V1, V2 etc.
 #' @param threshold numeric; value below which cells will not count towards the ordering of the component
 #'
@@ -12,7 +12,7 @@
 #' @return weighted mean of pseudotime for a given component
 #' @export
 
-ptorder <- function(component, cell_metadata=datat, threshold=2, side="both"){
+ptorder <- function(component, cell_metadata=cell_data, threshold=2, side="both"){
   tmp <- cell_metadata[!is.na(PseudoTime)][abs(get(component)) > threshold][,.(PseudoTime, get(component))]
   
   # if(side=="P"){

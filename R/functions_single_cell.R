@@ -41,7 +41,7 @@ rotate_matrix <- function(object, angle, rotation=FALSE){
 #'
 #' @export
 #' @import ggplot2
-print_raw_tsne <- function(gene, expression_matrix=data, cell_metadata=datat){
+print_raw_tsne <- function(gene, expression_matrix=data, cell_metadata=cell_data){
   ggplot(merge(cell_metadata, expression_dt(gene, expression_matrix)), aes(Tsne1, Tsne2, color=get(gene))) +
     geom_point(size=0.2) +
     scale_color_viridis(direction=-1) +
@@ -55,13 +55,13 @@ print_raw_tsne <- function(gene, expression_matrix=data, cell_metadata=datat){
 #' Print PCA
 #'
 #' @param cell_metadata data.table with columns Tsne1, Tsne2, and PCs
-#' @param pc string; name of principal compopnent (column of datat), of which cell score values will be used to colour points (cells)
+#' @param pc string; name of principal compopnent (column of cell_data), of which cell score values will be used to colour points (cells)
 #'
 #' @return ggplot2 object
 #'
 #' @export
 #' @import ggplot2
-print_pca <- function(cell_metadata=datat, pc){
+print_pca <- function(cell_metadata=cell_data, pc){
   ggplot(cell_metadata, aes(Tsne1, Tsne2, color=get(pc))) +
     geom_point(size=0.2) +
     scale_colour_distiller(palette="YlOrRd", direction=1) +
@@ -74,9 +74,9 @@ print_pca <- function(cell_metadata=datat, pc){
 
 #' Clustered heatmap (partially deprecated)
 #'
-#' @param cell_metadata data.table; datat, with subset of gene columns
+#' @param cell_metadata data.table; cell_data, with subset of gene columns
 #' @param name string; title
-#' @param annotation.col data.table; subset of datat, passed to annCol of aheatmap
+#' @param annotation.col data.table; subset of cell_data, passed to annCol of aheatmap
 #' @param colv_order passed to Colv of aheatmap
 #' @param col_lab passed to labCol of aheatmap
 #' @param row_text_size passed to cexRow of aheatmap
@@ -87,7 +87,7 @@ print_pca <- function(cell_metadata=datat, pc){
 #'
 #' @export
 #' @import NMF
-clustered_heatmap <- function(cell_metadata=datat, name, annotation.col=NULL, colv_order=NULL, col_lab=NULL, row_text_size=0.5){
+clustered_heatmap <- function(cell_metadata=cell_data, name, annotation.col=NULL, colv_order=NULL, col_lab=NULL, row_text_size=0.5){
   
   cols3 <- colorRampPalette(brewer.pal(9, "YlOrRd"))(100)
   #[, !c("cell", "cell_id"), with = FALSE]
@@ -123,7 +123,7 @@ clustered_heatmap <- function(cell_metadata=datat, name, annotation.col=NULL, co
 #' 
 #' @import ggplot2 data.table RColorBrewer
 
-plot_cell_scores <- function(component="V25", point_size=0.6, cell_metadata=datat){
+plot_cell_scores <- function(component="V25", point_size=0.6, cell_metadata=cell_data){
   tmp <- cell_metadata[,.(group,get(component))]
   tmp[group=="mj",group:="WT"]
   setnames(tmp, c("group",component))
@@ -171,7 +171,7 @@ load_curve_data <- function(princurves=principal_curves, principal_curve="df_9")
 #' Plot tSNE
 #'
 #' @param i ; either a numeric value corresponding to the component to plot, a gene name,
-#' or the name of a variable stored in datat such as "group", "PseudoTime", or "library_size"
+#' or the name of a variable stored in cell_data such as "group", "PseudoTime", or "library_size"
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param cell_metadata data.table with columns cell, Tsne1_QC1, Tsne2_QC2, and components V1, V2 etc.
 #' @param expression_matrix cell by gene matrix of expression values
@@ -195,10 +195,10 @@ load_curve_data <- function(princurves=principal_curves, principal_curve="df_9")
 #' 
 #' @import ggplot2 data.table viridis ggnewscale
 
-print_tsne <- function(i, factorisation=results, cell_metadata=datat, jitter=0, colourscale="diverging", expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
+print_tsne <- function(i, factorisation=results, cell_metadata=cell_data, jitter=0, colourscale="diverging", expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
   
   
-  if(i %in% colnames(cell_metadata)){ # plot feature in datat
+  if(i %in% colnames(cell_metadata)){ # plot feature in cell_data
     
     tmp <- cell_metadata[,c(i,dim1, dim2),with=FALSE]
     names(tmp)[1] <- "feature"
@@ -367,7 +367,7 @@ ternaryColours <- function(df, variables, shift=FALSE){
 #' 
 #' @import ggplot2 data.table
 
-tricolour_tsne <- function(genes, returndf=F, predict="SDA", cell_metadata=datat, ptsize=1.5, jitter=0.25){
+tricolour_tsne <- function(genes, returndf=F, predict="SDA", cell_metadata=cell_data, ptsize=1.5, jitter=0.25){
   
   if(predict=="SDA"){
     cell_metadata <- merge(cell_metadata, sda_predict(genes))
@@ -536,7 +536,7 @@ create_grob_list <- function(fn=print_marker2, input=hist_subset){
 #' 
 #' @import data.table
 
-gene_expression_pseudotime <- function(genes, factorisation=results, cell_metadata=datat){
+gene_expression_pseudotime <- function(genes, factorisation=results, cell_metadata=cell_data){
   tmp <- merge(cell_metadata[somatic4==FALSE, c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), with=FALSE],
                sda_predict(genes, factorisation, name_extension = ""))
   tmp <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), variable.name = "Gene")
@@ -564,7 +564,7 @@ gene_expression_pseudotime <- function(genes, factorisation=results, cell_metada
 #'
 #' @export
 #' @import ggplot2
-plot_pseudotime_expression_panel <- function(genes, factorisation=results, cell_metadata=datat, ncol=7, title="Histone Genes", gam_k=5, point_size=0.2, highlight_reigon=NULL){
+plot_pseudotime_expression_panel <- function(genes, factorisation=results, cell_metadata=cell_data, ncol=7, title="Histone Genes", gam_k=5, point_size=0.2, highlight_reigon=NULL){
   
   if(mode(genes)=="character"){
     data <- gene_expression_pseudotime(genes, factorisation, cell_metadata)
@@ -608,8 +608,8 @@ plot_pseudotime_expression_panel <- function(genes, factorisation=results, cell_
 #' @export
 #' @import data.table
 #' 
-melt_genes <- function(genes, cell_metadata=datat, expression_matrix=data, predict=FALSE, factorisation=results){
-  # generate melted version of datat on the fly for subset of genes
+melt_genes <- function(genes, cell_metadata=cell_data, expression_matrix=data, predict=FALSE, factorisation=results){
+  # generate melted version of cell_data on the fly for subset of genes
   # rather than keeping two 7Gb data.tables in memory
   #saveRDS(merge_sda3_melt2, "PseudoTime_Shiny/data_V3.rds")
   
@@ -785,7 +785,7 @@ go_volcano_plot <- function(data=GO_data, component="V5N", top_n=30, label_size=
 #' 
 #' @import ggplot2 data.table cowplot
 
-imputed_vs_raw <- function(genes, cell_metadata=datat, factorisation=results, expression_matrix=data, facet=T){
+imputed_vs_raw <- function(genes, cell_metadata=cell_data, factorisation=results, expression_matrix=data, facet=T){
   library(scales)
   
   tmp <- merge(cell_metadata[somatic4==FALSE], expression_dt(genes, expression_matrix))[,c(genes,"cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
@@ -877,7 +877,7 @@ asinh_trans <- function() {
 #' 
 #' @import data.table
 
-match_cells2 <- function(test_groups=NULL, cell_subset=NULL, cell_metadata=datat, swap_groups=F){
+match_cells2 <- function(test_groups=NULL, cell_subset=NULL, cell_metadata=cell_data, swap_groups=F){
   
   if(!is.null(cell_subset)){
     cell_metadata <- cell_metadata[cell %in% cell_subset]
