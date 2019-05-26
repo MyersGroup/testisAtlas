@@ -117,8 +117,8 @@ head(gwas_genes_rr_enrich[!component %in% gsub("V","",half_exclusion_comps)][ord
 
 ```{r, fig.width=6}
 
-tmp <- data.table(loading = sort(-results$loadings[[1]][5,],T),
-                  gene = names(sort(-results$loadings[[1]][5,],T)))
+tmp <- data.table(loading = sort(-SDAresults$loadings[[1]][5,],T),
+                  gene = names(sort(-SDAresults$loadings[[1]][5,],T)))
 tmp$rank <- seq_along(tmp$loading)
 tmp[gene %in% gwas_genes, KO := "Recombination GWAS hits"]
 
@@ -137,7 +137,7 @@ c5_rug_plot
 ## Loadings V5
 
 ```{r, fig.width=6}
-v5_loadings_plot <- genome_loadings(results$loadings[[1]][5,], label_both = FALSE, max.items = 20, label.size = 3.5,
+v5_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][5,], label_both = FALSE, max.items = 20, label.size = 3.5,
                                      gene_locations = rna_locations, hide_unknown = T,
                                      highlight_genes = gwas_genes,label_genes = c("Smc1b","Gm960","Hfm1","Sycp2","Meioc","Meiob","Sycp3")) +
   ylab("Gene Loadings (Component 5)") +
@@ -206,7 +206,7 @@ dev.off()
 # Sparsity by component
 
 ```{r, fig.height=4}
-ggplot(data.table(Sparsity=apply(results$pips[[1]], 1, function(x) mean(x<0.5)),
+ggplot(data.table(Sparsity=apply(SDAresults$pips[[1]], 1, function(x) mean(x<0.5)),
            Component=factor(names(sort(component_labels)), levels=unique(names(sort(component_labels))[component_order_all]))),
        aes(Component, Sparsity)) +
   geom_point() +
@@ -219,7 +219,7 @@ ggplot(data.table(Sparsity=apply(results$pips[[1]], 1, function(x) mean(x<0.5)),
 ## 9A Hormad1 Scores & Loadings
 
 ```{r}
-v38_loadings_plot <- genome_loadings(results$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations) +
+v38_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations) +
   ylab("Gene Loading (Component 38)")
 ```
 
@@ -249,7 +249,7 @@ dev.off()
 
 ```{r}
 
-v25_loadings_plot <- genome_loadings(results$loadings[[1]][25,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations) +
+v25_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][25,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations) +
   ylab("Gene Loading (Component 25)") + scale_y_reverse()
 
 ```
@@ -310,7 +310,7 @@ mean(ernst$total_counts)
 ## Hormad
 
 ```{r}
-tmp <- data.table(results$scores, cell=rownames(results$scores))
+tmp <- data.table(SDAresults$scores, cell=rownames(SDAresults$scores))
 tmp$Hormad <- grepl("Hormad",tmp$cell)
 tmp$WT <- grepl("WT",tmp$cell)
 
@@ -371,7 +371,7 @@ ggplot(tmp, aes(V22, colour=MiSeq)) +
 
 
 ```{r, fig.width=6}
-v22_loadings_plot <- genome_loadings(results$loadings[[1]][22,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
+v22_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][22,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
   ylab("Gene Loading (Component 22)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3))
@@ -392,7 +392,7 @@ v12_cell_scores <- ggplot(tmp,aes(V12, experiment, colour=grepl("Hormad",experim
   theme(axis.title.y=element_blank()) +
   xlab(paste0("Component ","V12","\n Cell Score"))
 
-v12_loadings_plot <- genome_loadings(results$loadings[[1]][12,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
+v12_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][12,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
   ylab("Gene Loading (Component 12)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3))
@@ -403,12 +403,12 @@ v12_loadings_plot <- genome_loadings(results$loadings[[1]][12,], label_both = FA
 ```{r}
 #GO_data <- readRDS("../data/GO_enrichment_dt.rds")
 
-# unique(ETC_genes$"MGI Gene/Marker ID")[unique(ETC_genes$"MGI Gene/Marker ID") %in% colnames(results$loadings[[1]])]
+# unique(ETC_genes$"MGI Gene/Marker ID")[unique(ETC_genes$"MGI Gene/Marker ID") %in% colnames(SDAresults$loadings[[1]])]
 # 
 # ETC_genes <- fread("../data/GO_term_summary_20190318_211630.txt")
 # unique(ETC_genes$"MGI Gene/Marker ID")
 
-etc_genes <- grep("Uqc|Cox|Ndu",colnames(results$loadings[[1]]),value = T)
+etc_genes <- grep("Uqc|Cox|Ndu",colnames(SDAresults$loadings[[1]]),value = T)
 etc_genes <- grep("-ps",etc_genes, invert = T,value = T)
 
 library(biomaRt)
@@ -424,7 +424,7 @@ etc_enrich <- component_enrichment(etc_genes_clean)
 etc_enrich_plot <- manhatten_plot(etc_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=1, legend_position=c(0.25,0.6), repel_force = 10) + ggtitle("Enrichment of electron transport\n chain proton pump genes")
 
 set.seed(142)
-v9_loadings_plot <- genome_loadings(results$loadings[[1]][9,], label_both = FALSE, label.repel = 2,  max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = etc_genes_clean) +
+v9_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][9,], label_both = FALSE, label.repel = 2,  max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = etc_genes_clean) +
   ylab("Gene Loading (Component 9)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3)) + expand_limits(y=-0.3)
@@ -571,7 +571,7 @@ mouse_ages <- data.table(
 4 * month + 2)
 )
 
-tmp2 <- data.table(results$scores, cell=rownames(results$scores))
+tmp2 <- data.table(SDAresults$scores, cell=rownames(SDAresults$scores))
 tmp2 <- melt(tmp2, id="cell")
 tmp2$experiment <- unlist(strsplit(tmp$cell,split = "\\."))[c(F,T)]
 
@@ -602,11 +602,11 @@ for(i in 1:50){
 sox30 <- readxl::read_xlsx("~/Downloads/TableS1.xlsx", sheet = "s1.4", range = "D2:D62")
 str(sox30$`Class 2 target genes (60)`)
 
-sox30_subset <- sox30$`Class 2 target genes (60)`[sox30$`Class 2 target genes (60)` %in% colnames(results$loadings[[1]])]
+sox30_subset <- sox30$`Class 2 target genes (60)`[sox30$`Class 2 target genes (60)` %in% colnames(SDAresults$loadings[[1]])]
 
 sox30DEG <- readxl::read_xlsx("~/Downloads/TableS1.xlsx", sheet = "s1.1", skip = 1)
 sox30DEG <- data.table(sox30DEG)[order(p_value)][1:500]$Genes
-sox30DEG <- sox30DEG[sox30DEG %in% colnames(results$loadings[[1]])]
+sox30DEG <- sox30DEG[sox30DEG %in% colnames(SDAresults$loadings[[1]])]
 sox30_enrich <- component_enrichment(sox30_subset)
 sox30DEG_enrich <- component_enrichment(sox30DEG)
 
@@ -695,7 +695,7 @@ C11_MQ_plot <- readRDS("../data/plots/C11_MQ_plot.rds")
 ## 4S3 G Leydig Cells
 
 ```{r, fig.width=6}
-c40_loadings_plot <- genome_loadings(results$loadings[[1]][40,], label_both = FALSE, max.items = 10, label.size = 4,
+c40_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][40,], label_both = FALSE, max.items = 10, label.size = 4,
                                      gene_locations = rna_locations, hide_unknown = T,
                                      highlight_genes = c("Cyp17a1","Hsd3b6","Star","Cyp11a1","Hsd17b3"),
                                      label_genes = c("Cyp17a1","Hsd3b6","Star","Cyp11a1","Hsd17b3")) +
@@ -726,7 +726,7 @@ dev.off()
 # For talks
 
 ```{r, fig.width=6}
-loadings_plot <- genome_loadings(results$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T) +
+loadings_plot <- genome_loadings(SDAresults$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T) +
   ylab("Gene Loadings (Component 38)") + theme_minimal() + theme(legend.position = "none")
 
 loadings_plot
@@ -798,7 +798,7 @@ dev.off()
 
 ```{r}
 devtools::load_all("~/Dropbox/Github/SDAtools/")
-genome_loadings(results$loadings[[1]][5,], label_both = FALSE, max.items = 100, label.size = 4, hide_unknown = T, gene_locations = rna_locations) + xlim(0,2e8)
+genome_loadings(SDAresults$loadings[[1]][5,], label_both = FALSE, max.items = 100, label.size = 4, hide_unknown = T, gene_locations = rna_locations) + xlim(0,2e8)
 ```
 
 
@@ -813,7 +813,7 @@ Enriched in 5N
 library(readxl)
 fetal_ovary <- read_excel("../data/previous_studies/Soh/journal.pgen.1005531.s008.XLSX", sheet = 1)
 
-union_ovary <- as.character(fetal_ovary$Row.names[fetal_ovary$Row.names %in% colnames(results$loadings[[1]])])
+union_ovary <- as.character(fetal_ovary$Row.names[fetal_ovary$Row.names %in% colnames(SDAresults$loadings[[1]])])
 
 str(union_ovary)
 

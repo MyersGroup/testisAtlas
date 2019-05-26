@@ -27,8 +27,8 @@ Notable hits in top 25 genes include: Apoe, Tyrobp, Trem2, and Ms4a7 (Part of MS
 
 ```{r, fig.width=6}
 devtools::load_all("~/Dropbox/Github/SDAtools/")
-#rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
-genome_loadings(results$loadings[[1]][11,], label_both = FALSE, max.items = 25, label.size = 4, gene_locations = rna_locations) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+#rna_locations <- load_gene_locations(colnames(SDAresults$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
+genome_loadings(SDAresults$loadings[[1]][11,], label_both = FALSE, max.items = 25, label.size = 4, gene_locations = rna_locations) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
 ```
 
 
@@ -66,19 +66,19 @@ There are 20 GWAS hits which have loadings. For component 11 (macrophages), 8 of
 AD_genes <- read.table("../data/previous_studies/alzhemiers/alzheimers_genes.txt", stringsAsFactors = F)
 AD_genes
 #DGS2?, APP. PSEN1, TAU, PLD3 - unconfirmed, Pld4...
-str(AD_genes$V2[!AD_genes$V2 %in% names(results$loadings[[1]][11,])])
-AD_genes <- AD_genes$V2[AD_genes$V2 %in% names(results$loadings[[1]][11,])]
+str(AD_genes$V2[!AD_genes$V2 %in% names(SDAresults$loadings[[1]][11,])])
+AD_genes <- AD_genes$V2[AD_genes$V2 %in% names(SDAresults$loadings[[1]][11,])]
 
 #AD_genes <- c("Apoe","Trem2","Bin1","Ms4a6d","Tyrobp","Cd33","Mef2c","Spi1","H2-Eb1","Clu","Picalm","Abca7","Cd2ap","Zcwpw1","Nme8","Inpp5d","Sorl1","Rin3","Ptk2b")
 
 str(AD_genes)
 
-tmp <- rank(-results$loadings[[1]][11,],F)
-names(tmp) <- names(results$loadings[[1]][11,])
+tmp <- rank(-SDAresults$loadings[[1]][11,],F)
+names(tmp) <- names(SDAresults$loadings[[1]][11,])
 
 data.table(rank=tmp[AD_genes], gene=AD_genes)[order(rank)]
 
-plot(sort(results$loadings[[1]][11,],T))
+plot(sort(SDAresults$loadings[[1]][11,],T))
 rug(tmp[AD_genes], col="red", lwd=0.3, ticksize = 0.1)
 
 fisher.test(matrix(c(8,20-8,200-8,19262-(200-20+8)),nrow=2,ncol=2),alternative="greater")
@@ -102,7 +102,7 @@ saveRDS(AZ_enrich_plot, "../data/plots/AZ_enrich_plot.rds")
 
 ```{r}
 
-v11_loadings_plot <- genome_loadings(results$loadings[[1]][11,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = c(AD_genes,"Ms4a7","Ms4a6c"), label_genes = c("Trem2","Apoe","Mef2c","H2-Eb1","Spi1","Bin1","Ms4a7","Cd33")) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+v11_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][11,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = c(AD_genes,"Ms4a7","Ms4a6c"), label_genes = c("Trem2","Apoe","Mef2c","H2-Eb1","Spi1","Bin1","Ms4a7","Cd33")) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
 
 C11_MQ_plot <- plot_grid(v11_loadings_plot, plot_cell_scores("V11", point_size = 2), ncol = 2, rel_widths = c(3,1))
 

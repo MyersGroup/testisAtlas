@@ -273,18 +273,18 @@ run_SDA(sda_location = "../../SDA/build/sda",
 
 ```{r, fig.width=6}
 # load SDA factorisation and helper functions
-results <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
-rownames(results$loadings[[1]]) <- paste0("V",1:50)
-rownames(results$pips[[1]]) <- paste0("V",1:50)
-str(results)
+SDAresults <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)
+rownames(SDAresults$pips[[1]]) <- paste0("V",1:50)
+str(SDAresults)
 
-check_convergence(results)
-loading_distribution(results)
+check_convergence(SDAresults)
+loading_distribution(SDAresults)
 
-density_data <- data.table("loading"=c(results$loadings[[1]][results$pips[[1]]>0.5],
-                                       results$loadings[[1]][results$pips[[1]]<0.5]),
-									   "type"=c(rep("Slab (PIP>0.5)         ",sum(results$pips[[1]]>0.5)),
-									   			rep("Spike (PIP<0.5)",sum(results$pips[[1]]<0.5))))
+density_data <- data.table("loading"=c(SDAresults$loadings[[1]][SDAresults$pips[[1]]>0.5],
+                                       SDAresults$loadings[[1]][SDAresults$pips[[1]]<0.5]),
+									   "type"=c(rep("Slab (PIP>0.5)         ",sum(SDAresults$pips[[1]]>0.5)),
+									   			rep("Spike (PIP<0.5)",sum(SDAresults$pips[[1]]<0.5))))
 				  
 sparsity_plot <- ggplot(density_data, aes(loading, colour=type)) + 
     stat_density(bw=1e-3, n=2^11, geom="line", position = "identity") +
@@ -297,32 +297,32 @@ sparsity_plot <- ggplot(density_data, aes(loading, colour=type)) +
 
 saveRDS(sparsity_plot, "../data/plots/sparsity_plot.rds")
 
-density_data <- as.data.table(density(results$loadings[[1]], n=5000)[c("x","y")])
+density_data <- as.data.table(density(SDAresults$loadings[[1]], n=5000)[c("x","y")])
 ggplot(density_data, aes(x, y)) + geom_line()+ facet_zoom(xy = y<1e5 & abs(x)<0.1)
 
-scores_distribution(results)
+scores_distribution(SDAresults)
 
 # Sparsity of Gene Loadings
-mean(results$pips[[1]]<0.5)
+mean(SDAresults$pips[[1]]<0.5)
 
 # max loadings with low PIP
-max(abs(results$loadings[[1]][results$pips[[1]]<0.5]))
+max(abs(SDAresults$loadings[[1]][SDAresults$pips[[1]]<0.5]))
 
 # range of loadings with low PIP
-quantile(results$loadings[[1]][results$pips[[1]]<0.5], c(0.005,0.995))
+quantile(SDAresults$loadings[[1]][SDAresults$pips[[1]]<0.5], c(0.005,0.995))
 
 # mean loading PIP>0.5
-mean(abs(results$loadings[[1]][results$pips[[1]]>0.5]))
+mean(abs(SDAresults$loadings[[1]][SDAresults$pips[[1]]>0.5]))
 
 # Max loading
-max(results$loadings[[1]][results$pips[[1]]>0.5])
+max(SDAresults$loadings[[1]][SDAresults$pips[[1]]>0.5])
 
 pdf("../results/SDA_diagnostics.pdf", width = 12, height = 10)
 plot_grid(
-plot_free_energy_change(results),
-plot_PIP_change(results),
-plot_maximums(results),
-PIP_distribution(results), labels = "AUTO")
+plot_free_energy_change(SDAresults),
+plot_PIP_change(SDAresults),
+plot_maximums(SDAresults),
+PIP_distribution(SDAresults), labels = "AUTO")
 dev.off()
 
 ```
@@ -330,11 +330,11 @@ dev.off()
 
 ```{r, fig.width=6}
 
-rna_locations <- load_gene_locations(colnames(results$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
+rna_locations <- load_gene_locations(colnames(SDAresults$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
 rna_locations[,.N,by=chromosome_name][order(-N)]
 
 # LOAD SDA into data.table
-merge_sda4 <- data.table(results$scores, keep.rownames = T)
+merge_sda4 <- data.table(SDAresults$scores, keep.rownames = T)
 setnames(merge_sda4, "rn", "cell")
 setkey(merge_sda4, cell)
 setkey(cell_data, cell)
@@ -392,17 +392,17 @@ Heatmap(cor_scores)
 
 
 # Gene loadings
-aheatmap(results$loadings[[1]][QC_components,], breaks=0, labCol=NA, Rowv=NA, main="Overview of genes loadings in each component", hclustfun="ward.D")
-aheatmap(results$pips[[1]][QC_components,], breaks=0, labCol=NA,  Rowv=NA, main="Overview of genes active (PIP>0.99) in each component", hclustfun="ward.D")
-tmp <- results$pips[[1]][QC_components,]>0.99
+aheatmap(SDAresults$loadings[[1]][QC_components,], breaks=0, labCol=NA, Rowv=NA, main="Overview of genes loadings in each component", hclustfun="ward.D")
+aheatmap(SDAresults$pips[[1]][QC_components,], breaks=0, labCol=NA,  Rowv=NA, main="Overview of genes active (PIP>0.99) in each component", hclustfun="ward.D")
+tmp <- SDAresults$pips[[1]][QC_components,]>0.99
 mode(tmp) <- "numeric"
 aheatmap(tmp, breaks=0, labCol=NA,  Rowv=NA, main="Overview of genes active (PIP>0.99) in each component", hclustfun="ward.D")
 
 # every gene is in at least one component
-qplot(seq_along(results$loadings[[1]][2,]), apply(results$pips[[1]], 2, max)) + labs(x="Gene", y="Maximum PIP",title="Every gene is in at least one component")
-qplot(seq_along(results$loadings[[1]][2,]), sort(apply(results$loadings[[1]], 2, max))) + labs(x="Gene", y="Max Loading", title="Maximum loading for each gene")
+qplot(seq_along(SDAresults$loadings[[1]][2,]), apply(SDAresults$pips[[1]], 2, max)) + labs(x="Gene", y="Maximum PIP",title="Every gene is in at least one component")
+qplot(seq_along(SDAresults$loadings[[1]][2,]), sort(apply(SDAresults$loadings[[1]], 2, max))) + labs(x="Gene", y="Max Loading", title="Maximum loading for each gene")
 
-tmp <- cor(t(results$loadings[[1]][QC_components,]))
+tmp <- cor(t(SDAresults$loadings[[1]][QC_components,]))
 tmp[tmp==1] <- NA
 aheatmap(tmp, breaks=0, main="Most components have low correlations by gene loadings", na.color="grey")
 
@@ -413,32 +413,32 @@ aheatmap(tmp, breaks=0, main="Most components have low correlations by gene load
 
 ```{r, fig.width=6}
 
-head(sort(results$scores[,4]))
+head(sort(SDAresults$scores[,4]))
 
-#sc_correlations <- sapply(rownames(data), function(x) cor(data[x,], results$loadings[[1]][4,], method = "spearman"))
+#sc_correlations <- sapply(rownames(data), function(x) cor(data[x,], SDAresults$loadings[[1]][4,], method = "spearman"))
 #saveRDS(sc_correlations, "../data/sc_correlations.rds")
 #head(sort(sc_correlations, F))
 # basically the same as the cell scores, and takes ages so commented out
 
-c4scores <- qplot(1:length(results$scores[,4]),sort(results$scores[,4],T), geom="point") + labs(x="Sorted Cell Index", y="Component 4 Cell Loading")
+c4scores <- qplot(1:length(SDAresults$scores[,4]),sort(SDAresults$scores[,4],T), geom="point") + labs(x="Sorted Cell Index", y="Component 4 Cell Loading")
 
-v4_loadings_plot <- genome_loadings(results$loadings[[1]][4,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations, ) +
+v4_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][4,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations, ) +
   ylab("Gene Loading (Component 4)")
 
-cor1 <- qplot(data["ATCCTCACCAAN.Mlh3_1190",], c(results$scores["ATCCTCACCAAN.Mlh3_1190",4,drop=F] %*% results$loadings[[1]][4,]), alpha=I(0.3), stroke=0) + 
-  annotate("text", x=1.7, y=8, label=paste("Correlation:",signif(cor(data["ATCCTCACCAAN.Mlh3_1190",], -results$loadings[[1]][4,]),3))) +
+cor1 <- qplot(data["ATCCTCACCAAN.Mlh3_1190",], c(SDAresults$scores["ATCCTCACCAAN.Mlh3_1190",4,drop=F] %*% SDAresults$loadings[[1]][4,]), alpha=I(0.3), stroke=0) + 
+  annotate("text", x=1.7, y=8, label=paste("Correlation:",signif(cor(data["ATCCTCACCAAN.Mlh3_1190",], -SDAresults$loadings[[1]][4,]),3))) +
   labs(x="Raw (Normalised) Gene Expression", y="Predicted gene expresstion using component 4", title = "Component 4 only Prediction vs Data for highest cell")
 
-cor2 <- qplot(data["ATCCTCATCCAA.Mlh3_1190",], c(results$scores["ATCCTCATCCAA.Mlh3_1190",4,drop=F] %*% results$loadings[[1]][4,]), alpha=I(0.3), stroke=0) + 
-  annotate("text", x=1.7, y=1, label=paste("Correlation:",signif(cor(data["ATCCTCATCCAA.Mlh3_1190",], -results$loadings[[1]][4,]),3))) +
+cor2 <- qplot(data["ATCCTCATCCAA.Mlh3_1190",], c(SDAresults$scores["ATCCTCATCCAA.Mlh3_1190",4,drop=F] %*% SDAresults$loadings[[1]][4,]), alpha=I(0.3), stroke=0) + 
+  annotate("text", x=1.7, y=1, label=paste("Correlation:",signif(cor(data["ATCCTCATCCAA.Mlh3_1190",], -SDAresults$loadings[[1]][4,]),3))) +
   labs(x="Raw (Normalised) Gene Expression", y="Predicted gene expresstion using component 4", title = "Component 4 only Prediction vs Data for 2nd highest cell")
 
-sans4 <- qplot(data["ATCCTCACCAAN.Mlh3_1190",], c(results$scores["ATCCTCACCAAN.Mlh3_1190",-c(4),drop=F] %*% results$loadings[[1]][-c(4),]), alpha=I(0.3), ylim = c(-2,10.5), stroke=0) + 
-  annotate("text", x=1.7, y=8, label=paste("Correlation:",signif(cor(data["ATCCTCACCAAN.Mlh3_1190",], c(results$scores["ATCCTCACCAAN.Mlh3_1190",-c(4),drop=F] %*% results$loadings[[1]][-c(4),])),3))) +
+sans4 <- qplot(data["ATCCTCACCAAN.Mlh3_1190",], c(SDAresults$scores["ATCCTCACCAAN.Mlh3_1190",-c(4),drop=F] %*% SDAresults$loadings[[1]][-c(4),]), alpha=I(0.3), ylim = c(-2,10.5), stroke=0) + 
+  annotate("text", x=1.7, y=8, label=paste("Correlation:",signif(cor(data["ATCCTCACCAAN.Mlh3_1190",], c(SDAresults$scores["ATCCTCACCAAN.Mlh3_1190",-c(4),drop=F] %*% SDAresults$loadings[[1]][-c(4),])),3))) +
   labs(x="Raw (Normalised) Gene Expression", y="Predicted Gene Expression without C4", title = "Prediction vs Data without Component 4")
 
-allcomps <- qplot(data["ATCCTCACCAAN.Mlh3_1190",], c(results$scores["ATCCTCACCAAN.Mlh3_1190",,drop=F] %*% results$loadings[[1]]), alpha=I(0.3), ylim = c(-2,10.5), stroke=0) + 
-  annotate("text", x=1.7, y=8, label=paste("Correlation:",signif(cor(data["ATCCTCACCAAN.Mlh3_1190",], c(results$scores["ATCCTCACCAAN.Mlh3_1190",,drop=F] %*% results$loadings[[1]][,])),3))) +
+allcomps <- qplot(data["ATCCTCACCAAN.Mlh3_1190",], c(SDAresults$scores["ATCCTCACCAAN.Mlh3_1190",,drop=F] %*% SDAresults$loadings[[1]]), alpha=I(0.3), ylim = c(-2,10.5), stroke=0) + 
+  annotate("text", x=1.7, y=8, label=paste("Correlation:",signif(cor(data["ATCCTCACCAAN.Mlh3_1190",], c(SDAresults$scores["ATCCTCACCAAN.Mlh3_1190",,drop=F] %*% SDAresults$loadings[[1]][,])),3))) +
   labs(x="Raw (Normalised) Gene Expression", y="Predicted Gene Expression", title = "Prediction vs Data with all components")
 
 
@@ -466,19 +466,19 @@ We can get rid of some of the batch effects by running tSNE on the SDA scores ra
 ```{r, fig.width=6}
 
 set.seed(42) # 28 - AV2?
-tsne_data2 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+tsne_data2 <- Rtsne::Rtsne(SDAresults$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
 
 set.seed(1234) # 28 - AV2?
-tsne_data3 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+tsne_data3 <- Rtsne::Rtsne(SDAresults$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
 
-# PCA_onSDA <- prcomp(results$scores)
+# PCA_onSDA <- prcomp(SDAresults$scores)
 # 
 # ggplot(data.table(PCA_onSDA$x[,1:4]), aes(PC1,PC2)) +geom_point()
 
 # add tsne to cell_data
 tsne_data_dt <- data.table(tsne_data3$Y)
 setnames(tsne_data_dt, c("Tsne1_QC1", "Tsne2_QC1"))
-tsne_data_dt$cell <- rownames(results$scores)
+tsne_data_dt$cell <- rownames(SDAresults$scores)
 setkey(tsne_data_dt, cell)
 cell_data[,Tsne1_QC1 := NULL]
 cell_data[,Tsne2_QC1 := NULL]
@@ -488,7 +488,7 @@ cell_data <- merge(cell_data, tsne_data_dt)
 # add tsne to cell_data
 tsne_data_dt2 <- data.table(tsne_data2$Y)
 setnames(tsne_data_dt2, c("Tsne1_QC2", "Tsne2_QC2"))
-tsne_data_dt2$cell <- rownames(results$scores)
+tsne_data_dt2$cell <- rownames(SDAresults$scores)
 setkey(tsne_data_dt2, cell)
 cell_data[,Tsne1_QC2 := NULL]
 cell_data[,Tsne2_QC2 := NULL]
@@ -522,7 +522,7 @@ ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
 ```{r, fig.width=9}
 
 set.seed(123)
-tsne_scores <- Rtsne::Rtsne(abs(t(results$scores)), verbose=TRUE, pca=FALSE, perplexity=2, max_iter=5000)
+tsne_scores <- Rtsne::Rtsne(abs(t(SDAresults$scores)), verbose=TRUE, pca=FALSE, perplexity=2, max_iter=5000)
 
 set.seed(12345)
 comp_clusters <- data.table(tsne_scores$Y,
@@ -547,7 +547,7 @@ library(uwot)
 
 set.seed(116189)
 # nb need  to set threads to 1 for repoduciability to work
-sda_umap <- umap(abs(t(results$scores)), n_neighbors = 2, n_threads = 1)
+sda_umap <- umap(abs(t(SDAresults$scores)), n_neighbors = 2, n_threads = 1)
 colnames(sda_umap) <- c("Umap1","Umap2")
 
 comp_clusters <- data.table(sda_umap,
@@ -616,7 +616,7 @@ is_negative <- diag(c(1,-1,-1,-1,1,1,-1,-1,-1,1,1,-1,1,-1))
 
 rownames(is_negative) <- component_subset
 
-sign_corrected_loadings_subset <- is_negative %*% results$loadings[[1]][component_subset,]
+sign_corrected_loadings_subset <- is_negative %*% SDAresults$loadings[[1]][component_subset,]
 
 top_20_genes <- sapply(component_subset, function(x) (names(sort(sign_corrected_loadings_subset[x,],T))[1:10]))
 
@@ -664,13 +664,13 @@ saveRDS(top_genes_plot, "../data/plots/top_genes_plot.rds")
 #         cluster_columns = F,
 #         split = rep(1:10, each=10))
 
-# Heatmap(cor(t(results$loadings[[1]][component_subset,])),
+# Heatmap(cor(t(SDAresults$loadings[[1]][component_subset,])),
 #         name = "Correlation of gene loadings",
 #         col=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),)
 
 library(UpSetR)
 
-top_250_genes <- sapply(component_subset, function(x) (names(sort(-abs(results$loadings[[1]][x,])))[1:250]))
+top_250_genes <- sapply(component_subset, function(x) (names(sort(-abs(SDAresults$loadings[[1]][x,])))[1:250]))
 
 upset(fromList(as.list(data.table(top_250_genes))), order.by = "freq", nsets = 10)
 ```
@@ -678,7 +678,7 @@ upset(fromList(as.list(data.table(top_250_genes))), order.by = "freq", nsets = 1
 ## Define Somatic Cells via Hard Clustering
 
 ```{r, fig.width=10}
-d <- dist(results$scores[,-c(22,6,25,29,12,28,41,1,46,4,8,14,9,43)], method = "euclidean")
+d <- dist(SDAresults$scores[,-c(22,6,25,29,12,28,41,1,46,4,8,14,9,43)], method = "euclidean")
 hc1 <- hclust(d, method = "ward.D2" )
 
 groups <- cutree(hc1, k=25) # cut tree into 25 clusters
@@ -747,8 +747,8 @@ Assign cell a single component based on max abs score
 
 ```{r, fig.width=6}
 
-max_component <- data.table(max_component = sapply(1:nrow(results$scores), function(x) which.max(abs(results$scores[x,]))),
-                            cell = rownames(results$scores))
+max_component <- data.table(max_component = sapply(1:nrow(SDAresults$scores), function(x) which.max(abs(SDAresults$scores[x,]))),
+                            cell = rownames(SDAresults$scores))
 
 cell_data <- max_component[cell_data, on="cell"]
 ```

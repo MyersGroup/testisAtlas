@@ -146,7 +146,7 @@ Tbpl1=TRF2
 
 ```{r fig.width=6}
 tfs <- c("Tbp","Tbpl1","Rfx2","Fhl5","Crem","Kif17","Taf7l","Taf7","Taf4b","Gtf2a1l","Gtf2a2","Foxo1","Foxj3","Foxj2","Zbtb33","E2f1","E2f2","E2f3","E2f4","E2f5","E2f7","Tfdp1","Evx1","Evx2","Mybl2","Myb","Mybl1")
-tfs <- tfs[(tfs %in% colnames(results$loadings[[1]]))]
+tfs <- tfs[(tfs %in% colnames(SDAresults$loadings[[1]]))]
 
 tmp <- cell_data[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
 tmp <- merge(tmp, sda_predict(tfs))
@@ -168,7 +168,7 @@ Ccnb2 and 1 were reported as being most highly expressed in meiotic spermatocyte
 
 ```{r fig.width=6}
 cyclins <- c("Ccno", "Ccna2", "Ccng1", "Ccnb1", "Ccne1", "Ccni", "Ccnt1", "Ccny", "Ccnf", "Ccndbp1", "Ccng2", "Ccnc", "Ccne2", "Ccnb2", "Ccnd1", "Ccnd2", "Ccnj", "Ccnh", "Ccnt2", "Ccnl1", "Ccnl2", "Ccnjl", "Ccna1", "Ccnk", "Ccnd3", "Ccnb1ip1", "Ccnyl1", "Ccnb3")
-cyclins <- cyclins[(cyclins %in% colnames(results$loadings[[1]]))]
+cyclins <- cyclins[(cyclins %in% colnames(SDAresults$loadings[[1]]))]
 #cyclins <- c("Ccne1","Ccne2", "Ccnb1","Ccnb2", "Ccnd2","Ccnd3", "Ccna1")
 
 tmp <- cell_data[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
@@ -257,7 +257,7 @@ This gene has high loadings in component 42 (Pachytene). Again, not much known, 
 
 krab_zinc_fingers <- fread("../data/MGImarkerQuery_20170326_120926.txt")$V8 # extract gene symbols
 str(krab_zinc_fingers)
-krab_zinc_fingers <- krab_zinc_fingers[(krab_zinc_fingers %in% colnames(results$loadings[[1]]))]
+krab_zinc_fingers <- krab_zinc_fingers[(krab_zinc_fingers %in% colnames(SDAresults$loadings[[1]]))]
 str(krab_zinc_fingers)
 
 KZF_melt <- melt_genes(cell_data, krab_zinc_fingers)

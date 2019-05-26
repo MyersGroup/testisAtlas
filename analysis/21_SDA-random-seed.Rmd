@@ -56,7 +56,7 @@ rownames(results_1k$loadings[[1]]) <- paste0("V",1:50)
 str(results_1k)
 
 pdf("../results/1k_vs_10k.pdf")
-compare_factorisations(results$loadings[[1]],
+compare_factorisations(SDAresults$loadings[[1]],
                        results_1k$loadings[[1]],
                        method = "pearson",
                        names=c("10k Iterations","1k Iterations"))

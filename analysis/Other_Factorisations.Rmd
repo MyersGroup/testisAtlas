@@ -246,7 +246,7 @@ threshold = exp(seq(-10,0,0.1))
 
 loading_sparsity <- data.table(threshold,
                                t(sapply(threshold, function(x) c("NNMF"=mean(abs(nnmf_decomp$H)/max(abs(nnmf_decomp$H)) < x),
-                                                                "SDA"=mean(abs(results$loadings[[1]])/max(abs(results$loadings[[1]])) < x),
+                                                                "SDA"=mean(abs(SDAresults$loadings[[1]])/max(abs(SDAresults$loadings[[1]])) < x),
                                                                 "PCA"=mean(abs(pcaresult$loadings)/max(abs(pcaresult$loadings)) < x),
                                                                 "ICA"=mean(abs(ica_decomp$A)/max(abs(ica_decomp$A)) < x)))))
 
@@ -291,7 +291,7 @@ threshold = exp(seq(-12,0,0.1))
 cellscore_sparsity <- data.table(threshold,
                                t(sapply(threshold, function(x) c("PCA"=mean(abs(pcaresult$projection)/max(abs(pcaresult$projection)) < x),
                                                                  "ICA"=mean(abs(ica_decomp$S)/max(abs(ica_decomp$S)) < x),
-                                                                 "SDA"=mean(abs(results$scores)/max(abs(results$scores)) < x),
+                                                                 "SDA"=mean(abs(SDAresults$scores)/max(abs(SDAresults$scores)) < x),
                                                                  "NNMF"=mean(abs(nnmf_decomp$W)/max(abs(nnmf_decomp$W)) < x)))))
 
 cellscore_sparsity <- melt(cellscore_sparsity, id.vars = "threshold", variable.name = "Method", value.name = "Fraction")
@@ -334,7 +334,7 @@ head(sort(pcaresult$loadings[,"V14"], F),20)
 ## Compare Leptotene Loadings
 
 ```{r}
-SDAtools::genome_loadings(results$loadings[[1]][5,], label_both = T, max.items = 20, label.size = 3,
+SDAtools::genome_loadings(SDAresults$loadings[[1]][5,], label_both = T, max.items = 20, label.size = 3,
                                      gene_locations = rna_locations, hide_unknown = T) +
   ylab("Gene Loadings (SDA Component 5)") +
   scale_y_reverse()
@@ -357,7 +357,7 @@ SDAtools::genome_loadings(ica_decomp$A[15,], label_both = F, max.items = 20, lab
 ## Compare X Chrom Activation Loadings
 
 ```{r}
-SDAtools::genome_loadings(results$loadings[[1]][38,], label_both = T, max.items = 20, label.size = 3,
+SDAtools::genome_loadings(SDAresults$loadings[[1]][38,], label_both = T, max.items = 20, label.size = 3,
                                      gene_locations = rna_locations, hide_unknown = T) +
   ylab("Gene Loadings (SDA Component 38)")
 
@@ -442,21 +442,21 @@ all.equal(pZ$x[,1], -pZ2$projection[,1])
 # Correlations
 
 ```{r, fig.width=6}
-compare_factorisations(nnmf_decomp$H, results$loadings[[1]], names=c("NNMF","SDA"))
-compare_factorisations(t(pcaresult$loadings), results$loadings[[1]], names=c("PCA","SDA"))
-compare_factorisations(ica_decomp$A, results$loadings[[1]], names=c("ICA","SDA"))
+compare_factorisations(nnmf_decomp$H, SDAresults$loadings[[1]], names=c("NNMF","SDA"))
+compare_factorisations(t(pcaresult$loadings), SDAresults$loadings[[1]], names=c("PCA","SDA"))
+compare_factorisations(ica_decomp$A, SDAresults$loadings[[1]], names=c("ICA","SDA"))
 ```
 
 ## 100 componentns
 
 ```{r, fig.height=8, fig.width=5}
-compare_factorisations(results$loadings[[1]],nnmf_decomp5$H, names=c("SDA","NNMF"), method="pearson")
+compare_factorisations(SDAresults$loadings[[1]],nnmf_decomp5$H, names=c("SDA","NNMF"), method="pearson")
 ```
 
 ## Pearson
 
 ```{r}
-named_loadings <- results$loadings[[1]]
+named_loadings <- SDAresults$loadings[[1]]
 
 rownames(named_loadings) <- paste0("Mix",1:50," ",names(sort(component_labels))) #paste0("Mix_",1:50)
 ```
@@ -468,14 +468,14 @@ pdf("../results/other_factorisations/NNMF_original.pdf", height=9, width=10)
 compare_factorisations(nnmf_decomp$H, named_loadings, names=c("NNMF","SDA"), method = "pearson")
 dev.off()
 
-compare_factorisations(t(pcaresult$loadings), results$loadings[[1]], names=c("PCA","SDA"), method = "pearson")
-compare_factorisations(ica_decomp$A, results$loadings[[1]], names=c("ICA","SDA"), method = "pearson")
+compare_factorisations(t(pcaresult$loadings), SDAresults$loadings[[1]], names=c("PCA","SDA"), method = "pearson")
+compare_factorisations(ica_decomp$A, SDAresults$loadings[[1]], names=c("ICA","SDA"), method = "pearson")
 ```
 
 ## Rotated NNMF
 
 ```{r, fig.height=8}
-rot_NNMF <- vegan::procrustes(t(results$loadings[[1]]), t(nnmf_decomp$H))
+rot_NNMF <- vegan::procrustes(t(SDAresults$loadings[[1]]), t(nnmf_decomp$H))
 
 colnames(rot_NNMF$Yrot) <- paste0("V",1:50)
 
@@ -528,7 +528,7 @@ saveRDS(heatmapgrob, "../data/plots/heatmapgrob.rds")
 
 ```{r}
 
-sda_load_promax <- promax(t(results$loadings[[1]]))
+sda_load_promax <- promax(t(SDAresults$loadings[[1]]))
 nnmf_load_promax <- promax(t(nnmf_decomp$H))
 
 ##
@@ -551,11 +551,11 @@ compare_factorisations(t(nnmf_load_promax$loadings),
                        c("NNMF","SDA"),
                        method = "pearson")
 
-plot(sda_load_promax$loadings[,"V5"],results$loadings[[1]]["V5",])
+plot(sda_load_promax$loadings[,"V5"],SDAresults$loadings[[1]]["V5",])
 plot(nnmf_load_promax$loadings[,"V50"],nnmf_decomp$H["V50",])
 
-plot(rot_NNMF$Yrot[,"V5"], results$loadings[[1]]["V5",])
-plot(nnmf_decomp$H["V50",],results$loadings[[1]]["V5",])
+plot(rot_NNMF$Yrot[,"V5"], SDAresults$loadings[[1]]["V5",])
+plot(nnmf_decomp$H["V50",],SDAresults$loadings[[1]]["V5",])
 ```
 
 
@@ -565,14 +565,14 @@ plot(nnmf_decomp$H["V50",],results$loadings[[1]]["V5",])
 
 ```{r, fig.width=5}
 
-gene_cor <- numeric(length = length(colnames(results$loadings[[1]])))
+gene_cor <- numeric(length = length(colnames(SDAresults$loadings[[1]])))
 
 for(i in seq_along(gene_cor)){
-  gene_cor[i] <- cor(nmf_predict(c(colnames(results$loadings[[1]])[i]))[,2][[1]],
-                     sda_predict(c(colnames(results$loadings[[1]])[i]))[,2][[1]])
+  gene_cor[i] <- cor(nmf_predict(c(colnames(SDAresults$loadings[[1]])[i]))[,2][[1]],
+                     sda_predict(c(colnames(SDAresults$loadings[[1]])[i]))[,2][[1]])
 }
 
-names(gene_cor) <- colnames(results$loadings[[1]])
+names(gene_cor) <- colnames(SDAresults$loadings[[1]])
 
 saveRDS(gene_cor, "../data/imputation/NNMF_vs_SDA_Gene_correlations.rds")
 
@@ -585,24 +585,24 @@ manhatten_plot(component_enrichment(names(head(sort(gene_cor),500)), loadings=nn
 Gene Correlation without single cell components
 
 ```{r, fig.width=5}
-named_results <- results
+named_SDAresults <- SDAresults
 
-rownames(named_results$loadings[[1]]) <- paste0("Mix",1:50," ",names(sort(component_labels)))
-colnames(named_results$scores) <- paste0("Mix",1:50," ",names(sort(component_labels)))
+rownames(named_SDAresults$loadings[[1]]) <- paste0("Mix",1:50," ",names(sort(component_labels)))
+colnames(named_SDAresults$scores) <- paste0("Mix",1:50," ",names(sort(component_labels)))
 
-sc_components <- grep("Single",rownames(named_results$loadings[[1]]))
+sc_components <- grep("Single",rownames(named_SDAresults$loadings[[1]]))
 
-named_results$loadings[[1]] <- named_results$loadings[[1]][-sc_components,]
-named_results$scores <- named_results$scores[,-sc_components]
+named_SDAresults$loadings[[1]] <- named_SDAresults$loadings[[1]][-sc_components,]
+named_SDAresults$scores <- named_SDAresults$scores[,-sc_components]
 
-gene_cor <- numeric(length = length(colnames(results$loadings[[1]])))
+gene_cor <- numeric(length = length(colnames(SDAresults$loadings[[1]])))
 
 for(i in seq_along(gene_cor)){
-  gene_cor[i] <- cor(nmf_predict(c(colnames(results$loadings[[1]])[i]))[,2][[1]],
-                     sda_predict(c(colnames(results$loadings[[1]])[i]), factorisation = named_results)[,2][[1]])
+  gene_cor[i] <- cor(nmf_predict(c(colnames(SDAresults$loadings[[1]])[i]))[,2][[1]],
+                     sda_predict(c(colnames(SDAresults$loadings[[1]])[i]), factorisation = named_SDAresults)[,2][[1]])
 }
 
-names(gene_cor) <- colnames(results$loadings[[1]])
+names(gene_cor) <- colnames(SDAresults$loadings[[1]])
 
 saveRDS(gene_cor, "../data/imputation/NNMF_vs_SDA_Gene_correlations_sans_single_cell.rds")
 
@@ -839,16 +839,16 @@ manhatten_plot(etc_enrich, legend_position = c(0.2,0.8))
 manhatten_plot(etc_enrich_nnmf, legend_position = c(0.2,0.8))
 
 plot(single_component_enrichment(nnmf_decomp$H["V46",], etc_genes_clean, threshold = 500)$ranks)
-plot(single_component_enrichment(results$loadings[[1]][9,], etc_genes_clean, threshold = 500, pos = F)$ranks)
+plot(single_component_enrichment(SDAresults$loadings[[1]][9,], etc_genes_clean, threshold = 500, pos = F)$ranks)
 
 plot(single_component_enrichment(nnmf_decomp$H["V46",], etc_genes_clean, threshold = 500)$ranks, 
-     single_component_enrichment(results$loadings[[1]][9,], etc_genes_clean, threshold = 500, pos = F)$ranks)
+     single_component_enrichment(SDAresults$loadings[[1]][9,], etc_genes_clean, threshold = 500, pos = F)$ranks)
 ```
 
 
 ```{r}
 nnmf_ranks <- single_component_enrichment(nnmf_decomp$H["V46",], etc_genes_clean, threshold = 500)$ranks
-sda_ranks <- single_component_enrichment(results$loadings[[1]][9,], etc_genes_clean, threshold = 500, pos = F)$ranks
+sda_ranks <- single_component_enrichment(SDAresults$loadings[[1]][9,], etc_genes_clean, threshold = 500, pos = F)$ranks
 
 plot(nnmf_ranks, sda_ranks)
 abline(0,1)
@@ -875,7 +875,7 @@ kojima_stra8_enrich_nnmf[order(p.value)][1:5]
 manhatten_plot(kojima_stra8_enrich, legend_position = c(0.2,0.8))
 manhatten_plot(kojima_stra8_enrich_nnmf, legend_position = c(0.2,0.8))
 
-plot(single_component_enrichment(results$loadings[[1]][5,], kojima_stra8_chip, threshold = 500, pos = F)$ranks)
+plot(single_component_enrichment(SDAresults$loadings[[1]][5,], kojima_stra8_chip, threshold = 500, pos = F)$ranks)
 plot(single_component_enrichment(nnmf_decomp$H["V50",], kojima_stra8_chip, threshold = 500)$ranks)
 ```
 
@@ -890,14 +890,14 @@ In NNMF this effect bleeds into the WT cells
 
 ```{r, fig.width=6}
 
-# plot(results$scores[cell_data[order(-PseudoTime)]$cell,"V38"],col=rgb(0,0,0,1-as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment))),xlim=c(0,5000),ylim=c(-5,20))
+# plot(SDAresults$scores[cell_data[order(-PseudoTime)]$cell,"V38"],col=rgb(0,0,0,1-as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment))),xlim=c(0,5000),ylim=c(-5,20))
 # plot(nnmf_decomp$W[cell_data[order(-PseudoTime)]$cell,"V3"],col=rgb(0,0,0,1-as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment))),xlim=c(0,5000))
 # 
-# plot(results$scores[cell_data[order(-PseudoTime)]$cell,"V38"],col=1+as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment)),xlim=c(0,5000),ylim=c(-5,20))
+# plot(SDAresults$scores[cell_data[order(-PseudoTime)]$cell,"V38"],col=1+as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment)),xlim=c(0,5000),ylim=c(-5,20))
 # plot(nnmf_decomp$W[cell_data[order(-PseudoTime)]$cell,"V3"],col=1+as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment)),xlim=c(0,5000))
 
 tmp <- data.table("NNMF"=nnmf_decomp$W[cell_data[order(-PseudoTime)]$cell,"V3"],
-           "SDA"=results$scores[cell_data[order(-PseudoTime)]$cell,"V38"],
+           "SDA"=SDAresults$scores[cell_data[order(-PseudoTime)]$cell,"V38"],
            "Hormad1KO"=grepl("Hormad",cell_data[order(-PseudoTime)]$experiment),
            "PseudoTime" = cell_data[order(-PseudoTime)]$PseudoTime,
            "cell" = cell_data[order(-PseudoTime)]$cell,

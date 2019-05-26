@@ -247,7 +247,7 @@ head(GO_data[["V44N"]][c(2,7,8,10)], 20)
 
 datatable(motifEnrichment_wLogo[geneSet=="V44N",-c("enrichedGenes","geneSet"), with=FALSE][1:40,], escape = FALSE, filter="top", options=list(pageLength=5))
 
-#aheatmap(t(results$loadings[[1]][,head(names(sort(-abs(results$loadings[[1]][44,]))),35)]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
+#aheatmap(t(SDAresults$loadings[[1]][,head(names(sort(-abs(SDAresults$loadings[[1]][44,]))),35)]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
 ```
 
 ## 13 X inactive
@@ -349,17 +349,17 @@ Hormad1KO_genes <- Hormad1KO[V1 %in% colnames(data)]$V1
 
 str(Hormad1KO_genes)
 
-tmp <- data.table(loading = sort(results$loadings[[1]][38,],T),
-                  gene = names(sort(results$loadings[[1]][38,],T)))
+tmp <- data.table(loading = sort(SDAresults$loadings[[1]][38,],T),
+                  gene = names(sort(SDAresults$loadings[[1]][38,],T)))
 tmp$rank <- seq_along(tmp$loading)
 ggplot(tmp, aes(rank, loading)) + geom_point() + geom_rug(data=tmp[gene %in% Hormad1KO_genes], sides = "b", colour="red", size=0.1)
 
 
-plot(sort(round(results$loadings[[1]][38,Hormad1KO[V1 %in% colnames(data)]$V1],4), T), ylab="Component 38 Loading", xlab="Genes overexpressed in Hormad1 KO (ordered by p value)")
+plot(sort(round(SDAresults$loadings[[1]][38,Hormad1KO[V1 %in% colnames(data)]$V1],4), T), ylab="Component 38 Loading", xlab="Genes overexpressed in Hormad1 KO (ordered by p value)")
 
-hist(rank(-results$loadings[[1]][38,])[Hormad1KO$V1], breaks=200, xlab='Component 38 loading rank')
+hist(rank(-SDAresults$loadings[[1]][38,])[Hormad1KO$V1], breaks=200, xlab='Component 38 loading rank')
 
-tripKOgenesranked <- names(sort(-results$loadings[[1]][38,]))
+tripKOgenesranked <- names(sort(-SDAresults$loadings[[1]][38,]))
 
 #seq_along(tripKOgenesranked)
 tmp <- sapply(1:1000, function(x) sum(Hormad1KO$V1 %in% tripKOgenesranked[1:x])/x)
@@ -394,14 +394,14 @@ Trip13KO[V1=="Ppp1r3fos", V1:="Flicr"]
 #Trip13KO[V1=="5730457N03Rik", V1:="Evx1os"]
 #Trip13KO[V1=="RP23-328P19.4", V1:="Gm42923"]
  
-str(Trip13KO[!V1 %in% colnames(results$loadings[[1]])]$V1)
+str(Trip13KO[!V1 %in% colnames(SDAresults$loadings[[1]])]$V1)
 
-Trip13KO <- Trip13KO[V1 %in% colnames(results$loadings[[1]])]
+Trip13KO <- Trip13KO[V1 %in% colnames(SDAresults$loadings[[1]])]
 str(Trip13KO)
 
 
-tmp <- data.table(loading = sort(results$loadings[[1]][38,],T),
-                  gene = names(sort(results$loadings[[1]][38,],T)))
+tmp <- data.table(loading = sort(SDAresults$loadings[[1]][38,],T),
+                  gene = names(sort(SDAresults$loadings[[1]][38,],T)))
 tmp$rank <- seq_along(tmp$loading)
 tmp[gene %in% Trip13KO$V1, KO := "Trip13"]
 tmp[gene %in% Hormad1KO_genes, KO := "Hormad1"]
@@ -438,13 +438,13 @@ trip13_enrich_plot
 
 saveRDS(trip13_enrich_plot, "../data/plots/trip13_enrich_plot.rds")
 
-plot(results$loadings[[1]][38,Trip13KO$V1], ylab="Component 38 Loading", xlab="Genes overexpressed in Trim18 KO (ordered by p value)")
+plot(SDAresults$loadings[[1]][38,Trip13KO$V1], ylab="Component 38 Loading", xlab="Genes overexpressed in Trim18 KO (ordered by p value)")
 
-plot(rank(-results$loadings[[1]][38,])[Trip13KO$V1], Trip13KO$LFC, ylab="Log Fold Change in Trim18 KO", xlab='Component 38 loading rank')
+plot(rank(-SDAresults$loadings[[1]][38,])[Trip13KO$V1], Trip13KO$LFC, ylab="Log Fold Change in Trim18 KO", xlab='Component 38 loading rank')
 
-hist(rank(-results$loadings[[1]][38,])[Trip13KO$V1], breaks=200, xlab='Component 38 loading rank')
+hist(rank(-SDAresults$loadings[[1]][38,])[Trip13KO$V1], breaks=200, xlab='Component 38 loading rank')
 
-tripKOgenesranked <- names(sort(-results$loadings[[1]][38,]))
+tripKOgenesranked <- names(sort(-SDAresults$loadings[[1]][38,]))
 
 #seq_along(tripKOgenesranked)
 tmp <- sapply(1:1000, function(x) sum(Trip13KO$V1 %in% tripKOgenesranked[1:x])/x)
@@ -534,9 +534,9 @@ Mybl1_genes <- c("Morc2b",
 "Ccnb3",
 "Rfx2")
 
-#aheatmap(t(results$loadings[[1]][,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of predicted direct targets of MYBL1 by ChIPseq")
+#aheatmap(t(SDAresults$loadings[[1]][,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of predicted direct targets of MYBL1 by ChIPseq")
 
-aheatmap(t(results$loadings[[1]][,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings by component of \n predicted direct targets of MYBL1 by ChIPseq", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings by component of \n predicted direct targets of MYBL1 by ChIPseq", scale="row")
 
 pirna_genes <- c("Piwil1",
 "Tdrd1",
@@ -553,9 +553,9 @@ pirna_genes <- c("Piwil1",
 "Tdrkh",
 "Tdrd9")
 
-#aheatmap(t(results$loadings[[1]][,pirna_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings of pirna genes for each component")
+#aheatmap(t(SDAresults$loadings[[1]][,pirna_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings of pirna genes for each component")
 
-aheatmap(t(results$loadings[[1]][,pirna_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of pirna genes for each component", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][,pirna_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of pirna genes for each component", scale="row")
 
 ```
 
@@ -611,17 +611,17 @@ datatable(motifEnrichment_wLogo[geneSet=="V20P",-c("enrichedGenes","geneSet"), w
 ```{r}
 DUF622 <- fread("../../data/MGImarkerQuery_20170327_215120.txt")$V8 # extract gene symbols
 str(DUF622)
-DUF622 <- DUF622[(DUF622 %in% colnames(results$loadings[[1]]))]
+DUF622 <- DUF622[(DUF622 %in% colnames(SDAresults$loadings[[1]]))]
 str(DUF622)
 
-data.table(t(results$loadings[[1]][30, DUF622, drop=F]), keep.rownames = T)[order(-V30)]
-data.table(t(results$loadings[[1]][20, DUF622, drop=F]), keep.rownames = T)[order(V20)]
+data.table(t(SDAresults$loadings[[1]][30, DUF622, drop=F]), keep.rownames = T)[order(-V30)]
+data.table(t(SDAresults$loadings[[1]][20, DUF622, drop=F]), keep.rownames = T)[order(V20)]
 
-sum(names(sort(results$loadings[[1]][20,]))[1:500] %in% DUF622)
-sum(names(sort(-results$loadings[[1]][30,]))[1:500] %in% DUF622)
-sum(names(sort(results$loadings[[1]][42,]))[1:500] %in% DUF622)
+sum(names(sort(SDAresults$loadings[[1]][20,]))[1:500] %in% DUF622)
+sum(names(sort(-SDAresults$loadings[[1]][30,]))[1:500] %in% DUF622)
+sum(names(sort(SDAresults$loadings[[1]][42,]))[1:500] %in% DUF622)
 
-aheatmap(t(results$loadings[[1]][,DUF622]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings of DUF622 genes for each component", scale='row')
+aheatmap(t(SDAresults$loadings[[1]][,DUF622]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings of DUF622 genes for each component", scale='row')
 ```
 
 There are also some in the next component C30 and the previous one C42 but of the top 500 genes in C30 only 3 are DUF622 and of the top 500 in C42 only 1 is DUF622. In the top 500 of C20 35 are DUF622 genes.
@@ -741,7 +741,7 @@ acrosomal_genes <- c(
 "Spaca7",
 "1700016D06Rik")
 
-aheatmap(t(results$loadings[[1]][,acrosomal_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][,acrosomal_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
 
 
 # from "RFX2 Is a Major Transcriptional Regulator of Spermiogenesis."
@@ -759,35 +759,35 @@ mapTab2 <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
 				filter = "ensembl_gene_id", values = rfx2_genes, mart = ensembl, uniqueRows=TRUE)
 rfx2_genes <- mapTab2[match(rfx2_genes, mapTab2$ensembl_gene_id),]$external_gene_name
 
-rfx2_genes[which(!rfx2_genes %in% colnames(results$loadings[[1]]))]
+rfx2_genes[which(!rfx2_genes %in% colnames(SDAresults$loadings[[1]]))]
 
-rfx2_genes <- rfx2_genes[which(rfx2_genes %in% colnames(results$loadings[[1]]))]
+rfx2_genes <- rfx2_genes[which(rfx2_genes %in% colnames(SDAresults$loadings[[1]]))]
 
-aheatmap(t(results$loadings[[1]][,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
 
-aheatmap(t(results$pips[[1]][,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+aheatmap(t(SDAresults$pips[[1]][,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
 
-#ranks <- apply(results$loadings[[1]], 1, function(x) qnorm(rank(x) / (ncol(results$loadings[[1]])+1) ))
-#ranks <- apply(results$loadings[[1]], 1, function(x) qnorm(rank(abs(x)) / (ncol(results$loadings[[1]])+1) ))
-#ranks <- apply(results$loadings[[1]], 1, function(x) rank(abs(x))) #19263-
+#ranks <- apply(SDAresults$loadings[[1]], 1, function(x) qnorm(rank(x) / (ncol(SDAresults$loadings[[1]])+1) ))
+#ranks <- apply(SDAresults$loadings[[1]], 1, function(x) qnorm(rank(abs(x)) / (ncol(SDAresults$loadings[[1]])+1) ))
+#ranks <- apply(SDAresults$loadings[[1]], 1, function(x) rank(abs(x))) #19263-
 ```
 
 ```{r, fig.width=6}
-aheatmap(asinh(t(results$loadings[[1]][QC_meiotic_components_ordered,rfx2_genes])), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+aheatmap(asinh(t(SDAresults$loadings[[1]][QC_meiotic_components_ordered,rfx2_genes])), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
 
-aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,m168_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][QC_meiotic_components_ordered,m168_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
 
-aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,m168_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+aheatmap(t(SDAresults$loadings[[1]][QC_meiotic_components_ordered,m168_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
 
-aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,m1478_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
+aheatmap(t(SDAresults$loadings[[1]][QC_meiotic_components_ordered,m1478_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
 
 ```
 
 
 ```{r}
-aheatmap(t(results$loadings[[1]][QC_meiotic_components_ordered,rfx2_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][QC_meiotic_components_ordered,rfx2_genes]), breaks=0, Rowv=NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
 
-tmp <- t(results$pips[[1]][,rfx2_genes]==1)
+tmp <- t(SDAresults$pips[[1]][,rfx2_genes]==1)
 mode(tmp) <- "numeric"
 aheatmap(tmp[, QC_meiotic_components_ordered], breaks=0, Rowv = NA, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq")
 ```
@@ -951,10 +951,10 @@ crem_genes <- readxl::read_excel("../data/supplementary_data/Kosir/Table_S4.xls"
 setnames(crem_genes, make.names(names(crem_genes)))
 
 crem_genes <- crem_genes$Symbol[1:100]
-crem_genes <- crem_genes[which(crem_genes %in% colnames(results$loadings[[1]]))]
+crem_genes <- crem_genes[which(crem_genes %in% colnames(SDAresults$loadings[[1]]))]
 crem_genes <- crem_genes[1:50]
 
-aheatmap(t(results$loadings[[1]][,crem_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Crem KO & Bound by Crem in ChIPseq", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][,crem_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Crem KO & Bound by Crem in ChIPseq", scale="row")
 
 ```
 
@@ -999,10 +999,10 @@ datatable(motifEnrichment_wLogo[geneSet=="V34N",-c("enrichedGenes","geneSet"), w
 
 ```{r, fig.width=10}
 
-tmp <- data.table(results$scores,
-                  cell_index = 1:nrow(results$scores),
-                  experiment = gsub("[A-Z]+\\.","",rownames(results$scores)),
-                  group = gsub("_.*","",gsub("[A-Z]+\\.","",rownames(results$scores))))
+tmp <- data.table(SDAresults$scores,
+                  cell_index = 1:nrow(SDAresults$scores),
+                  experiment = gsub("[A-Z]+\\.","",rownames(SDAresults$scores)),
+                  group = gsub("_.*","",gsub("[A-Z]+\\.","",rownames(SDAresults$scores))))
 tmp <- melt(tmp, id.vars = c("experiment","cell_index","group"))
 
 ggplot(tmp[variable %in% paste0("V",1:15)], aes(experiment, value, colour=group)) +

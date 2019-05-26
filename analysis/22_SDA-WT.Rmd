@@ -472,7 +472,7 @@ threshold = exp(seq(-10,0,0.1))
 loading_sparsity <- data.table(threshold,
                                t(sapply(threshold, function(x) c("Rotated_WT_SDA"=mean(t(row_9WT_list$loadings[[1]])/max(abs(t(row_9WT_list$loadings[[1]]))) < x),
                                                                  "Rotated_WT_SDA_reg"=mean(rot_9WTb_list$loadings[[1]]/max(abs(rot_9WTb_list$loadings[[1]])) < x),
-                                                                 "Mix_SDA"=mean(results$loadings[[1]]/max(abs(results$loadings[[1]])) < x),
+                                                                 "Mix_SDA"=mean(SDAresults$loadings[[1]]/max(abs(SDAresults$loadings[[1]])) < x),
                                                                  "WT_SDA"=mean(results9_WT$loadings[[1]]/max(abs(results9_WT$loadings[[1]])) < x)))))
 
 
@@ -497,7 +497,7 @@ gene_loading_sparsity
 # points(sort(abs(sample(results9_WT$loadings[[1]], 10000, replace = F))), col="red", pch=".", log='y')
 # abline(h=c(1e-2,1e-3))
 # 
-# plot(sort(abs(sample(results$loadings[[1]]/max(abs(results$loadings[[1]])), 10000, replace = F))), pch=".")
+# plot(sort(abs(sample(SDAresults$loadings[[1]]/max(abs(SDAresults$loadings[[1]])), 10000, replace = F))), pch=".")
 # points(sort(sample(nnmf_decomp$H/max(abs(nnmf_decomp$H)), 10000, replace = F)), col="red", pch=".")
 ```
 

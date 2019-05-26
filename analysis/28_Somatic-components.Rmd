@@ -70,7 +70,7 @@ datatable(motifEnrichment_wLogo[geneSet=="V11P",-c("enrichedGenes","geneSet"), w
 #from https://www.nature.com/articles/nri3073/tables/1 "Table 1: Cell surface markers commonly used in macrophage research"
 macrophage_genes <- c("Itgam","Adgre1","Cd68","Csf1r","Lgals3","Ly6c1","Il4ra","Cd163")
 
-aheatmap(t(results$loadings[[1]][,macrophage_genes]), breaks=0, Colv = NA, cexRow = 0.3, layout = "_*", main="(row scaled) Gene loadings of macrophage genes for each component", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][,macrophage_genes]), breaks=0, Colv = NA, cexRow = 0.3, layout = "_*", main="(row scaled) Gene loadings of macrophage genes for each component", scale="row")
 ```
 
 
@@ -170,7 +170,7 @@ from [... cAMP/cGMP signalling and adrenergic receptors in Leydig cells of adult
 ```{r}
 leydig_genes <- c("Star","Cyp11a1","Hsd3b1","Cyp17a1","Hsd17b1","Hsd17b2","Hsd17b3")
 
-aheatmap(t(results$loadings[[1]][,leydig_genes]), breaks=0, Colv = NA, cexRow = 0.2, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][,leydig_genes]), breaks=0, Colv = NA, cexRow = 0.2, layout = "_*", main="(row scaled) Gene loadings of acrosomal genes for each component", scale="row")
 ```
 
 

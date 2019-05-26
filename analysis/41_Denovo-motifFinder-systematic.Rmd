@@ -32,8 +32,8 @@ names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs))
 
 str(tss_seqs_s)
 
-results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
-rownames(results$loadings[[1]]) <- paste0("V",1:50)
+SDAresults <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)
 
 ```
 
@@ -938,8 +938,8 @@ results_all <- readRDS("motifFinder_denovo_results_all_clean_V3.rds")
 
 motif_matches <- readRDS("../data/motifs/motif_matches_v3.rds")
 
-results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
-rownames(results$loadings[[1]]) <- paste0("V",1:50)
+SDAresults <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)
 
 
 tss_seqs <- seqinr::read.fasta("../data/motifs/promoter_sequences/all_genes_tss_1000.fasta", forceDNAtolower = FALSE, as.string = TRUE)
@@ -948,7 +948,7 @@ names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs))
 
 tss_seqs_s <- substr(tss_seqs_s,500,1500)
 
-tss_seqs_s <- tss_seqs_s[names(tss_seqs_s) %in% colnames(results$loadings[[1]])]
+tss_seqs_s <- tss_seqs_s[names(tss_seqs_s) %in% colnames(SDAresults$loadings[[1]])]
 
 
 pwms <- lapply(results_all[c(motif_matches$Query_ID,"C5N.I57","C17P.I37")], get_PWM)

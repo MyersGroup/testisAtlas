@@ -47,16 +47,16 @@ rna_locations2 <- load_gene_locations(name="merge_mouse_V3_old", path = "../data
 
 # Plot gene expression X&Y
 sex_genes <- rna_locations2[chromosome_name %in% c("X","Y")]
-sex_genes <- sex_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+sex_genes <- sex_genes[gene_symbol %in% colnames(SDAresults$loadings[[1]])]$gene_symbol
 
 X_genes <- rna_locations2[chromosome_name %in% c("X")]
-X_genes <- X_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+X_genes <- X_genes[gene_symbol %in% colnames(SDAresults$loadings[[1]])]$gene_symbol
 
 Y_genes <- rna_locations2[chromosome_name %in% c("Y")]
-Y_genes <- Y_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+Y_genes <- Y_genes[gene_symbol %in% colnames(SDAresults$loadings[[1]])]$gene_symbol
 
 autosomal_genes <- rna_locations2[!chromosome_name %in% c("X","Y","Un")]
-autosomal_genes <- autosomal_genes[gene_symbol %in% colnames(results$loadings[[1]])]$gene_symbol
+autosomal_genes <- autosomal_genes[gene_symbol %in% colnames(SDAresults$loadings[[1]])]$gene_symbol
 
 sex_autosome <- data.table(autosomal = Matrix::rowSums(data[,autosomal_genes]),
                             sex = Matrix::rowSums(data[,sex_genes]),
@@ -82,7 +82,7 @@ cell_data[,msci_ratio:=(sex + 1) / (autosomal + 1)]
 
 library(bigmemory)
 options(bigmemory.allow.dimnames=TRUE)
-#predicted_expression <- as.big.matrix(results$scores %*% results$loadings[[1]], backingpath="../data/count_matrices/", backingfile = "predicted_expression.big")
+#predicted_expression <- as.big.matrix(SDAresults$scores %*% SDAresults$loadings[[1]], backingpath="../data/count_matrices/", backingfile = "predicted_expression.big")
 predicted_expression <- attach.big.matrix("../data/count_matrices/predicted_expression.big.desc")
 
 autosomal_predictions <- rowSums(predicted_expression[,autosomal_genes])
@@ -480,7 +480,7 @@ ggplot(melt_genes(sample(autosomal_genes, length(sex_genes))), aes(-PseudoTime, 
 
 
 ```{r}
-v42_loadings_plot <- genome_loadings(results$loadings[[1]][42,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
+v42_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][42,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
   ylab("Gene Loading (Component 42)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3))

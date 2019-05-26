@@ -59,9 +59,9 @@ qplot(fantom_summary$fold_difference, geom="density", bw=0.05) + scale_x_log10(b
 fantom_summary_subset <- fantom_summary[fantom_summary$Gene.Name %in% colnames(data)][,.(Gene.Name, fold_difference = signif(fold_difference,3))]
 setkey(fantom_summary_subset, Gene.Name)
 
-enriched_genes <- fantom_summary[fold_difference>10][Gene.Name %in% colnames(results$loadings[[1]])]$Gene.Name
+enriched_genes <- fantom_summary[fold_difference>10][Gene.Name %in% colnames(SDAresults$loadings[[1]])]$Gene.Name
 
-NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,enriched_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes")
+NMF::aheatmap(t(SDAresults$loadings[[1]][-QC_fail_components,enriched_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes")
 
 ```
 
@@ -138,9 +138,9 @@ setkey(gtex_summary, Gene.Name)
 gtex_summary[fold_difference>10][order(-fold_difference)][1:100]
 qplot(gtex_summary$fold_difference, geom="density", bw=0.05) + scale_x_log10(breaks=c(1,10,100,1000)) +geom_vline(xintercept=10) + ggtitle("Define enrichmennt threshold")
 
-enriched_genes_gtex <- gtex_summary[fold_difference>10][Gene.Name %in% colnames(results$loadings[[1]])]$Gene.Name
+enriched_genes_gtex <- gtex_summary[fold_difference>10][Gene.Name %in% colnames(SDAresults$loadings[[1]])]$Gene.Name
 
-NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,enriched_genes_gtex]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes", scale="row")
+NMF::aheatmap(t(SDAresults$loadings[[1]][-QC_fail_components,enriched_genes_gtex]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="In Which Components Are Testis Enriched Genes", scale="row")
 
 # Compare Fantom vs gtex
 enrich_merge <- merge(gtex_summary, fantom_summary_subset)
@@ -199,13 +199,13 @@ ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org", dataset = "
 #data.table(listAttributes(ensembl))[grepl(pattern = "Mouse",x = description)]
 flagged_map <- getBM(attributes = c('mgi_id','external_gene_name'),
 				filter = "mgi_id", values = flagged$mgi_id, mart = ensembl, uniqueRows=TRUE)
-infertility_genes <- data.table(flagged_map)[external_gene_name %in% colnames(results$loadings[[1]])]$external_gene_name
+infertility_genes <- data.table(flagged_map)[external_gene_name %in% colnames(SDAresults$loadings[[1]])]$external_gene_name
 
 # also same result to just do this but in future MGI symbol may not equal our symbols
-#infertility_genes <- flagged$Symbol[flagged$Symbol %in% colnames(results$loadings[[1]])]
+#infertility_genes <- flagged$Symbol[flagged$Symbol %in% colnames(SDAresults$loadings[[1]])]
 str(infertility_genes)
 
-NMF::aheatmap(t(results$loadings[[1]][-QC_fail_components,infertility_genes]), breaks=0, Colv = NA, cexRow = 0.7,  main="In Which Components Are Infertility Genes", scale="row")
+NMF::aheatmap(t(SDAresults$loadings[[1]][-QC_fail_components,infertility_genes]), breaks=0, Colv = NA, cexRow = 0.7,  main="In Which Components Are Infertility Genes", scale="row")
 ```
 
 

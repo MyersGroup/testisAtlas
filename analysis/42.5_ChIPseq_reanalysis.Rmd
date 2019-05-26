@@ -143,7 +143,7 @@ crem_genes <- readxl::read_excel("../data/previous_studies/Kosir/Table_S4.xls", 
 setnames(crem_genes, make.names(names(crem_genes)))
 
 crem_genes <- data.table(crem_genes)[Fold.Change<0]$Symbol
-crem_genes <- crem_genes[which(crem_genes %in% colnames(results$loadings[[1]]))]
+crem_genes <- crem_genes[which(crem_genes %in% colnames(SDAresults$loadings[[1]]))]
 ```
 
 ## Mybl1
@@ -176,7 +176,7 @@ Mybl1_genes <- c("Morc2b",
 
 
 #pdf(height=5, width=5*1.7, file="../results/Mybl1_enrich.pdf")
-aheatmap(t(results$loadings[[1]][component_order,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of predicted direct targets of MYBL1")
+aheatmap(t(SDAresults$loadings[[1]][component_order,Mybl1_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of predicted direct targets of MYBL1")
 #dev.off()
 
 
@@ -199,11 +199,11 @@ mapTab2 <- getBM(attributes = c("external_gene_name",'ensembl_gene_id'),
 				filter = "ensembl_gene_id", values = rfx2_genes, mart = ensembl, uniqueRows=TRUE)
 rfx2_genes <- mapTab2[match(rfx2_genes, mapTab2$ensembl_gene_id),]$external_gene_name
 
-rfx2_genes[which(!rfx2_genes %in% colnames(results$loadings[[1]]))]
+rfx2_genes[which(!rfx2_genes %in% colnames(SDAresults$loadings[[1]]))]
 
-rfx2_genes <- rfx2_genes[which(rfx2_genes %in% colnames(results$loadings[[1]]))]
+rfx2_genes <- rfx2_genes[which(rfx2_genes %in% colnames(SDAresults$loadings[[1]]))]
 
-aheatmap(t(results$loadings[[1]][component_order,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
+aheatmap(t(SDAresults$loadings[[1]][component_order,rfx2_genes]), breaks=0, Colv = NA, cexRow = 0.7, layout = "_*", main="Gene loadings by component of genes downregulated \n in Rfx2 KO & Bound by Rfx2 in ChIPseq", scale="row")
 
 ```
 
@@ -216,7 +216,7 @@ soh_elife$...1[6] <- "4933427D06Rik"
 
 #Reg2, Majin, & Pramel1 not detected
 
-soh_elife_genes <- soh_elife$...1[soh_elife$...1 %in% colnames(results$loadings[[1]])]
+soh_elife_genes <- soh_elife$...1[soh_elife$...1 %in% colnames(SDAresults$loadings[[1]])]
 soh_elife_enrich <- component_enrichment(soh_elife_genes, threshold = 500)
 
 manhatten_plot(soh_elife_enrich[!component %in% gsub("V","",half_exclusion_comps)])
@@ -227,7 +227,7 @@ head(soh_elife_enrich[!component %in% gsub("V","",half_exclusion_comps)][order(p
 
 ```{r}
 kojima_elife_chip <- readxl::read_xlsx("../data/previous_studies/Kojima/elife-43738-supp1-v1.xlsx", sheet = "STRA8-activated", col_names = F)
-kojima_stra8_chip <- kojima_elife_chip$...1[kojima_elife_chip$...1 %in% colnames(results$loadings[[1]])]
+kojima_stra8_chip <- kojima_elife_chip$...1[kojima_elife_chip$...1 %in% colnames(SDAresults$loadings[[1]])]
 ```
 
 ## Manhatten Plots

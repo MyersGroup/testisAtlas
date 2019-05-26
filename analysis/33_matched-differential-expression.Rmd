@@ -59,9 +59,9 @@ cnp_vs_wt <- data.table(cnp_mean = Matrix::colMeans(data[matched_cells_CNP[,1],]
                         gene=colnames(data),
                         pval=pVals)
 
-cnp_vs_wt2 <- data.table(cnp_mean = colMeans(results$scores[matched_cells_CNP[,1],] %*% results$loadings[[1]]),
-                        wt_mean = colMeans(results$scores[matched_cells_CNP[,2],] %*% results$loadings[[1]]),
-                        gene=colnames(results$loadings[[1]]))
+cnp_vs_wt2 <- data.table(cnp_mean = colMeans(SDAresults$scores[matched_cells_CNP[,1],] %*% SDAresults$loadings[[1]]),
+                        wt_mean = colMeans(SDAresults$scores[matched_cells_CNP[,2],] %*% SDAresults$loadings[[1]]),
+                        gene=colnames(SDAresults$loadings[[1]]))
 
 hist(cnp_vs_wt$cnp_mean, breaks=100)
 
@@ -94,13 +94,13 @@ Do any of the components correlate with these results?
 Which components have the highest ranked loadings for these genes?
 
 ```{r, fig.width=4}
-barplot(table(factor(sapply(cnp_vs_wt[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+barplot(table(factor(sapply(cnp_vs_wt[order(-FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
 
-barplot(table(factor(sapply(cnp_vs_wt[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+barplot(table(factor(sapply(cnp_vs_wt[order(FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
 
-barplot(table(factor(sapply(cnp_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes (Imputed)")
+barplot(table(factor(sapply(cnp_vs_wt2[order(-FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes (Imputed)")
 
-barplot(table(factor(sapply(cnp_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes (Imputed)")
+barplot(table(factor(sapply(cnp_vs_wt2[order(FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes (Imputed)")
 
 ```
 
@@ -108,7 +108,7 @@ Both the over and underexpressed genes many of them are ranked highest in compon
 
 ```{r, fig.width=6}
 # do any components correlate
-qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(cnp_vs_wt$FC2))), paste0("C",1:50))
+qplot(sapply(1:50, function(i) cor(SDAresults$loadings[[1]][i,],log(cnp_vs_wt$FC2))), paste0("C",1:50))
 ```
 
 There is a pretty good overlap with the loadings in this component, and the results from this analysis. This component was previsouly assigned "odd" given the funky cell scores - I'm still not sure what to make of the low WT group or why the FACS groups are lower - but the CNP cells are indeed higher than the rest.
@@ -150,9 +150,9 @@ Cul4a_vs_wt <- data.table(Cul4a_mean = Matrix::colMeans(data[matched_cells_Cul4a
                           wt_mean = Matrix::colMeans(data[matched_cells_Cul4a[,2],]),
                           gene=colnames(data))
 
-Cul4a_vs_wt2 <- data.table(Cul4a_mean = colMeans(results$scores[matched_cells_Cul4a[,1],] %*% results$loadings[[1]]),
-                        wt_mean = colMeans(results$scores[matched_cells_Cul4a[,2],] %*% results$loadings[[1]]),
-                        gene=colnames(results$loadings[[1]]))
+Cul4a_vs_wt2 <- data.table(Cul4a_mean = colMeans(SDAresults$scores[matched_cells_Cul4a[,1],] %*% SDAresults$loadings[[1]]),
+                        wt_mean = colMeans(SDAresults$scores[matched_cells_Cul4a[,2],] %*% SDAresults$loadings[[1]]),
+                        gene=colnames(SDAresults$loadings[[1]]))
 
 
 hist(Cul4a_vs_wt$Cul4a_mean, breaks=100)
@@ -174,13 +174,13 @@ ggplot(Cul4a_vs_wt, aes(log(wt_mean*Cul4a_mean), log(wt_mean/Cul4a_mean), label=
 ```
 
 ```{r, fig.width=6}
-barplot(table(factor(sapply(Cul4a_vs_wt[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+barplot(table(factor(sapply(Cul4a_vs_wt[order(FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
 
-barplot(table(factor(sapply(Cul4a_vs_wt[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+barplot(table(factor(sapply(Cul4a_vs_wt[order(-FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
 
-barplot(table(factor(sapply(Cul4a_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes (Imputed)")
+barplot(table(factor(sapply(Cul4a_vs_wt2[order(FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes (Imputed)")
 
-barplot(table(factor(sapply(Cul4a_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes (Imputed)")
+barplot(table(factor(sapply(Cul4a_vs_wt2[order(-FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes (Imputed)")
 
 ```
 
@@ -188,7 +188,7 @@ Confirmation that C25 represents Cul4a KO diff expression (& a bit of 9 perhaps)
 
 ```{r, fig.width=6}
 # do any components correlate
-qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(Cul4a_vs_wt$FC2))), paste0("C",1:50))
+qplot(sapply(1:50, function(i) cor(SDAresults$loadings[[1]][i,],log(Cul4a_vs_wt$FC2))), paste0("C",1:50))
 ```
 
 # Mlh3
@@ -251,14 +251,14 @@ ggplot(Mlh3_vs_wt, aes(FC2, -log(pval), label=gene)) + geom_point(alpha=0.5, siz
 
 ```{r, fig.width=6}
 
-barplot(table(factor(sapply(Mlh3_vs_wt[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+barplot(table(factor(sapply(Mlh3_vs_wt[order(-FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
 
-barplot(table(factor(sapply(Mlh3_vs_wt[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+barplot(table(factor(sapply(Mlh3_vs_wt[order(FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
 ```
 
 ```{r, fig.width=6}
 # do any components correlate
-qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(Mlh3_vs_wt$FC2))), paste0("C",1:50))
+qplot(sapply(1:50, function(i) cor(SDAresults$loadings[[1]][i,],log(Mlh3_vs_wt$FC2))), paste0("C",1:50))
 ```
 
 Verify results with expression over pseudotime
@@ -322,9 +322,9 @@ pVals <- p.adjust(pVals, method = "fdr")
 ```
 
 ```{r}
-Hormad1_vs_wt2 <- data.table(Hormad1_mean = colMeans(results$scores[matched_cells_Hormad1[,1],] %*% results$loadings[[1]]),
-                        wt_mean = colMeans(results$scores[matched_cells_Hormad1[,2],] %*% results$loadings[[1]]),
-                        gene=colnames(results$loadings[[1]]))
+Hormad1_vs_wt2 <- data.table(Hormad1_mean = colMeans(SDAresults$scores[matched_cells_Hormad1[,1],] %*% SDAresults$loadings[[1]]),
+                        wt_mean = colMeans(SDAresults$scores[matched_cells_Hormad1[,2],] %*% SDAresults$loadings[[1]]),
+                        gene=colnames(SDAresults$loadings[[1]]))
 
 Hormad1_vs_wt <- data.table(Hormad1_mean = Matrix::colMeans(data[matched_cells_Hormad1[,1],]),
                         wt_mean = Matrix::colMeans(data[matched_cells_Hormad1[,2],]),
@@ -372,19 +372,19 @@ data.table(tmp, Mlh3_vs_wt[order(pval)]$gene[tmp])
 DE genes match well with component 29, especially the underexpessed (previously named "SPG batch??"), and to a lesser extent 43 (ribosomal) for overexpressed genes.
 
 ```{r, fig.width=4}
-ranks <- apply(results$loadings[[1]], 1, function(x) rank(abs(x)))
-ranksN <- apply(results$loadings[[1]], 1, function(x) rank(x))
-ranksP <- apply(results$loadings[[1]], 1, function(x) rank(-x))
+ranks <- apply(SDAresults$loadings[[1]], 1, function(x) rank(abs(x)))
+ranksN <- apply(SDAresults$loadings[[1]], 1, function(x) rank(x))
+ranksP <- apply(SDAresults$loadings[[1]], 1, function(x) rank(-x))
 colnames(ranksP) <- paste0(colnames(ranksP), "P")
 colnames(ranksN) <- paste0(colnames(ranksN), "N")
 
 ranks <- cbind(ranksN, ranksP)
 
-barplot(table(factor(sapply(Hormad1_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+barplot(table(factor(sapply(Hormad1_vs_wt2[order(FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
 
-barplot(table(factor(sapply(Hormad1_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+barplot(table(factor(sapply(Hormad1_vs_wt2[order(-FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
 
-qplot(sapply(1:50, function(i) cor(results$loadings[[1]][i,],log(Hormad1_vs_wt$FC2))), paste0("C",1:50))
+qplot(sapply(1:50, function(i) cor(SDAresults$loadings[[1]][i,],log(Hormad1_vs_wt$FC2))), paste0("C",1:50))
 ```
 
 
@@ -410,9 +410,9 @@ MQ_vs_wt <- data.table(WT_mean = Matrix::colMeans(data[matched_cells_MQ2[,1],]),
                         mutant_mean = Matrix::colMeans(data[matched_cells_MQ2[,2],]),
                         gene=colnames(data))
 
-MQ_vs_wt2 <- data.table(mutant_mean = colMeans(results$scores[matched_cells_MQ2[,1],] %*% results$loadings[[1]]),
-                        WT_mean = colMeans(results$scores[matched_cells_MQ2[,2],] %*% results$loadings[[1]]),
-                        gene=colnames(results$loadings[[1]]))
+MQ_vs_wt2 <- data.table(mutant_mean = colMeans(SDAresults$scores[matched_cells_MQ2[,1],] %*% SDAresults$loadings[[1]]),
+                        WT_mean = colMeans(SDAresults$scores[matched_cells_MQ2[,2],] %*% SDAresults$loadings[[1]]),
+                        gene=colnames(SDAresults$loadings[[1]]))
 
 hist(MQ_vs_wt$WT_mean, breaks=100, main="Not Imputed")
 hist(MQ_vs_wt2$WT_mean, breaks=100, main="Imputed")
@@ -452,8 +452,8 @@ The underexpressed genes have broad low enrichment, mostly leydig?
 Overexpressed genes mostly in late components.
 
 ```{r, fig.width=6}
-barplot(table(factor(sapply(MQ_vs_wt2[order(FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
+barplot(table(factor(sapply(MQ_vs_wt2[order(FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 under-expressed genes")
 
-barplot(table(factor(sapply(MQ_vs_wt2[order(-FC2)][gene %in% colnames(results$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
+barplot(table(factor(sapply(MQ_vs_wt2[order(-FC2)][gene %in% colnames(SDAresults$loadings[[1]])][1:100]$gene, function(x) which.max(abs(ranks[x,]))), levels=1:100, labels = c(paste0(1:50,"N"),paste0(1:50,"P")))), las=2, cex.names=0.5, main="Highest ranked component for top 100 over-expressed genes")
 ```
 

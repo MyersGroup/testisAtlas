@@ -585,7 +585,7 @@ ggplot(tmp, aes(experiment, N, fill=bc11)) +
 # # cap extream values
 # cell_data[rnr2_percent>0.05]$rnr2_percent <- 0.05
 
-# max_scores_bycell <- apply(results$scores, 1, max)
+# max_scores_bycell <- apply(SDAresults$scores, 1, max)
 # max_scores_bycell <- data.table(max_scores_bycell, cell=names(max_scores_bycell))
 # cell_data <- merge(cell_data, max_scores_bycell, all.x = TRUE)
 # diff_expression <- data.table(odd=apply(data[cell_data[max_scores_bycell>20 & group=="WT"]$cell,], 2, median), normal=apply(data[cell_data[max_scores_bycell<20 & group=="WT"]$cell,], 2, median), gene=colnames(data))

@@ -13,15 +13,15 @@ library(SDAtools)
 library(ggplot2)
 library(data.table)
 
-results <- load_results(results_folder = "../results/conradV3_sda_1/", data_path = "../data/conradV3/")
-rownames(results$loadings[[1]]) <- paste0("V",1:50)
-rownames(results$pips[[1]]) <- paste0("V",1:50)
-str(results)
+SDAresults <- load_results(results_folder = "../results/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)
+rownames(SDAresults$pips[[1]]) <- paste0("V",1:50)
+str(SDAresults)
 
 do_tsne <- function(i){
   seed <- sample(10^6,1)
   set.seed(seed)
-  tsne_data5 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+  tsne_data5 <- Rtsne::Rtsne(SDAresults$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
   tsne_data5$seed <- seed
   return(tsne_data5)
 }
@@ -50,7 +50,7 @@ library(uwot)
 
 set.seed(116189)
 # nb need  to set threads to 1 for repoduciability to work
-sda_umap <- umap(results$scores[,-QC_fail_components], n_neighbors = 100, n_threads = 1)
+sda_umap <- umap(SDAresults$scores[,-QC_fail_components], n_neighbors = 100, n_threads = 1)
 colnames(sda_umap) <- c("Umap1","Umap2")
 
 saveRDS(sda_umap, file = "../data/umap.rds")
@@ -62,7 +62,7 @@ cell_data$Umap1 <- NULL
 cell_data$Umap2 <- NULL
 
 cell_data <- merge(cell_data,
-      cbind(data.table(sda_umap), cell=rownames(results$scores))
+      cbind(data.table(sda_umap), cell=rownames(SDAresults$scores))
 )
 
 
@@ -91,7 +91,7 @@ print_tsne("Prdm9",dim="Umap1",dim2="Umap2")
 tsne_repo_plots <- vector("list", 4)
 
 for(i in 1:3){
-tsne_repo_plots[[i]] <- ggplot(data.table(rotate_matrix(tsne_repo_rand_seeds[[selected[i]]]$Y, rotations[i])), aes(V1, V2, colour=cell_data$PseudoTime[match(rownames(results$scores), cell_data$cell)])) +
+tsne_repo_plots[[i]] <- ggplot(data.table(rotate_matrix(tsne_repo_rand_seeds[[selected[i]]]$Y, rotations[i])), aes(V1, V2, colour=cell_data$PseudoTime[match(rownames(SDAresults$scores), cell_data$cell)])) +
   geom_point(size=0.1) +
   scale_color_viridis() +
   theme(legend.position = "none") +

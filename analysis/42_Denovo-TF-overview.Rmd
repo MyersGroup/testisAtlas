@@ -84,9 +84,9 @@ regprobs_matrix_custom <- cbind("CpG"=sqrt(CG_count)[rownames(regprobs_matrix_cu
 
 ```{r}
 
-results$loadings_split <- split_loadings()#[rownames(HM11_regprobs),]
+SDAresults$loadings_split <- split_loadings()#[rownames(HM11_regprobs),]
 
-loadings_subset <- t(results$loadings[[1]][,rownames(regprobs_matrix_custom)])
+loadings_subset <- t(SDAresults$loadings[[1]][,rownames(regprobs_matrix_custom)])
 
 
 ```
@@ -111,12 +111,12 @@ summary(lm(loadings_subset[,"V5"] ~ CG_count[rownames(loadings_subset)]*(loading
 # plot raw associations
 # regrank_matrix <- apply(regprobs_matrix_custom, 2, rank)
 
-plot(rank(results$loadings[[1]][5,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"NRF1"]))
-plot(rank(results$loadings[[1]][5,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"SP2"]))
-plot(rank(results$loadings[[1]][42,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"MYBA"]))
-plot(rank(results$loadings[[1]][11,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"SPI1"]))
+plot(rank(SDAresults$loadings[[1]][5,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"NRF1"]))
+plot(rank(SDAresults$loadings[[1]][5,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"SP2"]))
+plot(rank(SDAresults$loadings[[1]][42,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"MYBA"]))
+plot(rank(SDAresults$loadings[[1]][11,rownames(regprobs_matrix)]),rank(regprobs_matrix[,"SPI1"]))
 
-plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_matrix_custom[,"ATF1"]))
+plot(rank(SDAresults$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_matrix_custom[,"ATF1"]))
 
 ```
 
@@ -126,27 +126,27 @@ plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_mat
 
 <!-- ```{r, fig.width=6} -->
 
-<!-- in42 <- results$loadings[[1]][42,][results$pips[[1]][42,]>0.5] -->
+<!-- in42 <- SDAresults$loadings[[1]][42,][SDAresults$pips[[1]][42,]>0.5] -->
 <!-- in42 <- in42[names(in42) %in% rownames(regprobs_matrix)] -->
 <!-- in42 <- in42[in42<0] -->
 
-<!-- not42 <- results$loadings[[1]][42,][results$pips[[1]][42,]<0.5] -->
+<!-- not42 <- SDAresults$loadings[[1]][42,][SDAresults$pips[[1]][42,]<0.5] -->
 <!-- not42 <- not42[names(not42) %in% rownames(regprobs_matrix)] -->
 <!-- not42 <- not42[not42<0] -->
 
-<!-- in17 <- results$loadings[[1]][17,][results$loadings[[1]][17,]>0.7] -->
+<!-- in17 <- SDAresults$loadings[[1]][17,][SDAresults$loadings[[1]][17,]>0.7] -->
 <!-- in17 <- in17[names(in17) %in% rownames(regprobs_matrix)] -->
 <!-- in17 <- in17[in17>0] -->
 
-<!-- not17 <- results$loadings[[1]][17,][results$pips[[1]][17,]<0.5] -->
+<!-- not17 <- SDAresults$loadings[[1]][17,][SDAresults$pips[[1]][17,]<0.5] -->
 <!-- not17 <- not17[names(not17) %in% rownames(regprobs_matrix)] -->
 <!-- not17 <- not17[not17>0] -->
 
-<!-- plot(density(regprobs_matrix[,"THAP1"][names(results$loadings[[1]][42,rownames(regprobs_matrix)][names(in42)])])) -->
-<!-- lines(density(regprobs_matrix[,"THAP1"][names(results$loadings[[1]][42,rownames(regprobs_matrix)][names(not42)])]), col="red") -->
+<!-- plot(density(regprobs_matrix[,"THAP1"][names(SDAresults$loadings[[1]][42,rownames(regprobs_matrix)][names(in42)])])) -->
+<!-- lines(density(regprobs_matrix[,"THAP1"][names(SDAresults$loadings[[1]][42,rownames(regprobs_matrix)][names(not42)])]), col="red") -->
 
-<!-- plot(density(regprobs_matrix[,"ATF1*"][names(results$loadings[[1]][17,rownames(regprobs_matrix)][names(in17)])])) -->
-<!-- lines(density(regprobs_matrix[,"ATF1*"][names(results$loadings[[1]][17,rownames(regprobs_matrix)][names(not17)])]), col="red") -->
+<!-- plot(density(regprobs_matrix[,"ATF1*"][names(SDAresults$loadings[[1]][17,rownames(regprobs_matrix)][names(in17)])])) -->
+<!-- lines(density(regprobs_matrix[,"ATF1*"][names(SDAresults$loadings[[1]][17,rownames(regprobs_matrix)][names(not17)])]), col="red") -->
 <!-- ``` -->
 
 
@@ -154,7 +154,7 @@ plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_mat
 
 <!-- library(ggridges) -->
 
-<!-- tmp <- sort(results$loadings[[1]][17,]) -->
+<!-- tmp <- sort(SDAresults$loadings[[1]][17,]) -->
 <!-- tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)] -->
 
 <!-- bin_factor <- cut(seq_along(tmp), 50, labels = 1:50) -->
@@ -171,7 +171,7 @@ plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_mat
 <!--   geom_boxplot() + -->
 <!--   scale_fill_viridis(discrete = T) + theme(legend.position = "none" ) -->
 
-<!-- tmp <- sort(results$loadings[[1]][42,]) -->
+<!-- tmp <- sort(SDAresults$loadings[[1]][42,]) -->
 <!-- tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)] -->
 
 <!-- ggplot(data.table(value = regprobs_matrix[names(tmp),"THAP1"], quantile = bin_factor)[quantile %in% seq(0,50,2)], aes(value, colour=quantile)) + -->
@@ -182,7 +182,7 @@ plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_mat
 <!-- ```{r, fig.width=6} -->
 
 
-<!-- tmp <- sort(results$loadings[[1]][42,]) -->
+<!-- tmp <- sort(SDAresults$loadings[[1]][42,]) -->
 <!-- tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)] -->
 <!-- tmp <- data.table(value = regprobs_matrix[names(tmp),"THAP1"], quantile = bin_factor) -->
 <!-- tmp <- sapply(1:50, function(x) density(tmp[quantile==x]$value)$y) -->
@@ -197,7 +197,7 @@ plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_mat
 <!--   stat_3D(theta=-30, phi=20, geom="path")+ -->
 <!--   scale_colour_viridis(discrete = T)  -->
 
-<!-- tmp <- sort(results$loadings[[1]][17,]) -->
+<!-- tmp <- sort(SDAresults$loadings[[1]][17,]) -->
 <!-- tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)] -->
 <!-- tmp <- data.table(value = regprobs_matrix[names(tmp),"THAP1"], quantile = bin_factor) -->
 <!-- tmp <- sapply(1:50, function(x) density(tmp[quantile==x]$value)$y) -->
@@ -215,9 +215,9 @@ plot(rank(results$loadings[[1]][17,rownames(regprobs_matrix)]),rank(regprobs_mat
 
 
 <!-- # does setting PIP<0.5 to 0 make a difference? - Not really -->
-<!-- # tmp <- results$loadings[[1]][46,] -->
+<!-- # tmp <- SDAresults$loadings[[1]][46,] -->
 <!-- # tmp2 <- tmp -->
-<!-- # tmp2[results$pips[[1]][46,]<0.5] <- 0 -->
+<!-- # tmp2[SDAresults$pips[[1]][46,]<0.5] <- 0 -->
 <!-- # SDAtools::genome_loadings(tmp2) -->
 
 <!-- ``` -->
@@ -247,19 +247,19 @@ compare to the mean loadings per bin of loading
 ```{r}
 bin_factor <- cut(seq_along(regprobs_matrix[,1]), 50)
 
-tmp <- sort(results$loadings[[1]][30,])
+tmp <- sort(SDAresults$loadings[[1]][30,])
 tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)]
 plot(tapply(tmp, bin_factor, mean), main="30")
 
-tmp <- sort(results$loadings[[1]][5,])
+tmp <- sort(SDAresults$loadings[[1]][5,])
 tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)]
 plot(tapply(tmp, bin_factor, mean), main="5")
 
-tmp <- sort(results$loadings[[1]][17,])
+tmp <- sort(SDAresults$loadings[[1]][17,])
 tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)]
 plot(tapply(tmp, bin_factor, mean), main="17")
 
-tmp <- sort(results$loadings[[1]][42,])
+tmp <- sort(SDAresults$loadings[[1]][42,])
 tmp <- tmp[names(tmp) %in% rownames(regprobs_matrix)]
 plot(tapply(tmp, bin_factor, mean), main="42")
 ```
@@ -304,7 +304,7 @@ Heatmap(t(binned_regprobs_custom["ATF1",,component_order]),
         column_title = "ATF1*")
 
 mean_prob_matrix <- cbind(binned_regprobs_custom[,50,],binned_regprobs_custom[,1,])
-colnames(mean_prob_matrix) <- colnames(results$loadings_split)
+colnames(mean_prob_matrix) <- colnames(SDAresults$loadings_split)
 
 mean_prob_matrix <- t(mean_prob_matrix[,ordering[-half_exclusions]])
 rownames(mean_prob_matrix) <- paste(rownames(mean_prob_matrix), component_names[-half_exclusions])
@@ -316,14 +316,14 @@ NMF::aheatmap(scale(mean_prob_matrix), Rowv = NA, hclustfun = "ward.D2")
 ```{r}
 
 regprob_enrich <- function(i,motif,n=500){
-  a=regprobs_matrix_custom[names(sort(results$loadings_split[rownames(regprobs_matrix_custom),i],T))[1:n],motif]
-  b=regprobs_matrix_custom[names(sort(results$loadings_split[rownames(regprobs_matrix_custom),i],T))[(n+1):4512],motif]
+  a=regprobs_matrix_custom[names(sort(SDAresults$loadings_split[rownames(regprobs_matrix_custom),i],T))[1:n],motif]
+  b=regprobs_matrix_custom[names(sort(SDAresults$loadings_split[rownames(regprobs_matrix_custom),i],T))[(n+1):4512],motif]
   return(wilcox.test(a,b, alternative = "greater")$p.value)
 }
 
 
 comps <- 1:100
-names(comps) <- colnames(results$loadings_split)
+names(comps) <- colnames(SDAresults$loadings_split)
 combined <- sapply(comps, function(x) regprob_enrich(x, "STRA8", n=500))
 #plot(-log10(combined))
   

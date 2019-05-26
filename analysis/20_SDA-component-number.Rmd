@@ -7,9 +7,9 @@ SDA can be run with different number of starting compopnents. So we check differ
 
 # Conrad 11 - 50 components
 ```{r, fig.width=6}
-results <- load_results(results_folder = "../data/conradV2/conradV2_sda_11/", data_path = "../data/conradV2/")
-rownames(results$loadings[[1]]) <- paste0("V",1:nrow(results$loadings[[1]]))
-plot_maximums(results)
+SDAresults <- load_results(results_folder = "../data/conradV2/conradV2_sda_11/", data_path = "../data/conradV2/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:nrow(SDAresults$loadings[[1]]))
+plot_maximums(SDAresults)
 ```
 
 ```{r, fig.width=6}
@@ -17,19 +17,19 @@ print_loadings_scores(43)
 print_loadings_scores(4)
 print_loadings_scores(26)
 print_loadings_scores(42)
-highest_components(results, "Dcn")
+highest_components(SDAresults, "Dcn")
 print_loadings_scores(28)
-highest_components(results, "Prdm9")
+highest_components(SDAresults, "Prdm9")
 print_loadings_scores(38)
-conrad11_prdm9 <- results$loadings[[1]]["V38",]
+conrad11_prdm9 <- SDAresults$loadings[[1]]["V38",]
 ```
 
 # Conrad 9 - 100 components
 
 ```{r, fig.width=6}
-results <- load_results(results_folder = "../data/conradV2/conradV2_sda_9/", data_path = "../data/conradV2/")
-rownames(results$loadings[[1]]) <- paste0("V",1:nrow(results$loadings[[1]]))
-plot_maximums(results)
+SDAresults <- load_results(results_folder = "../data/conradV2/conradV2_sda_9/", data_path = "../data/conradV2/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:nrow(SDAresults$loadings[[1]]))
+plot_maximums(SDAresults)
 ```
 
 
@@ -38,12 +38,12 @@ print_loadings_scores(53)
 print_loadings_scores(45)
 print_loadings_scores(95)
 print_loadings_scores(85)
-highest_components(results, "Dcn")
+highest_components(SDAresults, "Dcn")
 print_loadings_scores(5)
 print_loadings_scores(47)
-highest_components(results, "Prdm9")
+highest_components(SDAresults, "Prdm9")
 print_loadings_scores(1)
-conrad9_prdm9 <- results$loadings[[1]]["V1",]
+conrad9_prdm9 <- SDAresults$loadings[[1]]["V1",]
 ```
 
 # Conrad 10 - 500 components
@@ -57,15 +57,15 @@ loading_distribution(results2)
 scores_distribution(results2)
 plot_maximums(results2)
 # plot_maximums(results2)
-# #plot_scree(results)
-# PIP_distribution(results)
-# PIP_component_distribution(results, 2)
-# PIP_threshold_distribution(results)
+# #plot_scree(SDAresults)
+# PIP_distribution(SDAresults)
+# PIP_component_distribution(SDAresults, 2)
+# PIP_threshold_distribution(SDAresults)
 # 
-# QC_components <- results$component_statistics[max_score<50][order(Component)]$Component_name
-# odd_components <- results$component_statistics[max_score>50][order(Component)]$Component_name
+# QC_components <- SDAresults$component_statistics[max_score<50][order(Component)]$Component_name
+# odd_components <- SDAresults$component_statistics[max_score>50][order(Component)]$Component_name
 # 
-# #rna_locations <- load_gene_locations(colnames(results$loadings[[1]]))
+# #rna_locations <- load_gene_locations(colnames(SDAresults$loadings[[1]]))
 # rna_locations <- load_gene_locations(colnames(data), name="merge_mouse_wt")
 ```
 
@@ -115,9 +115,9 @@ print_loadings_scores(454)
 # Conrad 8 - 50 components different seed
 
 ```{r, fig.width=6}
-results <- load_results(results_folder = "../data/conradV2/conradV2_sda_8/", data_path = "../data/conradV2/")
-rownames(results$loadings[[1]]) <- paste0("V",1:nrow(results$loadings[[1]]))
-plot_maximums(results)
+SDAresults <- load_results(results_folder = "../data/conradV2/conradV2_sda_8/", data_path = "../data/conradV2/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:nrow(SDAresults$loadings[[1]]))
+plot_maximums(SDAresults)
 ```
 
 ```{r, fig.width=6}
@@ -126,7 +126,7 @@ print_loadings_scores(49)
 print_loadings_scores(46)
 print_loadings_scores(6)
 print_loadings_scores(19)
-conrad8_prdm9 <- results$loadings[[1]]["V19",]
+conrad8_prdm9 <- SDAresults$loadings[[1]]["V19",]
 ```
 
 # Comparison

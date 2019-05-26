@@ -32,8 +32,8 @@ nmf.options(grid.patch=TRUE) # stop blank pages appearing
 # Load SDA & tss sequences
 
 ```{r}
-results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
-rownames(results$loadings[[1]]) <- paste0("V",1:50)
+SDAresults <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)
 
 library(testisAtlas)
 
@@ -128,7 +128,7 @@ names(tss_seqs_s) <- gsub("\\(-\\)|\\(\\+\\)","",names(tss_seqs))
 
 tss_seqs_s <- substr(tss_seqs_s,500,1500)
 
-tss_seqs_s <- tss_seqs_s[names(tss_seqs_s) %in% colnames(results$loadings[[1]])]
+tss_seqs_s <- tss_seqs_s[names(tss_seqs_s) %in% colnames(SDAresults$loadings[[1]])]
 
 library(MotifFinder)
 

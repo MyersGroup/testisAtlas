@@ -40,8 +40,8 @@ diff_expression <- data.table(
 
 # Imputed
 diff_expression <- data.table(
-  odd = colMeans(results$scores[cell_data[subset=="Odd_48"]$cell,] %*% results$loadings[[1]]),
-  normal = colMeans(results$scores[cell_data[subset=="Normal"]$cell,] %*% results$loadings[[1]]),
+  odd = colMeans(SDAresults$scores[cell_data[subset=="Odd_48"]$cell,] %*% SDAresults$loadings[[1]]),
+  normal = colMeans(SDAresults$scores[cell_data[subset=="Normal"]$cell,] %*% SDAresults$loadings[[1]]),
   gene = colnames(data))
 
 diff_expression[,ratio := (odd+1)/(normal+1)]
@@ -90,9 +90,9 @@ write.table(head(diff_expression[order(ratio)], 250)$gene, file = "../data/48_un
 write.table(head(diff_expression[order(-ratio)], 250)$gene, file = "../data/48_overexpressed.txt", row.names = F, quote = F, col.names = F)
 
 
-write.table(names(head(sort(results$loadings[[1]][48,]),250)), file = "../data/48_neg_loadings.txt", row.names = F, quote = F, col.names = F)
+write.table(names(head(sort(SDAresults$loadings[[1]][48,]),250)), file = "../data/48_neg_loadings.txt", row.names = F, quote = F, col.names = F)
 
-write.table(names(head(sort(-results$loadings[[1]][48,]),250)), file = "../data/48_pos_loadings.txt", row.names = F, quote = F, col.names = F)
+write.table(names(head(sort(-SDAresults$loadings[[1]][48,]),250)), file = "../data/48_pos_loadings.txt", row.names = F, quote = F, col.names = F)
 
 
 write.table(diff_expression[order(ratio)]$gene, file = "../data/48_ranked.txt", row.names = F, quote = F, col.names = F)
@@ -112,7 +112,7 @@ c48 gene loadings
 library(SDAtools)
 rna_locations <- load_gene_locations(path = "../data/", name = "merge_mouse_V3b")
 load("../data/archive/gene_annotations.rds")
-genome_loadings(results$loadings[[1]][48,], gene_locations = rna_locations)
+genome_loadings(SDAresults$loadings[[1]][48,], gene_locations = rna_locations)
 print_gene_list(48)
 print_loadings_scores(48)
 ```
@@ -120,9 +120,9 @@ print_loadings_scores(48)
 Are the clusters different wrt other components?
 
 ```{r, fig.height=20, fig.width=5}
- #/ colSums(abs(results$scores[cell_data[subset=="Odd_48"]$cell,]))
+ #/ colSums(abs(SDAresults$scores[cell_data[subset=="Odd_48"]$cell,]))
 
-tmp <- melt(data.table(results$scores[cell_data[subset!="Other"]$cell,], keep.rownames = T), id.vars = "rn", variable.name = "Component")
+tmp <- melt(data.table(SDAresults$scores[cell_data[subset!="Other"]$cell,], keep.rownames = T), id.vars = "rn", variable.name = "Component")
 
 tmp[rn %in% cell_data[subset=="Odd_48"]$cell, type := "Odd"]
 tmp[rn %in% cell_data[subset=="Normal"]$cell, type := "Normal"]

@@ -9,9 +9,9 @@ library(testisAtlas)
 
 #load("../data/tmp_cache/cached_objects.rds")
 
-results <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
-rownames(results$loadings[[1]]) <- paste0("V",1:50)
-str(results)
+SDAresults <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)
+str(SDAresults)
 ```
 
 

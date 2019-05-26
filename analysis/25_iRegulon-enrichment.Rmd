@@ -98,18 +98,18 @@ motifRankings$`10kbp`@rankings[, rn := tmp$external_gene_name]
 ```{r}
 library(SDAtools)
 
-results <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
-rownames(results$loadings[[1]]) <- paste0("V",1:50)
-str(results)
+SDAresults <- load_results(results_folder = "../data/conradV3/conradV3_sda_1/", data_path = "../data/conradV3/")
+rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)
+str(SDAresults)
 
-which_SDA_genes <- colnames(results$loadings[[1]]) %in% motifRankings$`500bp`@rankings$rn
+which_SDA_genes <- colnames(SDAresults$loadings[[1]]) %in% motifRankings$`500bp`@rankings$rn
 
 sum(which_SDA_genes)
 
 geneNumber = 500
 
-top_positive <- apply(results$loadings[[1]][,which_SDA_genes], 1, function(x) names(sort(x, decreasing=TRUE)[1:geneNumber]))
-top_negative <- apply(results$loadings[[1]][,which_SDA_genes], 1, function(x) names(sort(x, decreasing=FALSE)[1:geneNumber]))
+top_positive <- apply(SDAresults$loadings[[1]][,which_SDA_genes], 1, function(x) names(sort(x, decreasing=TRUE)[1:geneNumber]))
+top_negative <- apply(SDAresults$loadings[[1]][,which_SDA_genes], 1, function(x) names(sort(x, decreasing=FALSE)[1:geneNumber]))
 
 colnames(top_positive) <- paste0(colnames(top_positive),"P")
 colnames(top_negative) <- paste0(colnames(top_negative),"N")
@@ -246,12 +246,12 @@ frac_to_numeric <- function(x) sapply(x, function(x) eval(parse(text=x)))
 GO_enrichment <- function(component, geneNumber = 250, threshold=0.01, side="N"){
   
   if(side=="N"){
-    top_genes <- data.table(as.matrix(results$loadings[[1]][component, ]), keep.rownames = TRUE)[order(V1)][1:geneNumber]$rn
+    top_genes <- data.table(as.matrix(SDAresults$loadings[[1]][component, ]), keep.rownames = TRUE)[order(V1)][1:geneNumber]$rn
   }else{
-    top_genes <- data.table(as.matrix(results$loadings[[1]][component, ]), keep.rownames = TRUE)[order(-V1)][1:geneNumber]$rn
+    top_genes <- data.table(as.matrix(SDAresults$loadings[[1]][component, ]), keep.rownames = TRUE)[order(-V1)][1:geneNumber]$rn
   }
 
-gene_universe <- data.table(as.matrix(results$loadings[[1]][component,]), keep.rownames = TRUE)$rn
+gene_universe <- data.table(as.matrix(SDAresults$loadings[[1]][component,]), keep.rownames = TRUE)$rn
 
 ego <- enrichGO(gene = top_genes,
                 universe = gene_universe,
