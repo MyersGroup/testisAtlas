@@ -569,7 +569,7 @@ common_genes <- rownames(regprobs_matrix_custom)[rownames(regprobs_matrix_custom
 
 tmp <- data[,common_genes] * matrix(rep(t(regprobs_matrix_custom[common_genes,"CREMT",drop=F]),nrow(data)),nrow=nrow(data),byrow = T)
 tmp2 <- Matrix::rowMeans(tmp)
-ggplot(data.table(Stra8=tmp2, cell=names(tmp2))[datat,on="cell"], aes(Tsne1_QC1, Tsne2_QC1, colour=Stra8)) + geom_point(stroke=0, size=1) + scale_colour_viridis(direction = -1)
+ggplot(data.table(Stra8=tmp2, cell=names(tmp2))[cell_data,on="cell"], aes(Tsne1_QC1, Tsne2_QC1, colour=Stra8)) + geom_point(stroke=0, size=1) + scale_colour_viridis(direction = -1)
 
 ```
 

@@ -21,13 +21,13 @@ library(dropsim)
 raw_data <- readRDS("../data/merged-mouse_counts_tsne-QC_low-mt.rds")
 raw_data <- t(raw_data)
 
-#datat <- readRDS("../data/tmp_cache/datat.rds")
+#cell_data <- readRDS("../data/tmp_cache/cell_data.rds")
 
 wt_groups <- c("WT","mj","SPG","SPD","SPCII","SPCI")
 
 str(wt_groups)
 
-wt_cells <- datat[group %in% wt_groups]$cell
+wt_cells <- cell_data[group %in% wt_groups]$cell
 
 
 
@@ -667,7 +667,7 @@ ggplot(mix_wt, aes(V1, V4, label=gene)) +
 dev.off()
 
 pdf("../results/WT/UdifSpg_cell_scatterplot.pdf")
-ggplot(datat[data.table(rot_9WT_scoresrot[,"WT_rot31", drop=F], keep.rownames = T)],
+ggplot(cell_data[data.table(rot_9WT_scoresrot[,"WT_rot31", drop=F], keep.rownames = T)],
         aes(WT_rot31, V31, colour=PseudoTime)) +
    geom_point(stroke=0, size=1.5) +
    scale_colour_viridis(direction = -1) +
@@ -685,10 +685,10 @@ plot(rot_9WTsparse_scoresrot[,"WT_rot42"], results1$scores[rownames(rot_9WTspars
 plot(rot_9WT_scoresrot[,"WT_rot42"], results1$scores[rownames(rot_9WT_scoresrot),42], pch=".")
 abline(0,0.55,col='red')
 
-ggplot(datat[data.table(rot_9WT_scoresrot_sparse[,"WT_rot42", drop=F], keep.rownames = T)], aes(WT_rot42, V42, colour=PseudoTime)) + geom_point(stroke=0, size=0.5) + scale_colour_viridis()
+ggplot(cell_data[data.table(rot_9WT_scoresrot_sparse[,"WT_rot42", drop=F], keep.rownames = T)], aes(WT_rot42, V42, colour=PseudoTime)) + geom_point(stroke=0, size=0.5) + scale_colour_viridis()
 
 pdf("../results/WT/Pachytene_cellscore_scatter.pdf")
-ggplot(datat[data.table(rot_9WT_scoresrot[,"WT_rot42", drop=F], keep.rownames = T)],
+ggplot(cell_data[data.table(rot_9WT_scoresrot[,"WT_rot42", drop=F], keep.rownames = T)],
        aes(WT_rot42, V42, colour=PseudoTime)) +
   geom_point(stroke=0, size=0.5) +
   scale_colour_viridis(direction = -1) +
@@ -696,14 +696,14 @@ ggplot(datat[data.table(rot_9WT_scoresrot[,"WT_rot42", drop=F], keep.rownames = 
   labs(y="WT: C42 (Rotated)", x="Mixed: C42 Pachytene")
 dev.off()
 
-ggplot(datat[data.table(results9_WT$scores[,"WT_42", drop=F], keep.rownames = T)],
+ggplot(cell_data[data.table(results9_WT$scores[,"WT_42", drop=F], keep.rownames = T)],
        aes(WT_42, V42, colour=PseudoTime)) +
   geom_point(stroke=0, size=0.5) +
   scale_colour_viridis(direction = -1) +
   scale_y_reverse() + scale_x_reverse() +
   labs(y="WT: C42 (Raw)", x="Mixed: C42 Pachytene")
 
-ggplot(datat[data.table(rot_9WTsparse_scoresrot[,"WT_rot42", drop=F], keep.rownames = T)], 
+ggplot(cell_data[data.table(rot_9WTsparse_scoresrot[,"WT_rot42", drop=F], keep.rownames = T)], 
        aes(Tsne1_QC1,Tsne2_QC1, colour=cell %in% names(which(rot_9WTsparse_scoresrot[,"WT_rot42"]*0.55 < results1$scores[rownames(rot_9WTsparse_scoresrot),42])))) + 
     geom_point() +
     theme(legend.position = "bottom")
@@ -714,13 +714,13 @@ ggplot(datat[data.table(rot_9WTsparse_scoresrot[,"WT_rot42", drop=F], keep.rowna
 Scores on tSNE (compare to previous score visualisation)
 
 ```{r}
-ggplot(datat[data.table(rot_9WT_scoresrot_sparse[,"Mix42 Pachytene", drop=F], keep.rownames = T)], 
+ggplot(cell_data[data.table(rot_9WT_scoresrot_sparse[,"Mix42 Pachytene", drop=F], keep.rownames = T)], 
        aes(Tsne1_QC1,Tsne2_QC1, colour=get("Mix42 Pachytene"))) + 
     geom_point() +
     scale_colour_viridis() +
     theme(legend.position = "bottom")
 
-ggplot(datat[data.table(rot_9WT_scoresrot_sparse[,"Mix42 Pachytene", drop=F], keep.rownames = T)], 
+ggplot(cell_data[data.table(rot_9WT_scoresrot_sparse[,"Mix42 Pachytene", drop=F], keep.rownames = T)], 
        aes(Tsne1_QC1,Tsne2_QC1, colour=V42)) + 
     geom_point() +
     scale_colour_viridis() +

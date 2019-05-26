@@ -35,13 +35,13 @@ For example:
 
 ```{r, fig.width=6}
 
-ggplot(datat[order(cell == matched_cells_CNP[500,2])], aes(Tsne1_QC1, Tsne2_QC1, color=cell == matched_cells_CNP[500,2])) +
+ggplot(cell_data[order(cell == matched_cells_CNP[500,2])], aes(Tsne1_QC1, Tsne2_QC1, color=cell == matched_cells_CNP[500,2])) +
   geom_point(size=0.5) +
   scale_color_manual(values=c("grey","red")) +
   theme(legend.position = "bottom") +
   ggtitle("Mutant Cell")
 
-ggplot(datat[order(cell == matched_cells_CNP[500,1])], aes(Tsne1_QC1, Tsne2_QC1, color=cell == matched_cells_CNP[500,1])) +
+ggplot(cell_data[order(cell == matched_cells_CNP[500,1])], aes(Tsne1_QC1, Tsne2_QC1, color=cell == matched_cells_CNP[500,1])) +
   geom_point(size=0.5) +
   scale_color_manual(values=c("grey","red")) +
   theme(legend.position = "bottom") +
@@ -131,7 +131,7 @@ ggplot(gene_expression_pseudotime(c("Rps7","Tpt1","Fau","Eif1"))[group %in% c("W
 ```{r}
 matched_cells_Cul4a <- match_cells2(test_group = "Cul4a")
 
-#matched_cells_Cul4a[,1] <- datat[group=="Cul4a"]$cell
+#matched_cells_Cul4a[,1] <- cell_data[group=="Cul4a"]$cell
 
 str(matched_cells_Cul4a)
 sum(is.na(matched_cells_Cul4a[,2]))
@@ -397,9 +397,9 @@ Only 6 wild type macrophages, so any inference of DE cells is shakey
 library(ggplot2)
 
 
-matched_cells_MQ2 <- match_cells2(cell_subset = datat[V11>5]$cell, swap_groups = T)
+matched_cells_MQ2 <- match_cells2(cell_subset = cell_data[V11>5]$cell, swap_groups = T)
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=V11>5)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=V11>5)) +
   geom_point(size=0.5) +
   theme(legend.position = "bottom") +
   ggtitle("Mutant Cell")

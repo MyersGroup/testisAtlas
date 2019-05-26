@@ -40,7 +40,7 @@ hist_subset <- c("Cenpa","Hist1h2bj", "Hist1h1e", "Hist1h2aa", "Hist1h2ba", "His
  "Hist2h2be","Hist1h1t", "Hist1h2bp", "Hist1h4a", "Hils1", "H2al3", "H2al1m", 
 "H2al1n", "H2al2a", "H1fnt","Tnp1","Tnp2","Prm1","Prm2")
 
-tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- cell_data[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
 tmp <- merge(tmp, sda_predict(hist_subset, name_extension = ""))
 
 grid.arrange(grobs=create_grob_list(fn = print_marker2, input = hist_subset), nrow=4, heights = c(1,1,1,1))
@@ -148,7 +148,7 @@ Tbpl1=TRF2
 tfs <- c("Tbp","Tbpl1","Rfx2","Fhl5","Crem","Kif17","Taf7l","Taf7","Taf4b","Gtf2a1l","Gtf2a2","Foxo1","Foxj3","Foxj2","Zbtb33","E2f1","E2f2","E2f3","E2f4","E2f5","E2f7","Tfdp1","Evx1","Evx2","Mybl2","Myb","Mybl1")
 tfs <- tfs[(tfs %in% colnames(results$loadings[[1]]))]
 
-tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- cell_data[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
 tmp <- merge(tmp, sda_predict(tfs))
 
 grid.arrange(grobs=create_grob_list(fn = print_marker2, input = tfs), nrow=4, heights = c(1,1,1,1))
@@ -171,7 +171,7 @@ cyclins <- c("Ccno", "Ccna2", "Ccng1", "Ccnb1", "Ccne1", "Ccni", "Ccnt1", "Ccny"
 cyclins <- cyclins[(cyclins %in% colnames(results$loadings[[1]]))]
 #cyclins <- c("Ccne1","Ccne2", "Ccnb1","Ccnb2", "Ccnd2","Ccnd3", "Ccna1")
 
-tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- cell_data[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
 tmp <- merge(tmp, sda_predict(cyclins, name_extension = ""))
 
 grid.arrange(grobs=create_grob_list(fn = print_marker2, input = cyclins), nrow=4, heights = c(1,1,1,1))
@@ -260,14 +260,14 @@ str(krab_zinc_fingers)
 krab_zinc_fingers <- krab_zinc_fingers[(krab_zinc_fingers %in% colnames(results$loadings[[1]]))]
 str(krab_zinc_fingers)
 
-KZF_melt <- melt_genes(datat, krab_zinc_fingers)
+KZF_melt <- melt_genes(cell_data, krab_zinc_fingers)
 
 # ggplot(KZF_melt, aes(-PseudoTime, abs(value), colour=variable)) +
 #     geom_smooth(se=FALSE) + ylab("Gene Expression") + xlab("Pseudotime") + ylim(0,NA) + ggtitle("Expression over pseudotime for KRAB-ZF genes") + theme(legend.position = "none")
 
 high_znf_Krab <- as.character(KZF_melt[,mean(value), by=variable][order(-V1)][1:25]$variable)
 
-tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- cell_data[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
 tmp <- merge(tmp, sda_predict(high_znf_Krab))
 
 grid.arrange(grobs=create_grob_list(fn = print_marker2, input = high_znf_Krab), nrow=4, heights = c(1,1,1,1))
@@ -276,7 +276,7 @@ grid.arrange(grobs=create_grob_list(fn = print_marker2, input = high_znf_Krab), 
 
 ```{r fig.width=6}
 # Top Early expressing ZNF-KRAB genes
-top_10_early_znf <- names(head(sort(datat[PseudoTime>(15000) , colSums(.SD, na.rm = TRUE), .SDcols = krab_zinc_fingers], T),15))
+top_10_early_znf <- names(head(sort(cell_data[PseudoTime>(15000) , colSums(.SD, na.rm = TRUE), .SDcols = krab_zinc_fingers], T),15))
 
 plot_pseudotime_expression_panel(top_10_early_znf, ncol = 5, title = "Top Early expressing ZNF-KRAB genes")
 

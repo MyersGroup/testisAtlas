@@ -268,13 +268,13 @@ save(MAGIC_AUCs, file = "../data/imputation/imputed_ranks_MAGIC.rds")
 
 
 # MAGIC expression jumps around quite a lot...
-ggplot(datat[sda_predict("Prdm9")], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
-ggplot(datat[nmf_predict("Prdm9")], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
-ggplot(datat[magic_predict("Prdm9",MAGIC_data)], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(cell_data[sda_predict("Prdm9")], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(cell_data[nmf_predict("Prdm9")], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(cell_data[magic_predict("Prdm9",MAGIC_data)], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3, size=0.5)
 
-ggplot(datat[magic_predict("Ssxb1",MAGIC_data)], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
-ggplot(datat[nmf_predict("Ssxb1")], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
-ggplot(datat[sda_predict("Ssxb1")], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(cell_data[magic_predict("Ssxb1",MAGIC_data)], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(cell_data[nmf_predict("Ssxb1")], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
+ggplot(cell_data[sda_predict("Ssxb1")], aes(-PseudoTime, Ssxb1)) + geom_point(stroke=0, alpha=0.3, size=0.5)
 ```
 
 # Data Compression
@@ -599,11 +599,11 @@ dev.off()
 which cells are better worse in NNMF vs SDA
 
 ```{r, fig.width=3}
-ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict < 0.99)) +
+ggplot(cell_data[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict < 0.99)) +
   geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
   scale_color_manual(values=c("lightgrey","red")) + theme_minimal()
 
-ggplot(datat[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict > 1.01)) +
+ggplot(cell_data[cellAUCs], aes(Tsne1_QC1, Tsne2_QC1, colour=predict.NNMF/predict > 1.01)) +
   geom_jitter(size=0.5, stroke=0, height = 0.25, width = 0.25) +
   scale_color_manual(values=c("lightgrey","red")) + theme_minimal()
 ```
@@ -622,7 +622,7 @@ pred_exp_example <- pred_exp_example[sda_predict(example_gene, results_train, ".
 
 setnames(pred_exp_example, names(pred_exp_example), gsub(paste0(example_gene,"."),"",names(pred_exp_example)))
 
-ex_imputed <- ggplot(melt(pred_exp_example, id.vars = "cell", value.name = example_gene, variable.name = "Method")[datat, on="cell"][!is.na(Method)],
+ex_imputed <- ggplot(melt(pred_exp_example, id.vars = "cell", value.name = example_gene, variable.name = "Method")[cell_data, on="cell"][!is.na(Method)],
        aes(-PseudoTime, get(example_gene), colour=Method)) + 
   geom_point(stroke=0, size=0.3, alpha=0.5)+
   scale_colour_manual(values = brewer.pal(7, "Set1")[-6])+
@@ -682,7 +682,7 @@ vs the mean cell apprach
 setkey(cellAUCs, cell)
 
 # which cells are best
-c <- ggplot(merge(datat, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
+c <- ggplot(merge(cell_data, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
   geom_point(size=0.3, stroke=0) + 
   scale_color_viridis(direction = -1) +
   theme_classic(base_size=8) +
@@ -701,7 +701,7 @@ c <- ggplot(merge(datat, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, co
   guides(colour=guide_colourbar(barwidth=5, barheight=0.5, title.position="top")) +
   labs(x="", y="", colour="Ratio of Imputed to\n Average Expression AUC")
 
-c2 <- ggplot(merge(datat, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
+c2 <- ggplot(merge(cell_data, cellAUCs)[predict/mean>1], aes(Tsne1_QC1, Tsne2_QC1, colour=predict/mean)) +
   geom_point(size=1, stroke=0) + 
   scale_color_viridis(direction = -1) +
   labs(x="tSNE1", y="tSNE2", colour="Ratio of Imputed to\n Average Expression AUC") +
@@ -714,16 +714,16 @@ c
 vs the no imputation
 
 ```{r}
-density_lib <- get_density(log(merge(datat, cellAUCs)$library_size), merge(datat, cellAUCs)[,predict/train], kern=0.07)
+density_lib <- get_density(log(merge(cell_data, cellAUCs)$library_size), merge(cell_data, cellAUCs)[,predict/train], kern=0.07)
 
-ggplot(merge(datat, cellAUCs), aes(log(library_size), predict/train, colour=density_lib)) +
+ggplot(merge(cell_data, cellAUCs), aes(log(library_size), predict/train, colour=density_lib)) +
   geom_point(size=0.1)+
   scale_colour_viridis() +
   theme_minimal() +
   geom_hline(yintercept = 1, colour="red") +
   labs(y="Ratio of SDA Imputed AUC\n to Unimputed AUC", x="Log Library Size (Total UMI Counts)")
 
-lib_size_plot <- ggplot(merge(datat, cellAUCs), aes(log10(library_size), predict/train, colour=-PseudoTime)) +
+lib_size_plot <- ggplot(merge(cell_data, cellAUCs), aes(log10(library_size), predict/train, colour=-PseudoTime)) +
   geom_point(size=0.1)+
   scale_colour_viridis(guide_colorbar(title="PseudoTime")) +
   theme_minimal() +

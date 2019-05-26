@@ -28,7 +28,7 @@ devtools::load_all() # aka library(testisAtlas)
 
 load("data/tmp_cache/SDA_objects.rds")
 
-tmp <- merge(datat[somatic4==FALSE,
+tmp <- merge(cell_data[somatic4==FALSE,
                    c("cell","PseudoTime","PseudoTime1","PseudoTime2","Tsne1_QC1", "Tsne2_QC1","group"),
                    with=FALSE],
                sda_predict("Prdm9", name_extension = ""))

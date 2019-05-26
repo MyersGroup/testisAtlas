@@ -77,7 +77,7 @@ saveRDS(list(dge=data, library_size=library_size), "../data/merged_mouse_normali
 
 ```{r}
 1- Matrix::nnzero(data)/prod(dim(data))
-median(datat$library_size)
+median(cell_data$library_size)
 ```
 
 
@@ -112,33 +112,33 @@ save(tsne_data, tsne_data2, file="../data/conradV3/merged_mouse_tsne_QCtsne.rds"
 ```{r, fig.width=6}
 load("../data/merged_mouse_tsne_QCtsne.rds")
 
-datat <- data.table(tsne_data$Y)
-setnames(datat, c("Tsne1","Tsne2"))
-datat$cell <- rownames(data)
-datat$experiment <- gsub("[A-Z]+\\.","",rownames(data))
-datat$group <- gsub("_.*","",datat$experiment)
-datat$library_size <- library_size
-setkey(datat, "cell")
+cell_data <- data.table(tsne_data$Y)
+setnames(cell_data, c("Tsne1","Tsne2"))
+cell_data$cell <- rownames(data)
+cell_data$experiment <- gsub("[A-Z]+\\.","",rownames(data))
+cell_data$group <- gsub("_.*","",cell_data$experiment)
+cell_data$library_size <- library_size
+setkey(cell_data, "cell")
 
 mito_genes <- grep("mt-",colnames(data), value=T)
 
 ```
 
 ```{r, fig.width=6}
-ggplot(datat, aes(Tsne1, Tsne2, color=log(library_size))) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=log(library_size))) +
   geom_point() +
   scale_colour_distiller(palette="YlOrRd", direction=1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - library size")
 
-ggplot(datat, aes(Tsne1, Tsne2, color=experiment)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=experiment)) +
   geom_point(size=0.5) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
   scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
 #scale_colour_brewer(palette="Paired")
 
-ggplot(datat, aes(Tsne1, Tsne2, color=group)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=group)) +
   geom_point(size=0.5) +
   scale_color_manual(values = brewer.pal(11,"Paired")) +
   theme(legend.position = "bottom") +
@@ -189,7 +189,7 @@ grid.arrange(grobs=create_grob_list(fn = print_raw_tsne, input = marker_genes), 
 ```{r, fig.width=4}
 # are the KO genes still expressed?
 
-ggplot(datat, aes(Tsne1, Tsne2, color=Cul4a)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=Cul4a)) +
   geom_point(size=1) +
   scale_colour_distiller(palette="YlOrRd", direction=1) +
   theme(legend.position = "bottom")
@@ -225,7 +225,7 @@ qplot(1:20322, raw_data["Mlh3",], col=group_vector, geom="point") +
 
 pca_dt <- data.table(pcaresult$projection[,1:10]) #data.table(pca_result$x[,1:10], keep.rownames = T)
 setnames(pca_dt, paste0("PC",1:10))
-datat <- cbind(datat[cell==rownames(data)], pca_dt)
+cell_data <- cbind(cell_data[cell==rownames(data)], pca_dt)
 
 
 grid.arrange(grobs=list(print_pca("PC1"),
@@ -237,7 +237,7 @@ grid.arrange(grobs=list(print_pca("PC1"),
                         print_pca("PC7")),
 			nrow=3, heights = c(1,1,1))
 
-ggplot(datat, aes(PC1, PC2, color=experiment)) +
+ggplot(cell_data, aes(PC1, PC2, color=experiment)) +
   geom_point() +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
@@ -337,8 +337,8 @@ rna_locations[,.N,by=chromosome_name][order(-N)]
 merge_sda4 <- data.table(results$scores, keep.rownames = T)
 setnames(merge_sda4, "rn", "cell")
 setkey(merge_sda4, cell)
-setkey(datat, cell)
-datat <- merge(datat, merge_sda4)
+setkey(cell_data, cell)
+cell_data <- merge(cell_data, merge_sda4)
 #merge_sda3$library_size <- library_size[merge_sda3$cell]
 
 ```
@@ -379,14 +379,14 @@ The first heatmap shows again that some components only have a single high loadi
 ```{r, fig.width=6}
 
 # cell scores
-clustered_heatmap(asinh(datat[,QC_components, with=FALSE]), "Cells can have multiple components active (Asinh Transformed)", col_lab=NA)
-#annotation.col=datat[,.(Prm2, Insl3, Nasp, Uchl1, Acrv1)],
-aheatmap(cor(datat[,QC_components, with=FALSE]),
+clustered_heatmap(asinh(cell_data[,QC_components, with=FALSE]), "Cells can have multiple components active (Asinh Transformed)", col_lab=NA)
+#annotation.col=cell_data[,.(Prm2, Insl3, Nasp, Uchl1, Acrv1)],
+aheatmap(cor(cell_data[,QC_components, with=FALSE]),
          breaks=0,
          main="Correlation between components, by Cell Score",
          hclustfun="ward.D2",
          labRow = component_order_dt[QC_fail==F]$name)
-cor_scores <- cor(datat[,QC_components, with=FALSE])
+cor_scores <- cor(cell_data[,QC_components, with=FALSE])
 rownames(cor_scores) <- component_order_dt[QC_fail==F]$name
 Heatmap(cor_scores)
 
@@ -475,40 +475,40 @@ tsne_data3 <- Rtsne::Rtsne(results$scores[,-QC_fail_components], verbose=TRUE, p
 # 
 # ggplot(data.table(PCA_onSDA$x[,1:4]), aes(PC1,PC2)) +geom_point()
 
-# add tsne to datat
+# add tsne to cell_data
 tsne_data_dt <- data.table(tsne_data3$Y)
 setnames(tsne_data_dt, c("Tsne1_QC1", "Tsne2_QC1"))
 tsne_data_dt$cell <- rownames(results$scores)
 setkey(tsne_data_dt, cell)
-datat[,Tsne1_QC1 := NULL]
-datat[,Tsne2_QC1 := NULL]
-setkey(datat, cell)
-datat <- merge(datat, tsne_data_dt)
+cell_data[,Tsne1_QC1 := NULL]
+cell_data[,Tsne2_QC1 := NULL]
+setkey(cell_data, cell)
+cell_data <- merge(cell_data, tsne_data_dt)
 
-# add tsne to datat
+# add tsne to cell_data
 tsne_data_dt2 <- data.table(tsne_data2$Y)
 setnames(tsne_data_dt2, c("Tsne1_QC2", "Tsne2_QC2"))
 tsne_data_dt2$cell <- rownames(results$scores)
 setkey(tsne_data_dt2, cell)
-datat[,Tsne1_QC2 := NULL]
-datat[,Tsne2_QC2 := NULL]
-setkey(datat, cell)
-datat <- merge(datat, tsne_data_dt2)
+cell_data[,Tsne1_QC2 := NULL]
+cell_data[,Tsne2_QC2 := NULL]
+setkey(cell_data, cell)
+cell_data <- merge(cell_data, tsne_data_dt2)
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=log(library_size))) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=log(library_size))) +
   geom_point(size=0.25) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - library size")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=experiment)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=experiment)) +
   geom_point(size=0.5) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
   scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
 #scale_colour_brewer(palette="Paired")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
   geom_point(size=0.5) +
   scale_color_manual(values = brewer.pal(11,"Paired")) +
   theme(legend.position = "bottom") +
@@ -682,24 +682,24 @@ d <- dist(results$scores[,-c(22,6,25,29,12,28,41,1,46,4,8,14,9,43)], method = "e
 hc1 <- hclust(d, method = "ward.D2" )
 
 groups <- cutree(hc1, k=25) # cut tree into 25 clusters
-datat[,hclust_group := groups[datat$cell]]
+cell_data[,hclust_group := groups[cell_data$cell]]
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group))) +
-  geom_point(data = transform(datat, hclust_group = NULL), colour = "grey85", size=0.1) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group))) +
+  geom_point(data = transform(cell_data, hclust_group = NULL), colour = "grey85", size=0.1) +
   geom_point(size=0.25) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") + 
   facet_wrap(~hclust_group)
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group) %in% c(21,22,20,19,16,11,6,17,23,25))) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group) %in% c(21,22,20,19,16,11,6,17,23,25))) +
   geom_point(size=0.1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment")
 
-datat[, somatic3 := FALSE]
-datat[hclust_group %in% c(21,22,20,19,16,11,6,17,23,25), somatic3 := TRUE]
+cell_data[, somatic3 := FALSE]
+cell_data[hclust_group %in% c(21,22,20,19,16,11,6,17,23,25), somatic3 := TRUE]
 
-ggplot(datat[somatic3 == FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
+ggplot(cell_data[somatic3 == FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
   geom_point(size=0.1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment")
@@ -709,33 +709,33 @@ ggplot(datat[somatic3 == FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
 
 ```{r}
 
-datat <- merge(datat, expression_dt("mt-Rnr2"))
+cell_data <- merge(cell_data, expression_dt("mt-Rnr2"))
 
-datat[,somatic4 := FALSE]
-datat[abs(V26)>2 | abs(V11)>2 | abs(V3)>2 | abs(V32)>1 | abs(V37)>1.5 | abs(V45)>2 | abs(V24)>2 |abs(V40)>1 | `mt-Rnr2`>3, somatic4 := TRUE]
+cell_data[,somatic4 := FALSE]
+cell_data[abs(V26)>2 | abs(V11)>2 | abs(V3)>2 | abs(V32)>1 | abs(V37)>1.5 | abs(V45)>2 | abs(V24)>2 |abs(V40)>1 | `mt-Rnr2`>3, somatic4 := TRUE]
 
-ggplot(expression_dt("mt-Rnr2")[datat], aes(Tsne1_QC1, Tsne2_QC1, colour=`mt-Rnr2`)) + geom_point(stroke=0, size=1) + scale_color_viridis(direction = -1)
+ggplot(expression_dt("mt-Rnr2")[cell_data], aes(Tsne1_QC1, Tsne2_QC1, colour=`mt-Rnr2`)) + geom_point(stroke=0, size=1) + scale_color_viridis(direction = -1)
 
-somatic_cells <- ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=somatic4)) +
+somatic_cells <- ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=somatic4)) +
   geom_point(size=0.1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
   scale_color_brewer(palette = "Set1")
 
-ggplot(datat[somatic4==FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
+ggplot(cell_data[somatic4==FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
   geom_point(size=0.1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment")
 
-# datat[,somatic2 := FALSE]
-# datat[V32<(-5) | V49>(1)|V21>(1) | V16<(-1) | V10>(5) | V45>(3) | V19>(1) | V40>(2) | V11>(5) | V3>(5)|V24<(-1)|V37>(2) , somatic2 := TRUE]
+# cell_data[,somatic2 := FALSE]
+# cell_data[V32<(-5) | V49>(1)|V21>(1) | V16<(-1) | V10>(5) | V45>(3) | V19>(1) | V40>(2) | V11>(5) | V3>(5)|V24<(-1)|V37>(2) , somatic2 := TRUE]
 
-# ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=((Tsne1_QC1-5)^2+(Tsne2_QC1-10)^2)<5)) +
+# ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=((Tsne1_QC1-5)^2+(Tsne2_QC1-10)^2)<5)) +
 #   geom_point(size=0.25) +
 #   theme(legend.position = "bottom") +
 #   ggtitle("t-SNE - experiment")
 
-# ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=somatic2)) +
+# ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=somatic2)) +
 #   geom_point(size=0.25) +
 #   theme(legend.position = "bottom") +
 #   ggtitle("t-SNE - experiment")
@@ -750,16 +750,16 @@ Assign cell a single component based on max abs score
 max_component <- data.table(max_component = sapply(1:nrow(results$scores), function(x) which.max(abs(results$scores[x,]))),
                             cell = rownames(results$scores))
 
-datat <- max_component[datat, on="cell"]
+cell_data <- max_component[cell_data, on="cell"]
 ```
 
 
 ```{r, fig.width=6}
-datat[, somatic5 := F]
-datat[max_component %in% c(3,10,11,16,19,21,24,26,32,37,40,45,49) | `mt-Rnr2`>3.5 , somatic5 := T]
+cell_data[, somatic5 := F]
+cell_data[max_component %in% c(3,10,11,16,19,21,24,26,32,37,40,45,49) | `mt-Rnr2`>3.5 , somatic5 := T]
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic4)) + geom_point(stroke=0) + theme(legend.position = "bottom")
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic5)) + geom_point(stroke=0) + theme(legend.position = "bottom")
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic4)) + geom_point(stroke=0) + theme(legend.position = "bottom")
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic5)) + geom_point(stroke=0) + theme(legend.position = "bottom")
 
 ```
 

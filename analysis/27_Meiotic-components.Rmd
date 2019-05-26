@@ -656,48 +656,48 @@ datatable(motifEnrichment_wLogo[geneSet=="V25N",-c("enrichedGenes","geneSet"), w
 The cul4a association becomes clearer if we transform the scores and flip the colouring - then compare to the position of groups in tsne. See also the codistribution ofsome specific genes with large negative loadings with the Cul4a cells.
 
 ```{r, fig.width=6}
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=asinh(V25))) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=asinh(V25))) +
   geom_point(size=0.5) +
   scale_color_viridis(direction=1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
   geom_point(size=0.5) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=`Rps13-ps1`)) +
-  geom_point(size=0.5) +
-  scale_color_viridis(direction=-1) +
-  theme(legend.position = "bottom") +
-  ggtitle("t-SNE - cells coloured by PseudoTime")
-
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Hist1h2al)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=`Rps13-ps1`)) +
   geom_point(size=0.5) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Gm10036)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=Hist1h2al)) +
   geom_point(size=0.5) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Jakmip2)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=Gm10036)) +
   geom_point(size=0.5) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Tagln2)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=Jakmip2)) +
   geom_point(size=0.5) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=Lpo)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=Tagln2)) +
+  geom_point(size=0.5) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - cells coloured by PseudoTime")
+
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=Lpo)) +
   geom_point(size=0.5) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +

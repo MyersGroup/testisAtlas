@@ -58,10 +58,10 @@ sda_umap <- readRDS("../data/umap.rds")
 
 str(sda_umap)
 
-datat$Umap1 <- NULL
-datat$Umap2 <- NULL
+cell_data$Umap1 <- NULL
+cell_data$Umap2 <- NULL
 
-datat <- merge(datat,
+cell_data <- merge(cell_data,
       cbind(data.table(sda_umap), cell=rownames(results$scores))
 )
 
@@ -91,7 +91,7 @@ print_tsne("Prdm9",dim="Umap1",dim2="Umap2")
 tsne_repo_plots <- vector("list", 4)
 
 for(i in 1:3){
-tsne_repo_plots[[i]] <- ggplot(data.table(rotate_matrix(tsne_repo_rand_seeds[[selected[i]]]$Y, rotations[i])), aes(V1, V2, colour=datat$PseudoTime[match(rownames(results$scores), datat$cell)])) +
+tsne_repo_plots[[i]] <- ggplot(data.table(rotate_matrix(tsne_repo_rand_seeds[[selected[i]]]$Y, rotations[i])), aes(V1, V2, colour=cell_data$PseudoTime[match(rownames(results$scores), cell_data$cell)])) +
   geom_point(size=0.1) +
   scale_color_viridis() +
   theme(legend.position = "none") +
@@ -99,7 +99,7 @@ tsne_repo_plots[[i]] <- ggplot(data.table(rotate_matrix(tsne_repo_rand_seeds[[se
   ggtitle(paste0("Random Seed: ",tsne_repo_rand_seeds[[selected[i]]]$seed," (rotated ",rotations[i],"°)"))
 }
 
-tsne_repo_plots[[4]] <- ggplot(datat, aes(Umap1, -Umap2, colour=PseudoTime)) +
+tsne_repo_plots[[4]] <- ggplot(cell_data, aes(Umap1, -Umap2, colour=PseudoTime)) +
   geom_point(size=0.1) +
   scale_color_viridis() +
   theme(legend.position = "none") +

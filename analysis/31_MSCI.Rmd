@@ -62,21 +62,21 @@ sex_autosome <- data.table(autosomal = Matrix::rowSums(data[,autosomal_genes]),
                             sex = Matrix::rowSums(data[,sex_genes]),
                             cell = rownames(data))
 
-# autosomal_sum <- datat[, .(autosomal = Reduce(`+`, .SD), cell, PseudoTime, somatic4,  V5,  Tsne1_QC1, Tsne2_QC1, library_size), .SDcols = autosomal_genes ] # somatic
-# sex_sum <- datat[, .(sex = Reduce(`+`, .SD), cell), .SDcols = sex_genes ] 
+# autosomal_sum <- cell_data[, .(autosomal = Reduce(`+`, .SD), cell, PseudoTime, somatic4,  V5,  Tsne1_QC1, Tsne2_QC1, library_size), .SDcols = autosomal_genes ] # somatic
+# sex_sum <- cell_data[, .(sex = Reduce(`+`, .SD), cell), .SDcols = sex_genes ] 
 # setkey(autosomal_sum, cell)
 # setkey(sex_sum, cell)
 # sex_autosome <- merge(sex_sum, autosomal_sum)
-# sex_autosome[order(PseudoTime), PseudoTime_rank:=1:nrow(datat)]
+# sex_autosome[order(PseudoTime), PseudoTime_rank:=1:nrow(cell_data)]
 
-#datat[somatic4==FALSE][order(-PseudoTime),(sex_predictions / autosomal_predictions)<0.01]
+#cell_data[somatic4==FALSE][order(-PseudoTime),(sex_predictions / autosomal_predictions)<0.01]
 msci_cells <- sex_autosome[(sex + 1) / (autosomal + 1) <0.001]$cell
 
-stopifnot(is.null(datat$sex)) # already merged
-datat[,sex:= NULL]
-datat[,autosomal:= NULL]
-datat <- merge(datat, sex_autosome[,.(cell, sex, autosomal)])
-datat[,msci_ratio:=(sex + 1) / (autosomal + 1)]
+stopifnot(is.null(cell_data$sex)) # already merged
+cell_data[,sex:= NULL]
+cell_data[,autosomal:= NULL]
+cell_data <- merge(cell_data, sex_autosome[,.(cell, sex, autosomal)])
+cell_data[,msci_ratio:=(sex + 1) / (autosomal + 1)]
 # plot heatmap of genes with at least 200 cells expression >2
 #[names(which(rowSums(abs(sex_expression_matrix)>2)>100)), ] Rowv=NA,
 
@@ -99,28 +99,28 @@ Y_predictions <- rowSums(predicted_expression[,Y_genes])
 
 msci_predictions <- data.table(sex_predictions, autosomal_predictions, Y_predictions, X_predictions, cell=names(autosomal_predictions))
 setkey(msci_predictions, cell)
-datat <- merge(msci_predictions, datat, by="cell")
+cell_data <- merge(msci_predictions, cell_data, by="cell")
 ```
 
 # Normalised Expresion Heatmap
 
 ```{r, fig.width=10}
-#datat$library.size <- log(datat$library_size,100)
+#cell_data$library.size <- log(cell_data$library_size,100)
 
-sex_expression_matrix <- t(scale(as.matrix(datat[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
-#sex_expression_matrix <- t(scale(as.matrix(datat[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
+sex_expression_matrix <- t(scale(as.matrix(cell_data[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
+#sex_expression_matrix <- t(scale(as.matrix(cell_data[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
 #sex_expression_matrix[sex_expression_matrix > 2.5] <- 2.5
 #sex_expression_matrix[sex_expression_matrix < (-2.5)] <- (-2.5)
 
 sex_expression_matrix <- asinh(sex_expression_matrix)
 
-#[,order(-datat[somatic4==FALSE]$PseudoTime)]
+#[,order(-cell_data[somatic4==FALSE]$PseudoTime)]
 aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)), ],
          breaks=0,
          hclustfun = "ward.D",
          Colv=NA,
          labCol = NA,
-         annCol = datat[somatic4==FALSE][order(-PseudoTime), .(msci_cell = msci_ratio<0.005)],
+         annCol = cell_data[somatic4==FALSE][order(-PseudoTime), .(msci_cell = msci_ratio<0.005)],
          main="Sex chromosome gene expression over pseudotime",
          color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)))
 
@@ -133,7 +133,7 @@ aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)
 tmp <- data.table(predicted_expression[,sex_genes], keep.rownames = T)
 setnames(tmp, "rn", "cell")
 setkey(tmp, "cell")
-tmp <- merge(tmp, datat[, .(cell, PseudoTime, V38, somatic4,  Tsne1_QC1, Tsne2_QC1)], by="cell")
+tmp <- merge(tmp, cell_data[, .(cell, PseudoTime, V38, somatic4,  Tsne1_QC1, Tsne2_QC1)], by="cell")
 
 sex_expression_matrix <- t(scale(as.matrix(tmp[order(-PseudoTime)][somatic4==FALSE, sex_genes, with=FALSE])))
 
@@ -148,7 +148,7 @@ aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)
          hclustfun = "ward.D",
          Colv=NA,
          labCol = NA, labRow = NA, legend = NA, annLegend = FALSE,
-         annCol = datat[somatic4==FALSE][order(-PseudoTime),(sex_predictions / autosomal_predictions)<0.01],
+         annCol = cell_data[somatic4==FALSE][order(-PseudoTime),(sex_predictions / autosomal_predictions)<0.01],
          color=rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(100)),
          file="../results/MSCI_heatmap.png", width = 9, height = 6)
 
@@ -162,7 +162,7 @@ aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)
          hclustfun = "ward.D",
          Colv=NA,
          labCol = NA, labRow = NA, legend = NA, annLegend = FALSE,
-         annCol = datat[somatic4==FALSE][order(-PseudoTime), .(msci_cell = msci_ratio<0.005)],
+         annCol = cell_data[somatic4==FALSE][order(-PseudoTime), .(msci_cell = msci_ratio<0.005)],
          main="Sex chromosome gene expression over pseudotime",
          color=test(100))
 ```
@@ -172,7 +172,7 @@ aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)
 # Sex-Autosome Ratio
 
 ```{r, fig.width=6}
-# ggplot(datat[somatic4==FALSE], aes(-PseudoTime, (sex + 1) / (autosomal + 1), colour = sex==0, group=NA)) +
+# ggplot(cell_data[somatic4==FALSE], aes(-PseudoTime, (sex + 1) / (autosomal + 1), colour = sex==0, group=NA)) +
 #   geom_point(size=0.5,alpha=0.5) +
 #   geom_smooth() +
 #   ggtitle("Ratio of Sex to Autosomal chromosome expression through pseudotime") +
@@ -181,7 +181,7 @@ aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)
 
 curve_data <- load_curve_data(principal_curves, "df_9")
 
-msci_pseudotime <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, sex_predictions / autosomal_predictions)) +
+msci_pseudotime <- ggplot(curve_data[cell_data, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, sex_predictions / autosomal_predictions)) +
   geom_point(size=0.25,alpha=0.5, aes(colour = V38)) +
   scale_color_viridis(direction=-1, guide=guide_colourbar("C38 Cell Scores\n(Hormad1 KO)", title.position = "top")) +
   labs(y="Ratio of total sex to autosomal expression") +
@@ -193,7 +193,7 @@ msci_pseudotime <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], a
   guides(colour = guide_legend(ncol = 4, title.position = "top")) +
   theme(legend.position = "bottom")
 
-msci_pseudotimeX <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, X_predictions / autosomal_predictions)) +
+msci_pseudotimeX <- ggplot(curve_data[cell_data, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, X_predictions / autosomal_predictions)) +
   geom_point(size=0.25,alpha=0.5, aes(colour = V38)) +
   scale_color_viridis(direction=-1, guide=guide_colourbar("C38 Cell Scores\n(Hormad1 KO)", title.position = "top")) +
   labs(y="Ratio of total X to autosomal expression") +
@@ -205,7 +205,7 @@ msci_pseudotimeX <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], 
   guides(colour = guide_legend(ncol = 4, title.position = "top")) +
   theme(legend.position = "bottom")
 
-msci_pseudotimeY <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, Y_predictions / autosomal_predictions)) +
+msci_pseudotimeY <- ggplot(curve_data[cell_data, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, Y_predictions / autosomal_predictions)) +
   geom_point(size=0.25,alpha=0.5, aes(colour = V38)) +
   scale_color_viridis(direction=-1, guide=guide_colourbar("C38 Cell Scores\n(Hormad1 KO)", title.position = "top")) +
   labs(y="Ratio of total Y to autosomal expression") +
@@ -233,7 +233,7 @@ saveRDS(msci_pseudotimeY, "../data/plots/msci_pseudotimeY.rds")
 ```{r, fig.width=6}
 
 
-msci_tsne <- ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=sex_predictions / autosomal_predictions)) +
+msci_tsne <- ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=sex_predictions / autosomal_predictions)) +
   geom_point(size=0.25) +
   scale_color_viridis(direction=-1) +
   theme_minimal() +
@@ -244,7 +244,7 @@ msci_tsne
 
 saveRDS(msci_tsne,"../data/tmp_cache/msci_tsne.rds")
 
-# ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=log((sex + 1) / (autosomal + 1)))) +
+# ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=log((sex + 1) / (autosomal + 1)))) +
 #   geom_point(size=0.5) +
 #   scale_color_viridis(direction=-1) +
 #   theme(legend.position = "bottom") +
@@ -252,7 +252,7 @@ saveRDS(msci_tsne,"../data/tmp_cache/msci_tsne.rds")
 ```
 
 ```{r, fig.width=6}
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=(sex_predictions / autosomal_predictions)<0.01)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=(sex_predictions / autosomal_predictions)<0.01)) +
     geom_point(size=0.25) +
     theme_minimal() +
     theme(legend.position = "bottom", legend.key.width=unit(1,"cm")) +
@@ -269,23 +269,23 @@ Let's use our real data to simulate a case in which there is obvious non sharing
 ```{r}
 
 
-datat[,Y_predictions_sim := Y_predictions]
-datat[,X_predictions_sim := X_predictions]
+cell_data[,Y_predictions_sim := Y_predictions]
+cell_data[,X_predictions_sim := X_predictions]
 
 set.seed(42)
 # start at peudotime 10k
 n=10000
-datat[PseudoTime<=n, male_simulated := sample(c(T,F), n, T)]
+cell_data[PseudoTime<=n, male_simulated := sample(c(T,F), n, T)]
 
 # gradually remove X chrom from males
-datat[PseudoTime<=n & male_simulated, Y_predictions_sim := Y_predictions]
-n2 = nrow(datat[PseudoTime<=n & male_simulated])
-datat[PseudoTime<=n & male_simulated, X_predictions_sim := (X_predictions)*(PseudoTime/n) + rnorm(n2,0,3)]
+cell_data[PseudoTime<=n & male_simulated, Y_predictions_sim := Y_predictions]
+n2 = nrow(cell_data[PseudoTime<=n & male_simulated])
+cell_data[PseudoTime<=n & male_simulated, X_predictions_sim := (X_predictions)*(PseudoTime/n) + rnorm(n2,0,3)]
 
 # gradually remove Y chrom from females
-datat[PseudoTime<=n & !male_simulated, X_predictions_sim := X_predictions]
-n2 = nrow(datat[PseudoTime<=n & !male_simulated])
-datat[PseudoTime<=n & !male_simulated, Y_predictions_sim := (Y_predictions)*(PseudoTime/n) + rnorm(n2,0,0.5)]
+cell_data[PseudoTime<=n & !male_simulated, X_predictions_sim := X_predictions]
+n2 = nrow(cell_data[PseudoTime<=n & !male_simulated])
+cell_data[PseudoTime<=n & !male_simulated, Y_predictions_sim := (Y_predictions)*(PseudoTime/n) + rnorm(n2,0,0.5)]
 ```
 
 The X chromosome expression very clearly splits into two populations, 1) the males which do not express it (perhaps there's some left over transcripts, it's not clear how fast they should decay), and 2) the females which do.
@@ -294,7 +294,7 @@ For the Y chromosome we have the inverse situation, although it's not as clear a
 
 ```{r}
 
-X_nonsharing_prediction <- ggplot(datat[somatic4==FALSE], aes(-PseudoTime, X_predictions_sim/autosomal_predictions, colour = male_simulated)) +
+X_nonsharing_prediction <- ggplot(cell_data[somatic4==FALSE], aes(-PseudoTime, X_predictions_sim/autosomal_predictions, colour = male_simulated)) +
   geom_point(alpha=0.3, size=1, stroke=0) +
   ylab("Ratio of Predicted total X Chromosome\n
        Expression to Autosomal Expression") + 
@@ -303,7 +303,7 @@ X_nonsharing_prediction <- ggplot(datat[somatic4==FALSE], aes(-PseudoTime, X_pre
 
 X_nonsharing_prediction
 
-ggplot(datat[somatic4==FALSE], aes(-PseudoTime, Y_predictions_sim/autosomal_predictions, colour = male_simulated)) +
+ggplot(cell_data[somatic4==FALSE], aes(-PseudoTime, Y_predictions_sim/autosomal_predictions, colour = male_simulated)) +
     geom_point(alpha=0.3, size=1, stroke=0) + theme(legend.position = "bottom")
 ```
 
@@ -312,21 +312,21 @@ ggplot(datat[somatic4==FALSE], aes(-PseudoTime, Y_predictions_sim/autosomal_pred
 str(Y_genes)
 str(X_genes)
 
-ggplot(datat[somatic4==FALSE], aes(-PseudoTime, asinh(Y_predictions / X_predictions), colour = V38)) +
+ggplot(cell_data[somatic4==FALSE], aes(-PseudoTime, asinh(Y_predictions / X_predictions), colour = V38)) +
   geom_point(alpha=0.5, size=0.5) +
   ylim(-0.25,0.25) +
   ggtitle("Ratio of Y to X chromosome expression through pseudotime") +
   scale_color_viridis(direction=-1) +
   theme_minimal()
 
-ggplot(datat[somatic4==FALSE], aes(-PseudoTime, Y_predictions, colour = V38)) +
+ggplot(cell_data[somatic4==FALSE], aes(-PseudoTime, Y_predictions, colour = V38)) +
   geom_point(alpha=0.5, size=0.5) +
   scale_color_viridis(direction=-1) +
   scale_y_sqrt(limits=c(0,40)) +
   ggtitle("Y chromosome expression through pseudotime") +
   theme_minimal()
 
-ggplot(datat[somatic4==FALSE], aes(-PseudoTime, X_predictions, colour = V38)) +
+ggplot(cell_data[somatic4==FALSE], aes(-PseudoTime, X_predictions, colour = V38)) +
   geom_point(alpha=0.5, size=0.5) +
   scale_color_viridis(direction=-1) +
   scale_y_sqrt() +
@@ -417,7 +417,7 @@ It seems that some genes have expression during MSCI e.g. Tsx, Cited1, Etd etc.
 
 ```{r, fig.width=6}
 
-MSCI_cells <- datat[-PseudoTime>(-15000) & -PseudoTime<(-12500)]$cell
+MSCI_cells <- cell_data[-PseudoTime>(-15000) & -PseudoTime<(-12500)]$cell
 
 mean_msci <- Matrix::colMeans(data[MSCI_cells,sex_genes])
 
@@ -452,7 +452,7 @@ grid.arrange(grobs=create_grob_list(fn = function(x){print_tsne(x,point_size = 0
 A reminder of which cells are masked as somatic in pseudotime assignment. You can see the problem cells, but it's hard to remove these cells without manually defining a reigon.
 
 ```{r, fig.width=6}
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=somatic4)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=somatic4)) +
   geom_point(size=0.25) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment")

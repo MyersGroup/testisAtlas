@@ -344,7 +344,7 @@ grid.arrange(grobs=list(print_marker("Mcf2") + simplify,
                         print_marker("Gm26814") + simplify),
 			nrow=2, heights = c(1,1))
 
-tmp <- datat[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
+tmp <- cell_data[,c("cell","Tsne1_QC1", "Tsne2_QC1","PseudoTime"), with=FALSE]
 tmp <- merge(tmp, sda_predict(c("Mcf2","Arhgef1","Pard3b","Slc4a3","Espn","Gm26814")))
 
 grid.arrange(grobs=list(print_marker2("Mcf2") + simplify,
@@ -408,35 +408,35 @@ datatable(motifEnrichment_wLogo[geneSet=="V10P",-c("enrichedGenes","geneSet"), w
 In the Tsne it's a bit hard to see as all the cells are almost on top of each other so here are some zoomed in plots:
 
 ```{r, fig.width=6}
-ggplot(datat, aes(Tsne1, Tsne2, color=V10)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=V10)) +
   geom_point(size=1) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime") +
   facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
 
-ggplot(datat, aes(Tsne1, Tsne2, color=Edn1)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=Edn1)) +
   geom_point(size=1) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime") +
   facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
 
-ggplot(datat, aes(Tsne1, Tsne2, color=Kazald1)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=Kazald1)) +
   geom_point(size=1) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime") +
   facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
 
-ggplot(datat, aes(Tsne1, Tsne2, color=Cdo1)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=Cdo1)) +
   geom_point(size=1) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - cells coloured by PseudoTime") +
   facet_zoom(x=Tsne1>20.7 & Tsne1<21.1, y=Tsne2>25.4 & Tsne2<25.8, zoom.size = 0.5)
 
-ggplot(datat, aes(Tsne1, Tsne2, color=Plac1)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=Plac1)) +
   geom_point(size=1) +
   scale_color_viridis(direction=-1) +
   theme(legend.position = "bottom") +

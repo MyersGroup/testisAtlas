@@ -8,7 +8,7 @@ sda_umap <- readRDS("../data/umap.rds")
 
 str(sda_umap)
 
-datat <- merge(datat,
+cell_data <- merge(cell_data,
                cbind(data.table(sda_umap),
                      cell=rownames(results$scores))
 )
@@ -28,7 +28,7 @@ load("../data/tmp_cache/cached_objects.rds")
 
 load("../data/gene_annotations/gene_annotations.rds")
 
-object_list <- c("datat",
+object_list <- c("cell_data",
                  "principal_curves",
                  "results",
                  "rna_locations",

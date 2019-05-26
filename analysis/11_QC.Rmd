@@ -420,35 +420,35 @@ data <- data$dge
 
 load("../data/conradV3/merged_mouse_tsne_full.rds")
 
-#datat$genes_detected <- data.table(genes_detected, cell=names(genes_detected))[order(cell)]$genes_detected
+#cell_data$genes_detected <- data.table(genes_detected, cell=names(genes_detected))[order(cell)]$genes_detected
 
-datat <- data.table(tsne_data$Y)
-setnames(datat, c("Tsne1","Tsne2"))
-datat$cell <- rownames(data)
-datat$experiment <- gsub("[A-Z]+\\.","",rownames(data))
-datat$group <- gsub("_.*","",datat$experiment)
-datat$library_size <- library_size # [grep("WT|SP|mj",rownames(data))]
+cell_data <- data.table(tsne_data$Y)
+setnames(cell_data, c("Tsne1","Tsne2"))
+cell_data$cell <- rownames(data)
+cell_data$experiment <- gsub("[A-Z]+\\.","",rownames(data))
+cell_data$group <- gsub("_.*","",cell_data$experiment)
+cell_data$library_size <- library_size # [grep("WT|SP|mj",rownames(data))]
 marker_genes <- c("Insl3", "Stra8", "Sycp2","Piwil1","Spata31", "Prss51", "Tnp1", "Prm1", "Prm2", "mt-Rnr2","Prdm9","Prss50","Dcn","Cst9","C1qb","Rpl41")
 other_genes <- c("Tex101","Hmgb2","Ddx39","Calm2","Hnrnpa2b1","Tpr","Pcgf5","Sycp2","Piwil1","Tnp1","Tnp2","Hmgb4","Tex37","Spata3","Klk1b8","Paqr5") # for GFP like plot, "Mtl5","H2afb1",
 mito_genes <- grep("mt-",colnames(data), value=T)
 expression <- data.table(as.matrix(data[,c(marker_genes, mito_genes, other_genes)])) #
-datat <- cbind(datat, expression)
+cell_data <- cbind(cell_data, expression)
 
 
-ggplot(datat, aes(Tsne1, Tsne2, color=log(library_size))) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=log(library_size))) +
   geom_point() +
   scale_colour_distiller(palette="YlOrRd", direction=1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - library size")
 
-ggplot(datat, aes(Tsne1, Tsne2, color=experiment)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=experiment)) +
   geom_point() +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
   scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
 #scale_colour_brewer(palette="Paired")
 
-ggplot(datat, aes(Tsne1, Tsne2, color=group)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=group)) +
   geom_point() +
   scale_color_manual(values = brewer.pal(11,"Paired")) +
   theme(legend.position = "bottom") +
@@ -463,7 +463,7 @@ simplify <- theme(legend.position = "none",
               axis.ticks = element_blank())
 
 print_pca <- function(i){
-  ggplot(datat, aes(Tsne1, Tsne2, color=get(i))) +
+  ggplot(cell_data, aes(Tsne1, Tsne2, color=get(i))) +
   geom_point(size=0.2) +
   scale_colour_distiller(palette="YlOrRd", direction=1) +
   theme(legend.position = "bottom") +
@@ -498,27 +498,27 @@ Cells in the amorphous group tend to have lower library sizes and high mitochond
 
 ```{r, fig.width=6}
 # Define circle to tagg odd cells
-datat[,odd:=FALSE]
-datat[((Tsne1-(-10))^2 + (Tsne2-(+20))^2) < 23^2, odd:= TRUE]
+cell_data[,odd:=FALSE]
+cell_data[((Tsne1-(-10))^2 + (Tsne2-(+20))^2) < 23^2, odd:= TRUE]
 
 # Label Odd Cells
-ggplot(datat, aes(Tsne1, Tsne2, color=odd)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=odd)) +
   geom_point(size=0.5) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment")
 
 
-datat[,.N,by=odd]
+cell_data[,.N,by=odd]
 
-datat[odd==FALSE,.N,by=group][order(-N)]
+cell_data[odd==FALSE,.N,by=group][order(-N)]
 
 # Proportion of Odd by experiment
-ggplot(datat[,.N,by=c("experiment","odd")], aes(experiment,N,  fill=odd)) +
+ggplot(cell_data[,.N,by=c("experiment","odd")], aes(experiment,N,  fill=odd)) +
   geom_col(position="fill") +
   geom_hline(yintercept = 0.5, linetype="dashed") +
   theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
 
-ggplot(datat[,.N,by=c("experiment","odd")], aes(experiment,N,  fill=odd)) +
+ggplot(cell_data[,.N,by=c("experiment","odd")], aes(experiment,N,  fill=odd)) +
   geom_col(position="stack") +
   theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
 
@@ -527,46 +527,46 @@ ggplot(datat[,.N,by=c("experiment","odd")], aes(experiment,N,  fill=odd)) +
 # Corrected cells
 
 ```{r, fig.width=6}
-datat[,last_bc_nt:=substr(cell, 12, 12)]
+cell_data[,last_bc_nt:=substr(cell, 12, 12)]
 
 # # if some barcodes different length!
-# index <- regexpr("[A-Z]\\.", datat$cell)
-# datat$last_bc_nt <- substring(datat$cell, index, index)
-# datat$last_bc_nt_2 <- substring(datat$cell, index-1, index-1)
+# index <- regexpr("[A-Z]\\.", cell_data$cell)
+# cell_data$last_bc_nt <- substring(cell_data$cell, index, index)
+# cell_data$last_bc_nt_2 <- substring(cell_data$cell, index-1, index-1)
 
 # Where are corrected cells?
-ggplot(datat, aes(Tsne1, Tsne2, color=last_bc_nt=="N")) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=last_bc_nt=="N")) +
   geom_point(size=0.3) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment")
 
-ggplot(datat, aes(Tsne1, Tsne2, color=last_bc_nt)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=last_bc_nt)) +
   geom_point(size=0.3) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment")
 
 
 # N occours less in odd cells
-ggplot(datat[,.N,by=c("odd","last_bc_nt")], aes(last_bc_nt, N, fill=odd)) + geom_col(position="fill")
+ggplot(cell_data[,.N,by=c("odd","last_bc_nt")], aes(last_bc_nt, N, fill=odd)) + geom_col(position="fill")
 
-tmp <- datat[,.N,by=c("odd","last_bc_nt")]
+tmp <- cell_data[,.N,by=c("odd","last_bc_nt")]
 tmp[,last_bc_nt := factor(last_bc_nt, levels=c("A","G","C","T","N"))]
 ggplot(tmp, aes(odd, N, fill=last_bc_nt)) + geom_col(position="fill")
 
 # some experiments don;t have barcodes with N
-tmp <- datat[,.N,by=c("experiment","last_bc_nt")]
+tmp <- cell_data[,.N,by=c("experiment","last_bc_nt")]
 tmp[,last_bc_nt := factor(last_bc_nt, levels=c("A","G","C","T","N"))]
 ggplot(tmp, aes(experiment, N, fill=last_bc_nt)) +
   geom_col(position="fill") +
   theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
 
-# ggplot(datat[,.N,by=c("experiment","corrected")], aes(experiment,N,  fill=corrected)) +
+# ggplot(cell_data[,.N,by=c("experiment","corrected")], aes(experiment,N,  fill=corrected)) +
 #   geom_col(position="fill") +
 #   theme(axis.text.x=element_text(angle=40,hjust=1,vjust=1,size=15))
 
 # second to last barcode seems fine
-datat[,bc11:=substr(cell, 11, 11)]
-tmp <- datat[,.N,by=c("experiment","bc11")]
+cell_data[,bc11:=substr(cell, 11, 11)]
+tmp <- cell_data[,.N,by=c("experiment","bc11")]
 tmp[,bc11 := factor(bc11, levels=c("A","G","C","T","N"))]
 ggplot(tmp, aes(experiment, N, fill=bc11)) +
   geom_col(position="fill") +
@@ -581,71 +581,71 @@ ggplot(tmp, aes(experiment, N, fill=bc11)) +
 # # % ribosomal gene expression
 # raw_data <- readRDS("../data/conradV2/merged_mouse_QC_counts_2.rds")
 # 
-# datat$rnr2_percent <- raw_data[, "mt-Rnr2"] / library_size
+# cell_data$rnr2_percent <- raw_data[, "mt-Rnr2"] / library_size
 # # cap extream values
-# datat[rnr2_percent>0.05]$rnr2_percent <- 0.05
+# cell_data[rnr2_percent>0.05]$rnr2_percent <- 0.05
 
 # max_scores_bycell <- apply(results$scores, 1, max)
 # max_scores_bycell <- data.table(max_scores_bycell, cell=names(max_scores_bycell))
-# datat <- merge(datat, max_scores_bycell, all.x = TRUE)
-# diff_expression <- data.table(odd=apply(data[datat[max_scores_bycell>20 & group=="WT"]$cell,], 2, median), normal=apply(data[datat[max_scores_bycell<20 & group=="WT"]$cell,], 2, median), gene=colnames(data))
-#ggplot(datat[!is.na(max_scores_bycell)], aes(Tex101, max_scores_bycell, colour=experiment)) + geom_point() + scale_x_log10() + facet_wrap(~experiment)
+# cell_data <- merge(cell_data, max_scores_bycell, all.x = TRUE)
+# diff_expression <- data.table(odd=apply(data[cell_data[max_scores_bycell>20 & group=="WT"]$cell,], 2, median), normal=apply(data[cell_data[max_scores_bycell<20 & group=="WT"]$cell,], 2, median), gene=colnames(data))
+#ggplot(cell_data[!is.na(max_scores_bycell)], aes(Tex101, max_scores_bycell, colour=experiment)) + geom_point() + scale_x_log10() + facet_wrap(~experiment)
 
-#datat[, is_mlh3:=FALSE]
-#datat[group %in% c("Mlh","MLHKO"), is_mlh3:=TRUE]
+#cell_data[, is_mlh3:=FALSE]
+#cell_data[group %in% c("Mlh","MLHKO"), is_mlh3:=TRUE]
 # & is_mlh3==FALSE, & is_mlh3==FALSE
 
 # which genes are differnetially expressed in the odd group
-# diff_expression <- data.table(odd=colMeans(data[datat[odd==TRUE & !group %in% c("Hormad","Mlh3")]$cell,]), normal=colMeans(data[datat[odd==FALSE & !group %in% c("Hormad","Mlh3")]$cell,]), gene=colnames(data))
+# diff_expression <- data.table(odd=colMeans(data[cell_data[odd==TRUE & !group %in% c("Hormad","Mlh3")]$cell,]), normal=colMeans(data[cell_data[odd==FALSE & !group %in% c("Hormad","Mlh3")]$cell,]), gene=colnames(data))
 # diff_expression[,ratio := (odd+0.1)/(normal+0.1)]
 # head(diff_expression[order(-ratio)], 20)
 # head(diff_expression[order(ratio)], 20)
 
-hist(datat$mt_geneset, breaks=500)
-datat$mt_geneset <- sqrt(rowSums(sparseM[datat$cell,mt_genes[-1]]) / rowSums(sparseM[datat$cell,]))
+hist(cell_data$mt_geneset, breaks=500)
+cell_data$mt_geneset <- sqrt(rowSums(sparseM[cell_data$cell,mt_genes[-1]]) / rowSums(sparseM[cell_data$cell,]))
 
 # create mito-marker genes
 mt_genes <- grep("mt-",colnames(data), value=T)
-datat[, mt_geneset := Reduce(`+`, .SD), .SDcols = mt_genes ]
+cell_data[, mt_geneset := Reduce(`+`, .SD), .SDcols = mt_genes ]
 
-datat[, mt_geneset := `mt-Rnr2` ]
+cell_data[, mt_geneset := `mt-Rnr2` ]
 
 # Desnity comparisons
-ggplot(datat, aes(library_size, colour=odd)) + geom_density() + scale_x_log10() + facet_wrap(~experiment)
-ggplot(datat, aes(mt_geneset, colour=odd)) + geom_density() + scale_x_log10() + facet_wrap(~experiment)
+ggplot(cell_data, aes(library_size, colour=odd)) + geom_density() + scale_x_log10() + facet_wrap(~experiment)
+ggplot(cell_data, aes(mt_geneset, colour=odd)) + geom_density() + scale_x_log10() + facet_wrap(~experiment)
 
 # Sina Plots - MT & LIB
-ggplot(datat, aes(odd, mt_geneset, colour=odd)) + geom_sina() + scale_y_log10() + facet_wrap(~group)
-ggplot(datat, aes(odd, library_size, colour=odd)) + geom_sina() + scale_y_log10() + facet_wrap(~group)
+ggplot(cell_data, aes(odd, mt_geneset, colour=odd)) + geom_sina() + scale_y_log10() + facet_wrap(~group)
+ggplot(cell_data, aes(odd, library_size, colour=odd)) + geom_sina() + scale_y_log10() + facet_wrap(~group)
 
-#ggplot(datat[group %in% c("WT","Mlh")], aes(mt_geneset, group=experiment, colour=group)) + geom_density() + scale_x_log10()
-#ggplot(datat[group %in% c("WT","Mlh")], aes(mt_geneset, group=experiment, colour=group)) + geom_density() + scale_x_log10() + scale_colour_brewer(palette="Paired") + facet_wrap(~odd, ncol = 1)
+#ggplot(cell_data[group %in% c("WT","Mlh")], aes(mt_geneset, group=experiment, colour=group)) + geom_density() + scale_x_log10()
+#ggplot(cell_data[group %in% c("WT","Mlh")], aes(mt_geneset, group=experiment, colour=group)) + geom_density() + scale_x_log10() + scale_colour_brewer(palette="Paired") + facet_wrap(~odd, ncol = 1)
 
 # Scatter plot
-#ggplot(datat, aes(mt_geneset, library_size, colour=odd)) + geom_point(alpha=0.2) + scale_y_log10() + scale_colour_brewer(palette="Paired") + facet_wrap(~group)
+#ggplot(cell_data, aes(mt_geneset, library_size, colour=odd)) + geom_point(alpha=0.2) + scale_y_log10() + scale_colour_brewer(palette="Paired") + facet_wrap(~group)
 
-ggplot(datat, aes(Tsne1, Tsne2, color=mt_geneset)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=mt_geneset)) +
   geom_point() +
   theme(legend.position = "bottom") +
   scale_colour_distiller(palette="YlOrRd", direction=1) +
   ggtitle("t-SNE - experiment")
 
-hist(datat$mt_geneset, breaks=1000)
+hist(cell_data$mt_geneset, breaks=1000)
 
-plot(datat$mt_geneset, datat$`mt-Rnr2`)
+plot(cell_data$mt_geneset, cell_data$`mt-Rnr2`)
 
-ggplot(datat, aes(Tsne1, Tsne2, color=mt_geneset)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=mt_geneset)) +
   geom_point() +
   theme(legend.position = "bottom") +
   scale_colour_distiller(palette="YlOrRd", direction=1) +
   ggtitle("t-SNE - experiment")
 
-ggplot(datat, aes(Tsne1, Tsne2, color=mt_geneset<2)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=mt_geneset<2)) +
     geom_point(size=0.01) +
     theme(legend.position = "bottom") +
     ggtitle("t-SNE - experiment")
 
-ggplot(datat[mt_geneset<2], aes(Tsne1, Tsne2)) +
+ggplot(cell_data[mt_geneset<2], aes(Tsne1, Tsne2)) +
     geom_point(size=0.01) +
     theme(legend.position = "bottom") +
     ggtitle("t-SNE - experiment")
@@ -655,43 +655,43 @@ ggplot(datat[mt_geneset<2], aes(Tsne1, Tsne2)) +
 This group also has a mixture of late and early gene expressing cells. Check for doublets+ by co-expression of early and late genes (like mouse vs human mRNA)
 ```{r, fig.width=6}
 
-datat[,early_geneset := Tex101+Hmgb2+Ddx39+Calm2+Hnrnpa2b1+Tpr+Pcgf5+Sycp2+Piwil1]
-datat[,late_geneset := Prm1+Tnp1+Tnp2+Prm2+Hmgb4+Tex37+Spata3+Klk1b8+Paqr5]
+cell_data[,early_geneset := Tex101+Hmgb2+Ddx39+Calm2+Hnrnpa2b1+Tpr+Pcgf5+Sycp2+Piwil1]
+cell_data[,late_geneset := Prm1+Tnp1+Tnp2+Prm2+Hmgb4+Tex37+Spata3+Klk1b8+Paqr5]
 
-#ggplot(datat, aes(Tsne1, Tsne2, color=rnr2_percent>0.02 | (early_geneset>2.5 & late_geneset>2.5))) +
+#ggplot(cell_data, aes(Tsne1, Tsne2, color=rnr2_percent>0.02 | (early_geneset>2.5 & late_geneset>2.5))) +
 #    geom_point() +
 #    theme(legend.position = "bottom") +
 #    ggtitle("t-SNE - experiment")
 
 # Early vs Late Scatter
-ggplot(datat, aes(early_geneset, late_geneset, color=odd)) +
+ggplot(cell_data, aes(early_geneset, late_geneset, color=odd)) +
   geom_point(alpha=0.1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
   facet_grid(~odd, scales = "free")
 
 # cap extreme values
-datat[early_geneset > quantile(early_geneset, 0.9), early_geneset:= quantile(early_geneset, 0.9)]
-datat[late_geneset > quantile(late_geneset, 0.9), late_geneset:= quantile(late_geneset, 0.9)]
+cell_data[early_geneset > quantile(early_geneset, 0.9), early_geneset:= quantile(early_geneset, 0.9)]
+cell_data[late_geneset > quantile(late_geneset, 0.9), late_geneset:= quantile(late_geneset, 0.9)]
 
 # normalise to max=1
-datat[,early_geneset_scale := early_geneset / max(early_geneset)]
-datat[,late_geneset_scale := late_geneset / max(late_geneset)]
+cell_data[,early_geneset_scale := early_geneset / max(early_geneset)]
+cell_data[,late_geneset_scale := late_geneset / max(late_geneset)]
 
 # GFP like plot
-ggplot(datat, aes(Tsne1, Tsne2)) +
-  geom_point(color=rgb(red=datat$late_geneset_scale, green=0, blue=datat$early_geneset_scale), size=0.3) +
+ggplot(cell_data, aes(Tsne1, Tsne2)) +
+  geom_point(color=rgb(red=cell_data$late_geneset_scale, green=0, blue=cell_data$early_geneset_scale), size=0.3) +
   theme(legend.position = "none") +
   ggtitle("t-SNE - experiment") +
   theme_dark() + theme(panel.background = element_rect(fill = "grey20", colour = NA))
 
-ggplot(datat, aes(Sycp2, Prm2, color=odd)) +
+ggplot(cell_data, aes(Sycp2, Prm2, color=odd)) +
   geom_point(alpha=0.1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
   facet_grid(~odd)
 
-ggplot(datat, aes(Piwil1, Prm2, color=odd)) +
+ggplot(cell_data, aes(Piwil1, Prm2, color=odd)) +
   geom_point(alpha=0.1) +
   theme(legend.position = "bottom") +
   ggtitle("t-SNE - experiment") +
@@ -700,8 +700,8 @@ ggplot(datat, aes(Piwil1, Prm2, color=odd)) +
 ```
 
 ```{r}
-stopifnot(digest::digest(datat[odd==FALSE & mt_geneset<2]$cell) == "94a4bdfa1dfdbec834ba2c4f0d2f43c1")
-cell_subset2 <- datat[odd==FALSE & mt_geneset<2]$cell
+stopifnot(digest::digest(cell_data[odd==FALSE & mt_geneset<2]$cell) == "94a4bdfa1dfdbec834ba2c4f0d2f43c1")
+cell_subset2 <- cell_data[odd==FALSE & mt_geneset<2]$cell
 raw_data <- readRDS("../data/conradV3/merged_mouse_QC_V3.rds")
 str(raw_data[cell_subset2, ])
 saveRDS(raw_data[cell_subset2, ], "../data/conradV3/merged-mouse_counts_tsne-QC_low-mt.rds")

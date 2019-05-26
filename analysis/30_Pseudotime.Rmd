@@ -20,8 +20,8 @@ Low library size cells were removed prior to construction of the principal curve
 # create principal curve using Tsne (without somatic cells)
 # build up curve
 
-principal_curves <- testisAtlas::princurve_bootstrap(as.matrix(datat[somatic4==FALSE & V38<3, .(Tsne1_QC1, Tsne2_QC1)]))
-principal_curves[["df_8_unbootstrapped"]] <- princurve::principal.curve(as.matrix(datat[somatic4==FALSE & V38<3, .(Tsne1_QC1, Tsne2_QC1)]), df=8)
+principal_curves <- testisAtlas::princurve_bootstrap(as.matrix(cell_data[somatic4==FALSE & V38<3, .(Tsne1_QC1, Tsne2_QC1)]))
+principal_curves[["df_8_unbootstrapped"]] <- princurve::principal.curve(as.matrix(cell_data[somatic4==FALSE & V38<3, .(Tsne1_QC1, Tsne2_QC1)]), df=8)
 
 saveRDS(principal_curves, "../data/principal_curves.rds")
 ```
@@ -46,31 +46,31 @@ print_tsne("Prm2", curve = T, principal_curve = "df_10", curve_width = 1) + ggti
 # Assign pseudotime based on position along principal line
 pseudotime <- cbind(principal_curves[["df_9"]]$s[principal_curves[["df_9"]]$tag, 1], principal_curves[["df_9"]]$s[principal_curves[["df_9"]]$tag, 2])
 find_pseudotime <- function(sample.point){ which.min(colSums((t(pseudotime) - c(sample.point))^2)) }
-cell_pseudotime <- apply(as.matrix(datat[,.(Tsne1_QC1,Tsne2_QC1)]), 1, find_pseudotime)
+cell_pseudotime <- apply(as.matrix(cell_data[,.(Tsne1_QC1,Tsne2_QC1)]), 1, find_pseudotime)
 
-datat[,PseudoTime1 := pseudotime[cell_pseudotime,][,1]]
-datat[,PseudoTime2 := pseudotime[cell_pseudotime,][,2]]
-datat[,PseudoTime := cell_pseudotime]
+cell_data[,PseudoTime1 := pseudotime[cell_pseudotime,][,1]]
+cell_data[,PseudoTime2 := pseudotime[cell_pseudotime,][,2]]
+cell_data[,PseudoTime := cell_pseudotime]
 
 # points closer to line
-# ggplot(datat, aes(PseudoTime1, PseudoTime2, colour=sqrt(library_size))) +
+# ggplot(cell_data, aes(PseudoTime1, PseudoTime2, colour=sqrt(library_size))) +
 #     geom_jitter(width=0.5, height=0.5, size=0.5) + scale_colour_distiller(palette="YlOrRd", direction=-1) + ggtitle("Cells moved towards point on principal Curve")
 
-datat[somatic4==TRUE, PseudoTime := NA]
+cell_data[somatic4==TRUE, PseudoTime := NA]
 
-ggplot(datat, aes(Tsne1_QC1, Tsne2_QC1, color=PseudoTime)) +
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=PseudoTime)) +
   geom_point(size=0.25) +
   scale_color_viridis() +
   theme(legend.position = "bottom") +
   ggtitle("SDA t-SNE - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1_QC2, Tsne2_QC2, color=PseudoTime)) +
+ggplot(cell_data, aes(Tsne1_QC2, Tsne2_QC2, color=PseudoTime)) +
   geom_point(size=0.25) +
   scale_color_viridis() +
   theme(legend.position = "bottom") +
   ggtitle("SDA t-SNE (differnt seed) - cells coloured by PseudoTime")
 
-ggplot(datat, aes(Tsne1, Tsne2, color=PseudoTime)) +
+ggplot(cell_data, aes(Tsne1, Tsne2, color=PseudoTime)) +
     geom_point(size=0.25) +
     scale_color_viridis() +
     theme(legend.position = "bottom") +
@@ -81,9 +81,9 @@ ggplot(datat, aes(Tsne1, Tsne2, color=PseudoTime)) +
 The component scores and gene loadings show a cascade of expression programmes as spermatogenesis progresses.
 
 ```{r}
-tmp <- datat[,paste0("V",1:50), with=FALSE]
+tmp <- cell_data[,paste0("V",1:50), with=FALSE]
 names(tmp) <- component_order_dt$name
-tmp <- as.matrix(tmp)[order(-datat$PseudoTime,datat$hclust_group),component_order_dt[order(-pseudotime_average,name)]$name]
+tmp <- as.matrix(tmp)[order(-cell_data$PseudoTime,cell_data$hclust_group),component_order_dt[order(-pseudotime_average,name)]$name]
 
 colnames(tmp) <- paste0("V",component_order_dt[order(-pseudotime_average,name)]$component_number," ",colnames(tmp))
 t=20
@@ -107,7 +107,7 @@ dev.off()
 components_w_pseudotime <- paste0("V",component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$component_number)
 
 # Plot component loading by pseudotime
-merge_sda3_melt <- melt(datat[somatic4==FALSE, c("cell", "PseudoTime", components_w_pseudotime), with=FALSE], id.vars = c("cell","PseudoTime"), variable.name = "Component")
+merge_sda3_melt <- melt(cell_data[somatic4==FALSE, c("cell", "PseudoTime", components_w_pseudotime), with=FALSE], id.vars = c("cell","PseudoTime"), variable.name = "Component")
 
 levels(merge_sda3_melt$Component) <- paste(levels(merge_sda3_melt$Component), component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$name)
 ```
@@ -243,7 +243,7 @@ print_tsne(5)+
   facet_zoom(x = Tsne1_QC1 > (-8) & Tsne1_QC1<25, y= Tsne2_QC1>25, zoom.size = 1)
 
 # make bi colour plot like GFP
-tmp <- datat[,.(Tsne1_QC1, Tsne2_QC1, V2, V5)]
+tmp <- cell_data[,.(Tsne1_QC1, Tsne2_QC1, V2, V5)]
 tmp[V2>0, V2 := 0]
 tmp[,V2 := abs(V2)]
 tmp[,V2 := V2/max(V2)]
@@ -277,7 +277,7 @@ V2_genes <- get_top_genes(2)
 V5_genes <- get_top_genes(5)
 compare_two_genes <- unique(c(V2_genes, V5_genes))
 
-tmp <- datat[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
+tmp <- cell_data[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
 tmp <- merge(tmp, sda_predict(compare_two_genes, name_extension = ""))
 
 tmp_m <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"))
@@ -305,7 +305,7 @@ top.genes <- unlist(lapply(meiotic_component_order, function(x) get_top_genes(x,
 top.genes <- top.genes[top.genes %in% colnames(data)]
 top.genes <- unique(top.genes)
 
-tmp <- datat[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
+tmp <- cell_data[somatic4==FALSE,c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
 tmp <- merge(tmp, sda_predict(top.genes, name_extension = ""))
 tmp <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"))
 tmp$variable = factor(tmp$variable, levels=top.genes)

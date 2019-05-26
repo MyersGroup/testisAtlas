@@ -618,7 +618,7 @@ manhatten_plot(sox30DEG_enrich, legend_position = c(0.2,0.6))
 # Exerpimental group on tSNE
 
 ```{r, fig.width=6}
-tmp <- datat
+tmp <- cell_data
 tmp[, group := factor(group, levels=c("WT","SPG","SPCI","SPCII","SPD","Hormad1","Mlh3","Cul4a","CNP"))]
 
 tnse_groups <- ggplot(tmp[group!="mj"], aes(Tsne1_QC1, Tsne2_QC1, colour=group)) +

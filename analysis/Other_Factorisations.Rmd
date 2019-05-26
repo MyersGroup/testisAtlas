@@ -412,9 +412,9 @@ plot(sda_predict(c("Acrv1"))$Acrv1, pca_predict(c("Acrv1"))$Acrv1, pch=".")
 ```
 
 ```{r}
-ggplot(datat[nmf_predict(c("Prdm9"))], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3) + ggtitle("NNMF")
-ggplot(datat[sda_predict(c("Prdm9"))], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3) + ggtitle("SDA")
-ggplot(datat[pca_predict(c("Prdm9"))], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3) + ggtitle("PCA")
+ggplot(cell_data[nmf_predict(c("Prdm9"))], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3) + ggtitle("NNMF")
+ggplot(cell_data[sda_predict(c("Prdm9"))], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3) + ggtitle("SDA")
+ggplot(cell_data[pca_predict(c("Prdm9"))], aes(-PseudoTime, Prdm9)) + geom_point(stroke=0, alpha=0.3) + ggtitle("PCA")
 ```
 
 # test PCA implementaitons
@@ -760,7 +760,7 @@ tricolour_tsne(c("Gfra1","Upp1","Crabp1"), predict = "NNMF2") +
 (with expression as colour)
 
 ```{r}
-#plot(nnmf_decomp$W[,"V4"][datat[order(experiment)]$cell], pch=".")
+#plot(nnmf_decomp$W[,"V4"][cell_data[order(experiment)]$cell], pch=".")
 
 tmp <- tricolour_tsne(c("Cd3g","Csf1r"), returndf = T, predict = F)
 
@@ -771,9 +771,9 @@ ggplot(tmp, aes(V3,V11,colour=rgb)) +
   annotate("text", Inf, Inf, hjust = 2, vjust = 2, label = "Cd3g", colour="red", fontface="bold") +
   annotate("text", Inf, Inf, hjust = 2, vjust = 4, label = "Csf1r", colour="blue", fontface="bold")
 
-tmp$NNMF_V4 <- nnmf_decomp$W[,"V4"][datat$cell]
-tmp$NNMF_V11 <- nnmf_decomp$W[,"V11"][datat$cell]
-tmp$NNMF_V34 <- nnmf_decomp$W[,"V34"][datat$cell]
+tmp$NNMF_V4 <- nnmf_decomp$W[,"V4"][cell_data$cell]
+tmp$NNMF_V11 <- nnmf_decomp$W[,"V11"][cell_data$cell]
+tmp$NNMF_V34 <- nnmf_decomp$W[,"V34"][cell_data$cell]
 
 ggplot(tmp[order(Cd3g/2+Csf1r)], aes(NNMF_V4,NNMF_V11,colour=rgb)) +
   geom_point() +
@@ -890,18 +890,18 @@ In NNMF this effect bleeds into the WT cells
 
 ```{r, fig.width=6}
 
-# plot(results$scores[datat[order(-PseudoTime)]$cell,"V38"],col=rgb(0,0,0,1-as.double(grepl("Hormad",datat[order(-PseudoTime)]$experiment))),xlim=c(0,5000),ylim=c(-5,20))
-# plot(nnmf_decomp$W[datat[order(-PseudoTime)]$cell,"V3"],col=rgb(0,0,0,1-as.double(grepl("Hormad",datat[order(-PseudoTime)]$experiment))),xlim=c(0,5000))
+# plot(results$scores[cell_data[order(-PseudoTime)]$cell,"V38"],col=rgb(0,0,0,1-as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment))),xlim=c(0,5000),ylim=c(-5,20))
+# plot(nnmf_decomp$W[cell_data[order(-PseudoTime)]$cell,"V3"],col=rgb(0,0,0,1-as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment))),xlim=c(0,5000))
 # 
-# plot(results$scores[datat[order(-PseudoTime)]$cell,"V38"],col=1+as.double(grepl("Hormad",datat[order(-PseudoTime)]$experiment)),xlim=c(0,5000),ylim=c(-5,20))
-# plot(nnmf_decomp$W[datat[order(-PseudoTime)]$cell,"V3"],col=1+as.double(grepl("Hormad",datat[order(-PseudoTime)]$experiment)),xlim=c(0,5000))
+# plot(results$scores[cell_data[order(-PseudoTime)]$cell,"V38"],col=1+as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment)),xlim=c(0,5000),ylim=c(-5,20))
+# plot(nnmf_decomp$W[cell_data[order(-PseudoTime)]$cell,"V3"],col=1+as.double(grepl("Hormad",cell_data[order(-PseudoTime)]$experiment)),xlim=c(0,5000))
 
-tmp <- data.table("NNMF"=nnmf_decomp$W[datat[order(-PseudoTime)]$cell,"V3"],
-           "SDA"=results$scores[datat[order(-PseudoTime)]$cell,"V38"],
-           "Hormad1KO"=grepl("Hormad",datat[order(-PseudoTime)]$experiment),
-           "PseudoTime" = datat[order(-PseudoTime)]$PseudoTime,
-           "cell" = datat[order(-PseudoTime)]$cell,
-           "msci_ratio" = datat[order(-PseudoTime)]$msci_ratio)
+tmp <- data.table("NNMF"=nnmf_decomp$W[cell_data[order(-PseudoTime)]$cell,"V3"],
+           "SDA"=results$scores[cell_data[order(-PseudoTime)]$cell,"V38"],
+           "Hormad1KO"=grepl("Hormad",cell_data[order(-PseudoTime)]$experiment),
+           "PseudoTime" = cell_data[order(-PseudoTime)]$PseudoTime,
+           "cell" = cell_data[order(-PseudoTime)]$cell,
+           "msci_ratio" = cell_data[order(-PseudoTime)]$msci_ratio)
 
 tmp[Hormad1KO==TRUE, Hormad_Genotype := "Hormad -/-"]
 tmp[Hormad1KO==FALSE, Hormad_Genotype := "Hormad WT"]
@@ -926,10 +926,10 @@ dev.off()
 
 hormad_gene <- "Rhox2h"
 
-datat[grepl("Hormad",experiment), Hormad_Genotype := "Hormad -/-"]
-datat[!grepl("Hormad",experiment), Hormad_Genotype := "Hormad WT"]
+cell_data[grepl("Hormad",experiment), Hormad_Genotype := "Hormad -/-"]
+cell_data[!grepl("Hormad",experiment), Hormad_Genotype := "Hormad WT"]
 
-tmp <- datat[nmf_predict(hormad_gene,name_extension = "_NNMF")][sda_predict(hormad_gene, name_extension = "_SDA")]
+tmp <- cell_data[nmf_predict(hormad_gene,name_extension = "_NNMF")][sda_predict(hormad_gene, name_extension = "_SDA")]
 
 tmp <- melt(tmp[PseudoTime>14500],id.vars = c("cell","PseudoTime","Hormad_Genotype"), measure.vars = paste0(hormad_gene,"_",c("NNMF","SDA")), variable.name = "Method", value.name = hormad_gene)
 
@@ -957,10 +957,10 @@ Better
 
 ```{r, fig.width=6}
 
-datat[grepl("Hormad1_3",experiment), Genotype := "2"]
-datat[!grepl("Hormad1_3",experiment), Genotype := "1"]
+cell_data[grepl("Hormad1_3",experiment), Genotype := "2"]
+cell_data[!grepl("Hormad1_3",experiment), Genotype := "1"]
 
-tmp <- datat[nmf_predict(c("Rhox2h"),nnmf_decomp5, name_extension = "_NNMF")][sda_predict(c("Rhox2h"), name_extension = "_SDA")]
+tmp <- cell_data[nmf_predict(c("Rhox2h"),nnmf_decomp5, name_extension = "_NNMF")][sda_predict(c("Rhox2h"), name_extension = "_SDA")]
 
 tmp <- melt(tmp[PseudoTime>14500],id.vars = c("cell","PseudoTime","Hormad_Genotype"), measure.vars = c("Rhox2h_NNMF","Rhox2h_SDA"), variable.name = "Method", value.name = "Rhox2h")
 
