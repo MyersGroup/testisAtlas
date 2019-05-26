@@ -215,12 +215,12 @@ motif_consensus <- function(sequence_matrix, motif){
 
 #' For an SDA component, find motifs /de novo/
 #'
-#' @param component numeric; component number in results$loadings[[1]]
+#' @param component numeric; component number in SDAresults$loadings[[1]]
 #' @param positive logical; should we look for motifs in the genes with positive loadings or negative
 #' @param random logical; if TRUE (default: FALSE) 250 random genes are used
 #'
 #' @details 
-#' Requires tss_seqs_s and results (from SDA load_results) to be loaded
+#' Requires tss_seqs_s and SDAresults (from SDA load_results) to be loaded
 #' For an SDA
 #' 
 #' @return Will save pdf of motifs found, and return list of motifs found
@@ -230,7 +230,7 @@ motif_consensus <- function(sequence_matrix, motif){
 
 get_component_motifs <- function(component, positive, topn=250, random=FALSE){
   
-  gene_names17 <- head(names(sort(results$loadings[[1]][component,], decreasing = positive)),2500)
+  gene_names17 <- head(names(sort(SDAresults$loadings[[1]][component,], decreasing = positive)),2500)
   
   regs_spermio <- tss_seqs_s[gene_names17]
   regs_spermio <- regs_spermio[!is.na(regs_spermio)]
@@ -262,7 +262,7 @@ get_component_motifs <- function(component, positive, topn=250, random=FALSE){
   
   if(random){ # to get "Null" Hypothesis Motifs
     set.seed(42+component)
-    gene_names_random <- sample(names(results$loadings[[1]][42,]),2500)
+    gene_names_random <- sample(names(SDAresults$loadings[[1]][42,]),2500)
     
     regs_random <- tss_seqs_s[gene_names_random]
     regs_random <- regs_random[!is.na(regs_random)][1:topn]
@@ -522,7 +522,7 @@ find_motifs_parallel <- function(motif, database="hocomoco", custom=F, seqs=tss_
 #' 
 #' @return 3d Array / Tensor, of motif by bin by component
 
-binned_mean_regprob <- function(regprobs=regprobs_matrix_custom, nbins=50, factorisation=results){
+binned_mean_regprob <- function(regprobs=regprobs_matrix_custom, nbins=50, factorisation=SDAresults){
   
   gene_subset <- colnames(factorisation$loadings[[1]])
   gene_subset <- gene_subset[gene_subset %in% rownames(regprobs)]
@@ -549,7 +549,7 @@ binned_mean_regprob <- function(regprobs=regprobs_matrix_custom, nbins=50, facto
 
 #' plot regprobs within binned components
 #'
-#' @param component numeric or string; rowname of `results$loadings[[1]]` corresponding to a component name or number
+#' @param component numeric or string; rowname of `SDAresults$loadings[[1]]` corresponding to a component name or number
 #'
 #' @details 
 #' Requires regprobs_matrix to be loaded.
@@ -639,7 +639,7 @@ plot_meanprob_bycomp <- function(binned_meanprob, plot=TRUE, facet_scales="free_
 #' @export
 #' @import ggplot2
 
-mean_prob_bycomp <- function(regprobs=regprobs_matrix_custom, plot=TRUE, n=100, factorisation=results, facet_scales="free_y"){
+mean_prob_bycomp <- function(regprobs=regprobs_matrix_custom, plot=TRUE, n=100, factorisation=SDAresults, facet_scales="free_y"){
   
   mean_prob_matrix <- matrix(nrow=100, ncol=ncol(regprobs))
   rownames(mean_prob_matrix) <- colnames(factorisation$loadings_split)
@@ -683,7 +683,7 @@ mean_prob_bycomp <- function(regprobs=regprobs_matrix_custom, plot=TRUE, n=100, 
 #' 
 #' @export
 
-split_loadings <- function(loadings=results$loadings[[1]]){
+split_loadings <- function(loadings=SDAresults$loadings[[1]]){
   pos = t(loadings * (loadings>0) )
   colnames(pos) <- paste0(colnames(pos),"P")
   
@@ -708,7 +708,7 @@ split_loadings <- function(loadings=results$loadings[[1]]){
 #'
 #' @export
 
-correlate_regprobs <- function(regprobs=regprobs_matrix, factorisation=results){
+correlate_regprobs <- function(regprobs=regprobs_matrix, factorisation=SDAresults){
   
   pred2 <- t(factorisation$loadings[[1]][,rownames(regprobs)])
   pred2 <- pred2[]

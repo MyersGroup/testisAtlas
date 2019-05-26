@@ -195,7 +195,7 @@ load_curve_data <- function(princurves=principal_curves, principal_curve="df_9")
 #' 
 #' @import ggplot2 data.table viridis ggnewscale
 
-print_tsne <- function(i, factorisation=results, cell_metadata=cell_data, jitter=0, colourscale="diverging", expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
+print_tsne <- function(i, factorisation=SDAresults, cell_metadata=cell_data, jitter=0, colourscale="diverging", expression_matrix=data, princurves=principal_curves, dim1="Tsne1_QC1", dim2="Tsne2_QC1", flip=FALSE, predict=FALSE, curve=FALSE, stages=FALSE, point_size=1, log=FALSE, principal_curve="df_9", curve_width=0.5){
   
   
   if(i %in% colnames(cell_metadata)){ # plot feature in cell_data
@@ -415,7 +415,7 @@ tricolour_tsne <- function(genes, returndf=F, predict="SDA", cell_metadata=cell_
 #' 
 #' @import data.table
 
-sda_predict <- function(genes, factorisation=results, name_extension=""){
+sda_predict <- function(genes, factorisation=SDAresults, name_extension=""){
   # use SDA parameters to create posterior prediction kind of
   stopifnot(!is.null(genes))
   
@@ -536,7 +536,7 @@ create_grob_list <- function(fn=print_marker2, input=hist_subset){
 #' 
 #' @import data.table
 
-gene_expression_pseudotime <- function(genes, factorisation=results, cell_metadata=cell_data){
+gene_expression_pseudotime <- function(genes, factorisation=SDAresults, cell_metadata=cell_data){
   tmp <- merge(cell_metadata[somatic4==FALSE, c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), with=FALSE],
                sda_predict(genes, factorisation, name_extension = ""))
   tmp <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), variable.name = "Gene")
@@ -564,7 +564,7 @@ gene_expression_pseudotime <- function(genes, factorisation=results, cell_metada
 #'
 #' @export
 #' @import ggplot2
-plot_pseudotime_expression_panel <- function(genes, factorisation=results, cell_metadata=cell_data, ncol=7, title="Histone Genes", gam_k=5, point_size=0.2, highlight_reigon=NULL){
+plot_pseudotime_expression_panel <- function(genes, factorisation=SDAresults, cell_metadata=cell_data, ncol=7, title="Histone Genes", gam_k=5, point_size=0.2, highlight_reigon=NULL){
   
   if(mode(genes)=="character"){
     data <- gene_expression_pseudotime(genes, factorisation, cell_metadata)
@@ -608,7 +608,7 @@ plot_pseudotime_expression_panel <- function(genes, factorisation=results, cell_
 #' @export
 #' @import data.table
 #' 
-melt_genes <- function(genes, cell_metadata=cell_data, expression_matrix=data, predict=FALSE, factorisation=results){
+melt_genes <- function(genes, cell_metadata=cell_data, expression_matrix=data, predict=FALSE, factorisation=SDAresults){
   # generate melted version of cell_data on the fly for subset of genes
   # rather than keeping two 7Gb data.tables in memory
   #saveRDS(merge_sda3_melt2, "PseudoTime_Shiny/data_V3.rds")
@@ -639,7 +639,7 @@ melt_genes <- function(genes, cell_metadata=cell_data, expression_matrix=data, p
 #' Find the top x genes for a component
 #'
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
-#' @param component integer or string; number or name of component in 'results' object
+#' @param component integer or string; number or name of component in 'SDAresults' object
 #' @param n integer; number of gene symbols to retrieve
 #' @param values logical; if TRUE (default FALSE) named gene loadings are returned
 #'
@@ -648,7 +648,7 @@ melt_genes <- function(genes, cell_metadata=cell_data, expression_matrix=data, p
 #'
 #' @export
 #'
-get_top_genes <- function(component, factorisation=results, n=20, values=FALSE){
+get_top_genes <- function(component, factorisation=SDAresults, n=20, values=FALSE){
   
   # first decide which side we want
   highest_cell <- names(sort(-abs(factorisation$scores[,component]))[1])
@@ -670,7 +670,7 @@ get_top_genes <- function(component, factorisation=results, n=20, values=FALSE){
 #'
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param gene_locations ouput of SDAtools::load_gene_locations()
-#' @param i integer or string; number or name of component in 'results' object
+#' @param i integer or string; number or name of component in 'SDAresults' object
 #' @param max.items integer; number of genes to label in loadings plot
 #'
 #' @return ggplot2 object
@@ -678,7 +678,7 @@ get_top_genes <- function(component, factorisation=results, n=20, values=FALSE){
 #' @export
 #' 
 #' @import ggplot2 gridExtra
-print_loadings_scores <- function(i, factorisation=results, gene_locations=rna_locations, max.items=30){
+print_loadings_scores <- function(i, factorisation=SDAresults, gene_locations=rna_locations, max.items=30){
   grid.arrange(grobs=list(genome_loadings(factorisation$loadings[[1]][i,], label_both = FALSE, max.items = max.items, gene_locations = gene_locations) + ggtitle(i),
                           ggplot(data.table(cell_index=1:nrow(factorisation$scores), score=factorisation$scores[,paste0("V",i)],
                                             experiment=gsub("_.*","",gsub("[A-Z]+\\.","",rownames(factorisation$scores)))),
@@ -697,7 +697,7 @@ print_loadings_scores <- function(i, factorisation=results, gene_locations=rna_l
 #' Print list of genes in component and their annotations
 #'
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
-#' @param i integer or string; number or name of component in 'results' object
+#' @param i integer or string; number or name of component in 'SDAresults' object
 #' @param n integer; number of genes to include in the list, default=100
 #' @param fantom data.table with columns Gene.Name and fold_difference from FANTOM dataset
 #' @param gtex data.table with column Gene.Name, Human_Orthologue, and fold_difference_gtex
@@ -709,7 +709,7 @@ print_loadings_scores <- function(i, factorisation=results, gene_locations=rna_l
 #' @export
 #' 
 #' @import data.table
-print_gene_list <- function(i, n=100, factorisation=results, infertility=infertility_genes, fantom=fantom_subset_summary, gtex=gtex_summary) {
+print_gene_list <- function(i, n=100, factorisation=SDAresults, infertility=infertility_genes, fantom=fantom_subset_summary, gtex=gtex_summary) {
   tmp <- data.table(as.matrix(factorisation$loadings[[1]][i,]), keep.rownames = TRUE)[order(-abs(V1))][1:n]
   setnames(tmp, c("Gene.Name","Loading"))
   setkey(tmp, Gene.Name)
@@ -785,7 +785,7 @@ go_volcano_plot <- function(data=GO_data, component="V5N", top_n=30, label_size=
 #' 
 #' @import ggplot2 data.table cowplot
 
-imputed_vs_raw <- function(genes, cell_metadata=cell_data, factorisation=results, expression_matrix=data, facet=T){
+imputed_vs_raw <- function(genes, cell_metadata=cell_data, factorisation=SDAresults, expression_matrix=data, facet=T){
   library(scales)
   
   tmp <- merge(cell_metadata[somatic4==FALSE], expression_dt(genes, expression_matrix))[,c(genes,"cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1"), with=FALSE]
@@ -946,7 +946,7 @@ match_cells2 <- function(test_groups=NULL, cell_subset=NULL, cell_metadata=cell_
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param pos logical; if TRUE (default) the positive gene loadings are ranked highest
 #' @param threshold numeric; how many genes should be included in the top genes list used to calculate enrichment
-#' @param bg_genes which genes to use as the 'background' default uses all genes in the results object from SDA
+#' @param bg_genes which genes to use as the 'background' default uses all genes in the SDAresults object from SDA
 #' @param test string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)
 #'
 #' @details 
@@ -956,7 +956,7 @@ match_cells2 <- function(test_groups=NULL, cell_subset=NULL, cell_metadata=cell_
 #' 
 #' @export
 
-single_component_enrichment <- function(gene_vector=results$loadings[[1]][1,], genes = Mybl1_genes,  pos=T, threshold=200, bg_genes=NULL, test="fisher"){
+single_component_enrichment <- function(gene_vector=SDAresults$loadings[[1]][1,], genes = Mybl1_genes,  pos=T, threshold=200, bg_genes=NULL, test="fisher"){
   
   if(is.null(bg_genes)){
     bg_genes <- names(gene_vector)
@@ -1006,13 +1006,13 @@ single_component_enrichment <- function(gene_vector=results$loadings[[1]][1,], g
 #' @param genes character vector of gene set to look for enrichment for
 #' @param threshold numeric; how many genes should be included in the top genes list used to calculate enrichment
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
-#' @param bg_genes which genes to use as the 'background' default uses all genes in the results object from SDA
+#' @param bg_genes which genes to use as the 'background' default uses all genes in the SDAresults object from SDA
 #' @param test string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)
 #'
 #' @details 
 #' for each component (P&N seperately), calculate p value enrichemnt (fishers test) for a set of genes
 #' This is a multi-component wrapper to AZ_pvalue
-#' requires the results object from SDA to be loaded as well as the component_order_all object from 'R/functions_ordering.R'
+#' requires the SDAresults object from SDA to be loaded as well as the component_order_all object from 'R/functions_ordering.R'
 #' 
 #' @return A data.table with a row for each component (+ve & -ve seperately) with columns giving the p.value of enrichment,
 #' Odds Ratio, Component number and name, component type (Somatic or Meiotic), and component order
@@ -1021,7 +1021,7 @@ single_component_enrichment <- function(gene_vector=results$loadings[[1]][1,], g
 #' 
 #' @import data.table
 
-component_enrichment <- function(genes, threshold=500, loadings_matrix=results$loadings[[1]], orderSDA=T ,bg_genes=NULL, test="fisher"){
+component_enrichment <- function(genes, threshold=500, loadings_matrix=SDAresults$loadings[[1]], orderSDA=T ,bg_genes=NULL, test="fisher"){
   
   stopifnot(nrow(loadings_matrix) < ncol(loadings_matrix))
   
@@ -1257,14 +1257,14 @@ sort_matrix <- function(mat=cross_cor, order1=max_cor_per_compoent){
 #' @export
 #' @import ComplexHeatmap
 #' 
-compare_factorisations <- function(f1=nnmf_decomp$H, f2=results$loadings[[1]], names=c("f1","f2"), method="spearman", return="hm", split=c(F,F), inject_matrix=NULL, randomise=FALSE){
+compare_factorisations <- function(f1=nnmf_decomp$H, f2=SDAresults$loadings[[1]], names=c("f1","f2"), method="spearman", return="hm", split=c(F,F), inject_matrix=NULL, randomise=FALSE){
   
   if(method=="kendall"){
     stop("kendall is too slow, not allowed it will crash R")
   }
   
   
-  # check if whole results is passed, or just loadings
+  # check if whole SDAresults is passed, or just loadings
   if(is.list(f1)){
     f1loadings <- f1$loadings[[1]]
     f1scores <- f1$scores

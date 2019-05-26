@@ -149,7 +149,7 @@ component_order_all <<- component_order_dt[order(-pseudotime_average, na.last = 
 
 meiotic_component_order <<- component_order_dt[!is.na(pseudotime_average)][order(-pseudotime_average)]$component_number
 
-PN_ratio <- apply(results$scores, 2, function(x) log(abs(min(x)/max(x))))
+PN_ratio <- apply(SDAresults$scores, 2, function(x) log(abs(min(x)/max(x))))
 
 half_exclusion_comps <<- c(paste0(names(which(PN_ratio < -log(5))),"N"),
                      paste0(names(which(PN_ratio > log(5))),"P"))

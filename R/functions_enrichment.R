@@ -12,7 +12,7 @@
 #'
 #' @export
 
-GO_enrichment <- function(component, geneNumber = 250, side="N", factorisation=results, database=Musculus){
+GO_enrichment <- function(component, geneNumber = 250, side="N", factorisation=SDAresults, database=Musculus){
   
   if (!requireNamespace("clusterProfiler", quietly = TRUE)) {
     stop("Package \"clusterProfiler\" needed for this function to work. Please install it.",
@@ -118,8 +118,8 @@ ggd.qqplot = function(pvector, main=NULL, ...) {
 
 
 visualise_correlation <- function(motif_genes, component, motif_name="motif X"){
-  joined_list <- join_lists(motif_genes, names(sort(results$loadings[[1]][component,])), values = "motif")
-  joined_list2 <- join_lists(motif_genes, names(sort(results$loadings[[1]][component,])), values = "test")
+  joined_list <- join_lists(motif_genes, names(sort(SDAresults$loadings[[1]][component,])), values = "motif")
+  joined_list2 <- join_lists(motif_genes, names(sort(SDAresults$loadings[[1]][component,])), values = "test")
   
   print(qplot(1:length(joined_list), joined_list, size=I(2), shape=I(21)) +
           labs(x="Genes Ranked by SDA Component Loading",
@@ -154,9 +154,9 @@ correlation_test <- function(component, positive=FALSE){
   for (motif in rownames(correlation_statistics)){
     
     if(positive){
-      joined_ranking <- join_lists(motifGenes(motif), names(sort(results$loadings[[1]][component,][results$loadings[[1]][component,]>0], T)), values = "motif")
+      joined_ranking <- join_lists(motifGenes(motif), names(sort(SDAresults$loadings[[1]][component,][SDAresults$loadings[[1]][component,]>0], T)), values = "motif")
     }else{
-      joined_ranking <- join_lists(motifGenes(motif), names(sort(results$loadings[[1]][component,][results$loadings[[1]][component,]<0])), values = "motif")
+      joined_ranking <- join_lists(motifGenes(motif), names(sort(SDAresults$loadings[[1]][component,][SDAresults$loadings[[1]][component,]<0])), values = "motif")
     }
     
     correlation_statistics[motif,] <- unlist(cor.test(joined_ranking, seq_along(joined_ranking))[c("p.value","estimate")])
@@ -179,11 +179,11 @@ correlation_test_motif <- function(motif){
   for (component in 1:50){
     
     # positive
-    joined_ranking <- join_lists(motifGenes(motif), names(sort(results$loadings[[1]][component,][results$loadings[[1]][component,]>0], T)), values = "motif")
+    joined_ranking <- join_lists(motifGenes(motif), names(sort(SDAresults$loadings[[1]][component,][SDAresults$loadings[[1]][component,]>0], T)), values = "motif")
     correlation_statistics[seq(1,99,2)[component],] <- unlist(cor.test(joined_ranking, seq_along(joined_ranking))[c("p.value","estimate")])
     
     # negative
-    joined_ranking <- join_lists(motifGenes(motif), names(sort(results$loadings[[1]][component,][results$loadings[[1]][component,]<0])), values = "motif")
+    joined_ranking <- join_lists(motifGenes(motif), names(sort(SDAresults$loadings[[1]][component,][SDAresults$loadings[[1]][component,]<0])), values = "motif")
     correlation_statistics[seq(1,99,2)[component]+1,] <- unlist(cor.test(joined_ranking, seq_along(joined_ranking))[c("p.value","estimate")])
     
   }
@@ -205,12 +205,12 @@ two_groups_test <- function(component, positive=FALSE, pip_threshold=0.5){
   for (motif in rownames(correlation_statistics)){
     
     if(positive){
-      joined_ranking <- join_lists(motif, names(sort(results$loadings[[1]][component,][results$loadings[[1]][component,]>0], T)), values = "motif")
+      joined_ranking <- join_lists(motif, names(sort(SDAresults$loadings[[1]][component,][SDAresults$loadings[[1]][component,]>0], T)), values = "motif")
     }else{
-      joined_ranking <- join_lists(motif, names(sort(results$loadings[[1]][component,][results$loadings[[1]][component,]<0])), values = "motif")
+      joined_ranking <- join_lists(motif, names(sort(SDAresults$loadings[[1]][component,][SDAresults$loadings[[1]][component,]<0])), values = "motif")
     }
     
-    in_spike <- names(joined_ranking) %in% colnames(results$pips[[1]])[results$pips[[1]][component,] < pip_threshold]
+    in_spike <- names(joined_ranking) %in% colnames(SDAresults$pips[[1]])[SDAresults$pips[[1]][component,] < pip_threshold]
     joined_ranking_spike <- joined_ranking[in_spike]
     joined_ranking_slab <- joined_ranking[!in_spike]
     
