@@ -1458,6 +1458,47 @@ plotCellAUC <- function(i, mt){
   )
 }
 
+#' Save R Objects, as multiple files in a folder
+#'
+#' Like save but instead of one rds file, creates one file per object
+#' See also load2
+#'
+#' @param folder string; path of folder in which to save objects
+#' @param list character vector; names of objects to be saved.
+#' Defaults to all objects in global environment (not functions).
+#' @param compress logical; specifying whether saving to a named file is to use "gzip" compression,
+#' or one of "gzip", "bzip2" or "xz" to indicate the type of compression to be used.
+#' 
+#' @export
+#' 
+save2 <- function(folder="", list = NULL, compress=FALSE){
+  if(is.null(list)){
+    list <- setdiff(ls(.GlobalEnv), lsf.str(.GlobalEnv))
+  }
+  
+  for(item in list){
+    saveRDS(get(item), paste0(folder,item,".rds"), compress = compress)
+  }
+}
+
+#' Save R Objects, as multiple files in a folder
+#'
+#' Like load but instead of one rds file, loads all rds objects in a folder.
+#' See also save2
+#'
+#' @param folder string; path of folder containing objects to be loaded
+#' @param pattern an optional regular expression. 
+#' Only files which match the regular expression will be loaded.
+#' 
+#' @export
+#' 
+load2 <- function(folder, pattern = ".rds$"){
+  files <- list.files(path = folder, pattern = pattern, full.names = T)
+  for(item in files){
+    assign(gsub(".rds$","",basename(item)), readRDS(item), envir = .GlobalEnv)
+  }
+}
+
 # deprecated
 # e.g. a=sample(1:20000,1);cellAUC_old(a);print(a)
 cellAUC_old=function(i){

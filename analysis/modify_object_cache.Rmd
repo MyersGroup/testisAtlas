@@ -32,7 +32,6 @@ object_list <- c("datat",
                  "principal_curves",
                  "results",
                  "rna_locations",
-                 "chromosome.lengths",
                  "gtex_summary",
                  "fantom_summary_subset",
                  "infertility_genes",
@@ -41,3 +40,11 @@ object_list <- c("datat",
 save(list=object_list, file = "../data/tmp_cache/cached_objects.rds", compress = FALSE)
 
 ```
+
+```{r}
+
+save2(folder="../data/exported_objects/")
+
+load2(folder="../data/exported_objects")
+```
+
