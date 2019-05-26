@@ -19,7 +19,7 @@ Full Literature: http://www.citeulike.org/user/danielwells/tag/alzheimers
 
 ```{r, fig.width=6}
 library(testisAtlas)
-load("../data/tmp_cache/SDA_objects.rds")
+load("../data/tmp_cache/cached_objects.rds")
 load_component_orderings()
 ```
 
@@ -90,7 +90,9 @@ Repeating this one sided fishers test for all components gives three results wit
 
 AZ_enrich <- component_enrichment(AD_genes, threshold = 200)
 
-AZ_enrich_plot <- manhatten_plot(AZ_enrich, topn = 2, repel_force = 20)
+AZ_enrich_plot <- manhatten_plot(AZ_enrich, topn = 2, repel_force = 20, legend_position = c(0.75,0.75))
+
+AZ_enrich_plot
 
 saveRDS(AZ_enrich_plot, "../data/plots/AZ_enrich_plot.rds")
 ```

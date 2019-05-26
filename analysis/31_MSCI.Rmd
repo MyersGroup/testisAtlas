@@ -32,7 +32,7 @@ library(NMF) # devtools::install_github("renozao/NMF", "devel")
 nmf.options(grid.patch=TRUE) # stop blank pages appearing
 
 library(testisAtlas)
-load("../data/tmp_cache/SDA_objects.rds")
+load("../data/tmp_cache/cached_objects.rds")
 load_component_orderings()
 ```
 
@@ -179,7 +179,7 @@ aheatmap(sex_expression_matrix[names(which(rowSums(sex_expression_matrix>2)>200)
 #   geom_hline(yintercept = 0.05, linetype="dashed") +
 #   theme(legend.position = "bottom")
 
-curve_data <- load_curve_data(princurves, principal_curve)
+curve_data <- load_curve_data(principal_curves, "df_9")
 
 msci_pseudotime <- ggplot(curve_data[datat, on="PseudoTime"][somatic4==FALSE], aes(-PseudoTime, sex_predictions / autosomal_predictions)) +
   geom_point(size=0.25,alpha=0.5, aes(colour = V38)) +
@@ -508,11 +508,11 @@ left <- plot_grid(msci_pseudotimeX,
                   ncol=1, rel_heights = c(3,2),
                   labels = c("A",""))
 
-pdf(width = 15, height = 10, file = "../results/Figure_2_MSCI.pdf")
+pdf(width = 15, height = 10, file = "../results/Figure_6_MSCI.pdf")
 plot_grid(left, right, ncol=2)
 dev.off() 
 
-pdf(width = 15, height = 9, file = "../results/Figure_2_Supplement.pdf")
+pdf(width = 15, height = 9, file = "../results/Figure_6_Supplement.pdf")
 plot_grid(plotlist = list(msci_pseudotimeY,
                        X_escapees_plot + facet_wrap(~Gene, scales='free_y')),
           labels = c("A","B"), rel_widths = c(2,3))

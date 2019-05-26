@@ -214,16 +214,16 @@ ggplot(data.table(Sparsity=apply(results$pips[[1]], 1, function(x) mean(x<0.5)),
 ```
 
 
-# Figure 7
+# Figure 9
 
-## 7A Hormad1 Scores & Loadings
+## 9A Hormad1 Scores & Loadings
 
 ```{r}
 v38_loadings_plot <- genome_loadings(results$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations) +
   ylab("Gene Loading (Component 38)")
 ```
 
-## 7B Rhox2h Hormad vs WT
+## 9B Rhox2h Hormad vs WT
 
 ```{r}
 tmp <- gene_expression_pseudotime(c("Rhox2h"))
@@ -245,7 +245,7 @@ dev.off()
 
 ```
 
-## 7C Cul4a Scores & Loadings
+## 9C Cul4a Scores & Loadings
 
 ```{r}
 
@@ -254,14 +254,14 @@ v25_loadings_plot <- genome_loadings(results$loadings[[1]][25,], label_both = FA
 
 ```
 
-## 7D MQ enrichment
+## 9D MQ enrichment
 
 ```{r}
 # from alzheimers.Rmd
 AZ_enrich_plot <- readRDS("../data/plots/AZ_enrich_plot.rds")
 ```
 
-## Fig 7 Combined
+## Fig 9 Combined
 
 ```{r}
 
@@ -280,7 +280,7 @@ dev.off()
 #c11 <- plot_grid(v11_loadings_plot, v11_scores, ncol = 2, rel_widths = c(3,1))
 
 set.seed(87162)
-pdf(width = 12, height = 6, file = "../results/Figure_7_AtoD.pdf")
+pdf(width = 12, height = 6, file = "../results/Figure_9_AtoD.pdf")
 plot_grid(plotlist = list(c38,
                        Hormad1_gxe,
                        c25,
@@ -647,9 +647,9 @@ dev.off()
 ```
 
 
-# Fig S6
+# Fig 4 S3
 
-## S6 AB; C38 vs Trip13 & Hormad1 KO genes
+## 4S3 AB; C38 vs Trip13 & Hormad1 KO genes
 
 ```{r, fig.width=6}
 
@@ -668,7 +668,7 @@ hormad
 dev.off()
 ```
 
-## S6 CD; MSCI
+## 4S3 CD; MSCI
 
 ```{r}
 # from MSCI.Rmd
@@ -684,7 +684,7 @@ msci
 dev.off()
 ```
 
-## S6F Macrophages
+## 4S3 F Macrophages
 
 ```{r}
 # Macrophages plot inc Hormad enrichment
@@ -692,7 +692,7 @@ C11_MQ_plot <- readRDS("../data/plots/C11_MQ_plot.rds")
 ```
 
 
-## S6G Leydig Cells
+## 4S3 G Leydig Cells
 
 ```{r, fig.width=6}
 c40_loadings_plot <- genome_loadings(results$loadings[[1]][40,], label_both = FALSE, max.items = 10, label.size = 4,
@@ -710,7 +710,7 @@ leydig <- plot_grid(c40_loadings_plot, mito_plot, rel_widths = c(2,1))
 ```
 
 
-## S6 Combined
+## Fig4S3 Combined
 
 ```{r}
 pdf("../results/Fig_S6_top.pdf", height=13, width=20)
@@ -770,6 +770,10 @@ pdf(height=5, width=5*1.7, file="../results/Gapdhs_impute.pdf")
 imputed_vs_raw(c("Gapdhs"), facet = F) + theme_minimal(base_size = 18) + theme(legend.position = "none") + ggtitle("Gapdhs")
 dev.off()
 
+pdf(height=5, width=5*1.7, file="../results/Lrrd1_impute.pdf")
+imputed_vs_raw(c("Lrrd1"), facet = F) + theme_minimal(base_size = 16) + theme(legend.position = "none") + ggtitle("Lrrd1")
+dev.off()
+
 GO_data <- readRDS("../data/GO_enrichment.rds")
 
 library(ggrepel)
@@ -777,6 +781,15 @@ pdf(height=5, width=5*1.7, file="../results/V5N_enrich.pdf")
 go_volcano_plot(component = "V5N", label_size = 3, OR_threshold = 10)
 dev.off()
 
+```
+
+
+```{r}
+component_tsne <- plot_grid(plotlist = create_grob_list(fn = print_tsne, input = c(11,32,40,45,38,31,5,13,42,20,30,35,15,17,18)), nrow=3)
+
+pdf("../results/component_tsne_sel.pdf", width=24,height=13.5)
+component_tsne
+dev.off()
 ```
 
 # Other Random Plots
