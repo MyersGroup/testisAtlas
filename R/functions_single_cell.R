@@ -1497,7 +1497,7 @@ save2 <- function(folder="", list = NULL, compress=FALSE){
 #' 
 #' @export
 #' 
-load2 <- function(folder, pattern = ".rds$"){
+load2 <- function(folder, pattern = "\\.rds$"){
   files <- list.files(path = folder, pattern = pattern, full.names = T)
   for(item in files){
     assign(gsub(".rds$","",basename(item)), readRDS(item), envir = .GlobalEnv)

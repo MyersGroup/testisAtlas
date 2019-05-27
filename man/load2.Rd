@@ -4,7 +4,7 @@
 \alias{load2}
 \title{Save R Objects, as multiple files in a folder}
 \usage{
-load2(folder, pattern = ".rds$")
+load2(folder, pattern = "\\\\.rds$")
 }
 \arguments{
 \item{folder}{string; path of folder containing objects to be loaded}
