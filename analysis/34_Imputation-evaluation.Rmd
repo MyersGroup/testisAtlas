@@ -453,7 +453,7 @@ NB do this part on a server with lots of memory >16GB
 SDA_AUCs <- calculateAUCs(predicted_train)
 
 
-saveRDS(SDA_AUCs[[1]], file = "../data/imputation/cellAUCs.rds")
+saveRDS(SDA_AUCs[[1]], file = "../data/imputation/cellAUCs_SDA.rds")
 
 save(SDA_AUCs, file = "../data/imputation/imputed_ranks.rds")
 
@@ -498,7 +498,7 @@ save(NNMF_AUCs, file = "../data/imputation/imputed_ranks_NNMF.rds")
 ## Plot AUC for each cell
 
 ```{r}
-cellAUCs <- readRDS("../data/imputation/cellAUCs.rds")
+cellAUCs <- readRDS("../data/imputation/cellAUCs_SDA.rds")
 
 density_auc <- get_density(cellAUCs$mean, cellAUCs$predict, kern=0.025)
 density_auc_t <- get_density(cellAUCs$train, cellAUCs$predict, kern=0.025)
@@ -527,19 +527,23 @@ plot_mean
 ## vs PCA
 ```{r}
 
-cellAUCs <- readRDS("../data/imputation/cellAUCs.rds")
+cellAUCs <- readRDS("../data/imputation/cellAUCs_SDA.rds")
 cellAUCs_SDA_shifted <- readRDS("../data/imputation/cellAUCs_SDA_shifted.rds")
 cellAUCs_PCA <- readRDS("../data/imputation/cellAUCs_PCA.rds")
 cellAUCs_ICA <- readRDS("../data/imputation/cellAUCs_ICA.rds")
 cellAUCs_NNMF <- readRDS("../data/imputation/cellAUCs_NNMF.rds")
 cellAUCs_MAGIC <- readRDS("../data/imputation/cellAUCs_MAGIC.rds")
-cellAUCs_DCA <- readRDS("../data/imputation/cellAUCs_DCA.rds")
+#cellAUCs_DCA <- readRDS("../data/imputation/cellAUCs_DCA.rds")
 
 cellAUCs <- merge(cellAUCs, cellAUCs_PCA, by="cell", suffixes = c("",".PCA"))
 cellAUCs <- merge(cellAUCs, cellAUCs_ICA, by="cell", suffixes = c("",".ICA"))
 cellAUCs <- merge(cellAUCs, cellAUCs_NNMF, by="cell", suffixes = c("",".NNMF"))
 cellAUCs <- merge(cellAUCs, cellAUCs_MAGIC, by="cell", suffixes = c("",".MAGIC"))
 #cellAUCs <- merge(cellAUCs, cellAUCs_SDA_shifted, by="cell", suffixes = c("",".SDA_shifted"))
+
+cellAUCs <- cellAUCs[,c("cell","predict","train","mean","predict.PCA","predict.ICA","predict.NNMF","predict.MAGIC"),with=F]
+
+saveRDS(cellAUCs, "../data/imputation/cellAUCs.rds")
 
 ggplot(cellAUCs, aes(train, predict)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
 #ggplot(cellAUCs, aes(train, predict.SDA_shifted)) + geom_hex(bins=150) + scale_fill_viridis(option="inferno") + geom_abline(colour="red") + ylim(0.8,1)
