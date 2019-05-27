@@ -4,7 +4,7 @@
 \alias{split_loadings}
 \title{Split SDA components into positive and negative components}
 \usage{
-split_loadings(loadings = results$loadings[[1]])
+split_loadings(loadings = SDAresults$loadings[[1]])
 }
 \arguments{
 \item{loadings}{numeric matrix; components vs gene matrix of loadings, e.g. `SDAtools::load_results()$loadings[[1]]`}

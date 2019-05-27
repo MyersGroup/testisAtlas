@@ -4,9 +4,10 @@
 \alias{compare_factorisations}
 \title{Plot correlation heatmap comparing two sets of loadings}
 \usage{
-compare_factorisations(f1 = nnmf_decomp$H, f2 = results$loadings[[1]],
-  names = c("f1", "f2"), method = "spearman", return = "hm",
-  split = c(F, F), inject_matrix = NULL, randomise = FALSE)
+compare_factorisations(f1 = nnmf_decomp$H,
+  f2 = SDAresults$loadings[[1]], names = c("f1", "f2"),
+  method = "spearman", return = "hm", split = c(F, F),
+  inject_matrix = NULL, randomise = FALSE)
 }
 \arguments{
 \item{f1}{gene loadings from factorisation method 1}

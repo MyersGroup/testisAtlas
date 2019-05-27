@@ -4,8 +4,8 @@
 \alias{plot_pseudotime_expression_panel}
 \title{Plot pseudotime expression panel}
 \usage{
-plot_pseudotime_expression_panel(genes, factorisation = results,
-  cell_metadata = datat, ncol = 7, title = "Histone Genes",
+plot_pseudotime_expression_panel(genes, factorisation = SDAresults,
+  cell_metadata = cell_data, ncol = 7, title = "Histone Genes",
   gam_k = 5, point_size = 0.2, highlight_reigon = NULL)
 }
 \arguments{

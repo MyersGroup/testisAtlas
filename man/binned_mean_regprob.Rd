@@ -5,7 +5,7 @@
 \title{Calculate mean regulation probabilities for binned genes for each component}
 \usage{
 binned_mean_regprob(regprobs = regprobs_matrix_custom, nbins = 50,
-  factorisation = results)
+  factorisation = SDAresults)
 }
 \arguments{
 \item{regprobs}{matrix; rows = genes, columns = motif/transcription factors}

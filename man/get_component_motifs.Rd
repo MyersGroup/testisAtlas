@@ -7,7 +7,7 @@
 get_component_motifs(component, positive, topn = 250, random = FALSE)
 }
 \arguments{
-\item{component}{numeric; component number in results$loadings[[1]]}
+\item{component}{numeric; component number in SDAresults$loadings[[1]]}
 
 \item{positive}{logical; should we look for motifs in the genes with positive loadings or negative}
 
@@ -20,6 +20,6 @@ Will save pdf of motifs found, and return list of motifs found
 For an SDA component, find motifs /de novo/
 }
 \details{
-Requires tss_seqs_s and results (from SDA load_results) to be loaded
+Requires tss_seqs_s and SDAresults (from SDA load_results) to be loaded
 For an SDA
 }

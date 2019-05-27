@@ -1461,6 +1461,9 @@ plotCellAUC <- function(i, mt){
 #' Save R Objects, as multiple files in a folder
 #'
 #' Like save but instead of one rds file, creates one file per object
+#' This gives much more flexibility, to add, modify, rename, remove and
+#' share individual objects.
+#' 
 #' See also load2
 #'
 #' @param folder string; path of folder in which to save objects
@@ -1484,6 +1487,8 @@ save2 <- function(folder="", list = NULL, compress=FALSE){
 #' Save R Objects, as multiple files in a folder
 #'
 #' Like load but instead of one rds file, loads all rds objects in a folder.
+#' This gives much more flexibility, to add, modify, rename, remove and
+#' share individual objects.
 #' See also save2
 #'
 #' @param folder string; path of folder containing objects to be loaded

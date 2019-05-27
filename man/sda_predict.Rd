@@ -4,7 +4,7 @@
 \alias{sda_predict}
 \title{Compute Imputed Expression values}
 \usage{
-sda_predict(genes, factorisation = results, name_extension = "")
+sda_predict(genes, factorisation = SDAresults, name_extension = "")
 }
 \arguments{
 \item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}

@@ -4,7 +4,8 @@
 \alias{correlate_regprobs}
 \title{For a matrix of genes by motifs, calculate correlations}
 \usage{
-correlate_regprobs(regprobs = regprobs_matrix, factorisation = results)
+correlate_regprobs(regprobs = regprobs_matrix,
+  factorisation = SDAresults)
 }
 \arguments{
 \item{regprobs}{matrix; a matrix of genes by motifs}

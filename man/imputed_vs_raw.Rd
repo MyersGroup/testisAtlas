@@ -4,8 +4,8 @@
 \alias{imputed_vs_raw}
 \title{Plot gene expression through pseudotime (Raw & Imputed)}
 \usage{
-imputed_vs_raw(genes, cell_metadata = datat, factorisation = results,
-  expression_matrix = data, facet = T)
+imputed_vs_raw(genes, cell_metadata = cell_data,
+  factorisation = SDAresults, expression_matrix = data, facet = T)
 }
 \arguments{
 \item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}

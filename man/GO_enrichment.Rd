@@ -5,7 +5,7 @@
 \title{Perform Gene Ontology (Biological Process) enrichment analysis of components}
 \usage{
 GO_enrichment(component, geneNumber = 250, side = "N",
-  factorisation = results, database = Musculus)
+  factorisation = SDAresults, database = Musculus)
 }
 \arguments{
 \item{component}{string; name of component e.g. "V5N" (N meaning negative size loadings)}

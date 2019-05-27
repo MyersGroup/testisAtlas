@@ -4,15 +4,16 @@
 \alias{clustered_heatmap}
 \title{Clustered heatmap (partially deprecated)}
 \usage{
-clustered_heatmap(cell_metadata = datat, name, annotation.col = NULL,
-  colv_order = NULL, col_lab = NULL, row_text_size = 0.5)
+clustered_heatmap(cell_metadata = cell_data, name,
+  annotation.col = NULL, colv_order = NULL, col_lab = NULL,
+  row_text_size = 0.5)
 }
 \arguments{
-\item{cell_metadata}{data.table; datat, with subset of gene columns}
+\item{cell_metadata}{data.table; cell_data, with subset of gene columns}
 
 \item{name}{string; title}
 
-\item{annotation.col}{data.table; subset of datat, passed to annCol of aheatmap}
+\item{annotation.col}{data.table; subset of cell_data, passed to annCol of aheatmap}
 
 \item{colv_order}{passed to Colv of aheatmap}
 

@@ -5,7 +5,7 @@
 \title{Find pairs of cells that are close in tSNE space}
 \usage{
 match_cells2(test_groups = NULL, cell_subset = NULL,
-  cell_metadata = datat, swap_groups = F)
+  cell_metadata = cell_data, swap_groups = F)
 }
 \arguments{
 \item{test_groups}{string; type of cell to pair cell to}

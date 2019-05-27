@@ -5,7 +5,7 @@
 \title{Plot tricolor tSNE}
 \usage{
 tricolour_tsne(genes, returndf = F, predict = "SDA",
-  cell_metadata = datat, ptsize = 1.5, jitter = 0.25)
+  cell_metadata = cell_data, ptsize = 1.5, jitter = 0.25)
 }
 \arguments{
 \item{genes;}{string vector of two or three gene names}

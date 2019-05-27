@@ -4,8 +4,8 @@
 \alias{melt_genes}
 \title{Create long table combining gene expression and cell metadata}
 \usage{
-melt_genes(genes, cell_metadata = datat, expression_matrix = data,
-  predict = FALSE, factorisation = results)
+melt_genes(genes, cell_metadata = cell_data, expression_matrix = data,
+  predict = FALSE, factorisation = SDAresults)
 }
 \arguments{
 \item{genes}{character vector; vector of gene symbols, of which expression values will be plotted over pseudotime}

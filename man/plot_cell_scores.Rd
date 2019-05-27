@@ -5,7 +5,7 @@
 \title{Plot scores}
 \usage{
 plot_cell_scores(component = "V25", point_size = 0.6,
-  cell_metadata = datat)
+  cell_metadata = cell_data)
 }
 \arguments{
 \item{component}{string ; component name as in cell_metadata object e.g. "V12"}

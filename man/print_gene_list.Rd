@@ -4,12 +4,12 @@
 \alias{print_gene_list}
 \title{Print list of genes in component and their annotations}
 \usage{
-print_gene_list(i, n = 100, factorisation = results,
+print_gene_list(i, n = 100, factorisation = SDAresults,
   infertility = infertility_genes, fantom = fantom_subset_summary,
   gtex = gtex_summary)
 }
 \arguments{
-\item{i}{integer or string; number or name of component in 'results' object}
+\item{i}{integer or string; number or name of component in 'SDAresults' object}
 
 \item{n}{integer; number of genes to include in the list, default=100}
 

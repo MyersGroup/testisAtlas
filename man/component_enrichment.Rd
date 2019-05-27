@@ -5,7 +5,7 @@
 \title{Calculate enrichment for a set of genes for each component}
 \usage{
 component_enrichment(genes, threshold = 500,
-  loadings_matrix = results$loadings[[1]], orderSDA = T,
+  loadings_matrix = SDAresults$loadings[[1]], orderSDA = T,
   bg_genes = NULL, test = "fisher")
 }
 \arguments{
@@ -13,7 +13,7 @@ component_enrichment(genes, threshold = 500,
 
 \item{threshold}{numeric; how many genes should be included in the top genes list used to calculate enrichment}
 
-\item{bg_genes}{which genes to use as the 'background' default uses all genes in the results object from SDA}
+\item{bg_genes}{which genes to use as the 'background' default uses all genes in the SDAresults object from SDA}
 
 \item{test}{string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)}
 
@@ -29,5 +29,5 @@ Calculate enrichment for a set of genes for each component
 \details{
 for each component (P&N seperately), calculate p value enrichemnt (fishers test) for a set of genes
 This is a multi-component wrapper to AZ_pvalue
-requires the results object from SDA to be loaded as well as the component_order_all object from 'R/functions_ordering.R'
+requires the SDAresults object from SDA to be loaded as well as the component_order_all object from 'R/functions_ordering.R'
 }

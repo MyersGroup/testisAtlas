@@ -4,11 +4,11 @@
 \alias{print_loadings_scores}
 \title{Plot gene loadings with cell scores underneath}
 \usage{
-print_loadings_scores(i, factorisation = results,
+print_loadings_scores(i, factorisation = SDAresults,
   gene_locations = rna_locations, max.items = 30)
 }
 \arguments{
-\item{i}{integer or string; number or name of component in 'results' object}
+\item{i}{integer or string; number or name of component in 'SDAresults' object}
 
 \item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 

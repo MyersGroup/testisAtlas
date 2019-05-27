@@ -4,7 +4,7 @@
 \alias{single_component_enrichment}
 \title{Calculate enrichment for a set of genes in a single component}
 \usage{
-single_component_enrichment(gene_vector = results$loadings[[1]][1, ],
+single_component_enrichment(gene_vector = SDAresults$loadings[[1]][1, ],
   genes = Mybl1_genes, pos = T, threshold = 200, bg_genes = NULL,
   test = "fisher")
 }
@@ -15,7 +15,7 @@ single_component_enrichment(gene_vector = results$loadings[[1]][1, ],
 
 \item{threshold}{numeric; how many genes should be included in the top genes list used to calculate enrichment}
 
-\item{bg_genes}{which genes to use as the 'background' default uses all genes in the results object from SDA}
+\item{bg_genes}{which genes to use as the 'background' default uses all genes in the SDAresults object from SDA}
 
 \item{test}{string, either binomial (from Exact::exact.test, slow) or fisher (R's fisher.test)}
 

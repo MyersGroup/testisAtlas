@@ -8,7 +8,7 @@ plot_component_regprobs(component, binned_meanprob,
   facet_scales = "free_y")
 }
 \arguments{
-\item{component}{numeric or string; rowname of `results$loadings[[1]]` corresponding to a component name or number}
+\item{component}{numeric or string; rowname of `SDAresults$loadings[[1]]` corresponding to a component name or number}
 }
 \value{
 ggplot2 object

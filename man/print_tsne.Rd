@@ -4,7 +4,7 @@
 \alias{print_tsne}
 \title{Plot tSNE}
 \usage{
-print_tsne(i, factorisation = results, cell_metadata = datat,
+print_tsne(i, factorisation = SDAresults, cell_metadata = cell_data,
   jitter = 0, colourscale = "diverging", expression_matrix = data,
   princurves = principal_curves, dim1 = "Tsne1_QC1",
   dim2 = "Tsne2_QC1", flip = FALSE, predict = FALSE, curve = FALSE,
@@ -13,7 +13,7 @@ print_tsne(i, factorisation = results, cell_metadata = datat,
 }
 \arguments{
 \item{i}{; either a numeric value corresponding to the component to plot, a gene name,
-or the name of a variable stored in datat such as "group", "PseudoTime", or "library_size"}
+or the name of a variable stored in cell_data such as "group", "PseudoTime", or "library_size"}
 
 \item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 

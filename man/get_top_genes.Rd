@@ -4,11 +4,11 @@
 \alias{get_top_genes}
 \title{Find the top x genes for a component}
 \usage{
-get_top_genes(component, factorisation = results, n = 20,
+get_top_genes(component, factorisation = SDAresults, n = 20,
   values = FALSE)
 }
 \arguments{
-\item{component}{integer or string; number or name of component in 'results' object}
+\item{component}{integer or string; number or name of component in 'SDAresults' object}
 
 \item{factorisation}{SDA factorisation object, output of SDAtools::load_results()}
 

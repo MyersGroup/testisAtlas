@@ -4,8 +4,8 @@
 \alias{gene_expression_pseudotime}
 \title{Create long data table of gene expression for a subset of genes with pseudotimes}
 \usage{
-gene_expression_pseudotime(genes, factorisation = results,
-  cell_metadata = datat)
+gene_expression_pseudotime(genes, factorisation = SDAresults,
+  cell_metadata = cell_data)
 }
 \arguments{
 \item{genes}{character vector; Gene Symbols of the genes to compute imputed expression for}

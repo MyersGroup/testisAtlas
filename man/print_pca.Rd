@@ -4,12 +4,12 @@
 \alias{print_pca}
 \title{Print PCA}
 \usage{
-print_pca(cell_metadata = datat, pc)
+print_pca(cell_metadata = cell_data, pc)
 }
 \arguments{
 \item{cell_metadata}{data.table with columns Tsne1, Tsne2, and PCs}
 
-\item{pc}{string; name of principal compopnent (column of datat), of which cell score values will be used to colour points (cells)}
+\item{pc}{string; name of principal compopnent (column of cell_data), of which cell score values will be used to colour points (cells)}
 }
 \value{
 ggplot2 object

@@ -4,7 +4,8 @@
 \alias{print_raw_tsne}
 \title{Print tsne based on raw expression rather than SDA scores}
 \usage{
-print_raw_tsne(gene, expression_matrix = data, cell_metadata = datat)
+print_raw_tsne(gene, expression_matrix = data,
+  cell_metadata = cell_data)
 }
 \arguments{
 \item{gene}{string; gene symbol, of which expression values will be used to colour points (cells)}
