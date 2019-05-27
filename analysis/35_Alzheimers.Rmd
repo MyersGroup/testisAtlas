@@ -28,7 +28,7 @@ Notable hits in top 25 genes include: Apoe, Tyrobp, Trem2, and Ms4a7 (Part of MS
 ```{r, fig.width=6}
 devtools::load_all("~/Dropbox/Github/SDAtools/")
 #rna_locations <- load_gene_locations(colnames(SDAresults$loadings[[1]]), name="merge_mouse_V3b", path = "../data/")
-genome_loadings(SDAresults$loadings[[1]][11,], label_both = FALSE, max.items = 25, label.size = 4, gene_locations = rna_locations) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+genome_loadings(SDAresults$loadings[[1]][11,], label_both = FALSE, max.items = 25, label.size = 4, gene_locations = gene_annotations) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
 ```
 
 
@@ -102,7 +102,7 @@ saveRDS(AZ_enrich_plot, "../data/plots/AZ_enrich_plot.rds")
 
 ```{r}
 
-v11_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][11,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = c(AD_genes,"Ms4a7","Ms4a6c"), label_genes = c("Trem2","Apoe","Mef2c","H2-Eb1","Spi1","Bin1","Ms4a7","Cd33")) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
+v11_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][11,], label_both = FALSE, max.items = 10, label.size = 4, hide_unknown = T, gene_locations = gene_annotations, highlight_genes = c(AD_genes,"Ms4a7","Ms4a6c"), label_genes = c("Trem2","Apoe","Mef2c","H2-Eb1","Spi1","Bin1","Ms4a7","Cd33")) + ylab("Gene Loading (Component 11)") + theme_minimal() + theme(legend.position = "none")
 
 C11_MQ_plot <- plot_grid(v11_loadings_plot, plot_cell_scores("V11", point_size = 2), ncol = 2, rel_widths = c(3,1))
 

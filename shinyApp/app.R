@@ -143,7 +143,7 @@ server <- function(input, output, session) {
       title <- paste("Component",tmp,"(",component_order_dt[component_number==tmp]$name,")")
     }
     
-	genome_loadings(SDAresults$loadings[[1]][tmp,], label_both = TRUE, max.items = input$n_genes, label.size = 4, gene_locations=rna_locations, highlight_genes = gene, label_genes = gene) +
+	genome_loadings(SDAresults$loadings[[1]][tmp,], label_both = TRUE, max.items = input$n_genes, label.size = 4, gene_locations=gene_annotations, highlight_genes = gene, label_genes = gene) +
 	ylab(paste("Gene Loading (Component",tmp,")")) + theme_minimal() + theme(legend.position = "none") + ggtitle(title)
     
   })

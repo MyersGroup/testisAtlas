@@ -335,21 +335,21 @@ head(sort(pcaresult$loadings[,"V14"], F),20)
 
 ```{r}
 SDAtools::genome_loadings(SDAresults$loadings[[1]][5,], label_both = T, max.items = 20, label.size = 3,
-                                     gene_locations = rna_locations, hide_unknown = T) +
+                                     gene_locations = gene_annotations, hide_unknown = T) +
   ylab("Gene Loadings (SDA Component 5)") +
   scale_y_reverse()
 
 genome_loadings(nnmf_decomp$H["V50",], label_both = FALSE, max.items = 20, label.size = 3,
-                                     gene_locations = rna_locations, hide_unknown = T) +
+                                     gene_locations = gene_annotations, hide_unknown = T) +
   ylab("Gene Loadings (NNMF Component 50)")
 
 SDAtools::genome_loadings(pcaresult$loadings[,"V14"], label_both = T, max.items = 20, label.size = 3,
-                                     gene_locations = rna_locations, hide_unknown = T) +
+                                     gene_locations = gene_annotations, hide_unknown = T) +
   ylab("Gene Loadings (PCA Component 14)") +
   scale_y_reverse()
 
 SDAtools::genome_loadings(ica_decomp$A[15,], label_both = F, max.items = 20, label.size = 3,
-                                     gene_locations = rna_locations, hide_unknown = T) +
+                                     gene_locations = gene_annotations, hide_unknown = T) +
   ylab("Gene Loadings (ICA Component 15)") +
   scale_y_reverse()
 ```
@@ -358,11 +358,11 @@ SDAtools::genome_loadings(ica_decomp$A[15,], label_both = F, max.items = 20, lab
 
 ```{r}
 SDAtools::genome_loadings(SDAresults$loadings[[1]][38,], label_both = T, max.items = 20, label.size = 3,
-                                     gene_locations = rna_locations, hide_unknown = T) +
+                                     gene_locations = gene_annotations, hide_unknown = T) +
   ylab("Gene Loadings (SDA Component 38)")
 
 genome_loadings(nnmf_decomp$H["V3",], label_both = FALSE, max.items = 20, label.size = 3,
-                                     gene_locations = rna_locations, hide_unknown = T) +
+                                     gene_locations = gene_annotations, hide_unknown = T) +
   ylab("Gene Loadings (NNMF Component 3)")
 ```
 
@@ -373,7 +373,7 @@ To check if anything interesting looking
 ```{r}
 for(i in 1:50){
   print(genome_loadings(nnmf_decomp$H[i,], label_both = FALSE, max.items = 20, label.size = 3,
-                                     gene_locations = rna_locations, hide_unknown = T) +
+                                     gene_locations = gene_annotations, hide_unknown = T) +
   ylab(i))
 }
 ```

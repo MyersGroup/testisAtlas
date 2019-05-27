@@ -480,7 +480,7 @@ ggplot(melt_genes(sample(autosomal_genes, length(sex_genes))), aes(-PseudoTime, 
 
 
 ```{r}
-v42_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][42,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
+v42_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][42,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = gene_annotations) +
   ylab("Gene Loading (Component 42)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3))

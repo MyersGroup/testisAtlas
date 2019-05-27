@@ -5,7 +5,7 @@
 \title{Plot gene loadings with cell scores underneath}
 \usage{
 print_loadings_scores(i, factorisation = SDAresults,
-  gene_locations = rna_locations, max.items = 30)
+  gene_locations = gene_annotations, max.items = 30)
 }
 \arguments{
 \item{i}{integer or string; number or name of component in 'SDAresults' object}

@@ -213,3 +213,15 @@ NMF::aheatmap(t(SDAresults$loadings[[1]][-QC_fail_components,infertility_genes])
 save(fantom_summary_subset, gtex_summary, infertility_genes, file = "../data/gene_annotations/gene_annotations.rds")
 ```
 
+```{r}
+setnames(fantom_summary_subset, c("Gene.Name","fold_difference"),c("gene_symbol","fold_enrichment_fantom"))
+setnames(gtex_summary, c("Gene.Name","fold_difference"),c("gene_symbol","fold_enrichment_gtex"))
+
+bulk_expression <- merge(fantom_summary_subset, gtex_summary[,.(gene_symbol, fold_enrichment_gtex, Human_Orthologue)], all = T)
+bulk_expression$Infertility_Gene <- bulk_expression$gene_symbol %in% infertility_genes
+
+gene_annotations <- merge(bulk_expression, rna_locations, all = T)
+
+saveRDS(gene_annotations, "../data/cache/gene_annotations.rds")
+```
+

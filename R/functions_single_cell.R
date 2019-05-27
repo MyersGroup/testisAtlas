@@ -678,7 +678,7 @@ get_top_genes <- function(component, factorisation=SDAresults, n=20, values=FALS
 #' @export
 #' 
 #' @import ggplot2 gridExtra
-print_loadings_scores <- function(i, factorisation=SDAresults, gene_locations=rna_locations, max.items=30){
+print_loadings_scores <- function(i, factorisation=SDAresults, gene_locations=gene_annotations, max.items=30){
   grid.arrange(grobs=list(genome_loadings(factorisation$loadings[[1]][i,], label_both = FALSE, max.items = max.items, gene_locations = gene_locations) + ggtitle(i),
                           ggplot(data.table(cell_index=1:nrow(factorisation$scores), score=factorisation$scores[,paste0("V",i)],
                                             experiment=gsub("_.*","",gsub("[A-Z]+\\.","",rownames(factorisation$scores)))),

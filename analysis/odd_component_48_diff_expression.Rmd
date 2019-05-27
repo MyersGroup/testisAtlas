@@ -112,7 +112,7 @@ c48 gene loadings
 library(SDAtools)
 rna_locations <- load_gene_locations(path = "../data/", name = "merge_mouse_V3b")
 load("../data/archive/gene_annotations.rds")
-genome_loadings(SDAresults$loadings[[1]][48,], gene_locations = rna_locations)
+genome_loadings(SDAresults$loadings[[1]][48,], gene_locations = gene_annotations)
 print_gene_list(48)
 print_loadings_scores(48)
 ```

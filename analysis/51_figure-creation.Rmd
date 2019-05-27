@@ -138,7 +138,7 @@ c5_rug_plot
 
 ```{r, fig.width=6}
 v5_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][5,], label_both = FALSE, max.items = 20, label.size = 3.5,
-                                     gene_locations = rna_locations, hide_unknown = T,
+                                     gene_locations = gene_annotations, hide_unknown = T,
                                      highlight_genes = gwas_genes,label_genes = c("Smc1b","Gm960","Hfm1","Sycp2","Meioc","Meiob","Sycp3")) +
   ylab("Gene Loadings (Component 5)") +
   scale_y_reverse()
@@ -219,7 +219,7 @@ ggplot(data.table(Sparsity=apply(SDAresults$pips[[1]], 1, function(x) mean(x<0.5
 ## 9A Hormad1 Scores & Loadings
 
 ```{r}
-v38_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations) +
+v38_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][38,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = gene_annotations) +
   ylab("Gene Loading (Component 38)")
 ```
 
@@ -249,7 +249,7 @@ dev.off()
 
 ```{r}
 
-v25_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][25,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations) +
+v25_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][25,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = gene_annotations) +
   ylab("Gene Loading (Component 25)") + scale_y_reverse()
 
 ```
@@ -371,7 +371,7 @@ ggplot(tmp, aes(V22, colour=MiSeq)) +
 
 
 ```{r, fig.width=6}
-v22_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][22,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
+v22_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][22,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = gene_annotations) +
   ylab("Gene Loading (Component 22)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3))
@@ -392,7 +392,7 @@ v12_cell_scores <- ggplot(tmp,aes(V12, experiment, colour=grepl("Hormad",experim
   theme(axis.title.y=element_blank()) +
   xlab(paste0("Component ","V12","\n Cell Score"))
 
-v12_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][12,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations) +
+v12_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][12,], label_both = FALSE, max.items = 20, label.size = 4, hide_unknown = T, gene_locations = gene_annotations) +
   ylab("Gene Loading (Component 12)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3))
@@ -424,7 +424,7 @@ etc_enrich <- component_enrichment(etc_genes_clean)
 etc_enrich_plot <- manhatten_plot(etc_enrich[!component %in% gsub("V","",half_exclusion_comps)], topn=1, legend_position=c(0.25,0.6), repel_force = 10) + ggtitle("Enrichment of electron transport\n chain proton pump genes")
 
 set.seed(142)
-v9_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][9,], label_both = FALSE, label.repel = 2,  max.items = 20, label.size = 4, hide_unknown = T, gene_locations = rna_locations, highlight_genes = etc_genes_clean) +
+v9_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][9,], label_both = FALSE, label.repel = 2,  max.items = 20, label.size = 4, hide_unknown = T, gene_locations = gene_annotations, highlight_genes = etc_genes_clean) +
   ylab("Gene Loading (Component 9)") +
   scale_y_reverse() +
   scale_size_continuous(range = c(1, 3)) + expand_limits(y=-0.3)
@@ -696,7 +696,7 @@ C11_MQ_plot <- readRDS("../data/plots/C11_MQ_plot.rds")
 
 ```{r, fig.width=6}
 c40_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][40,], label_both = FALSE, max.items = 10, label.size = 4,
-                                     gene_locations = rna_locations, hide_unknown = T,
+                                     gene_locations = gene_annotations, hide_unknown = T,
                                      highlight_genes = c("Cyp17a1","Hsd3b6","Star","Cyp11a1","Hsd17b3"),
                                      label_genes = c("Cyp17a1","Hsd3b6","Star","Cyp11a1","Hsd17b3")) +
   ylab("Gene Loadings (Component 40)") +
@@ -798,7 +798,7 @@ dev.off()
 
 ```{r}
 devtools::load_all("~/Dropbox/Github/SDAtools/")
-genome_loadings(SDAresults$loadings[[1]][5,], label_both = FALSE, max.items = 100, label.size = 4, hide_unknown = T, gene_locations = rna_locations) + xlim(0,2e8)
+genome_loadings(SDAresults$loadings[[1]][5,], label_both = FALSE, max.items = 100, label.size = 4, hide_unknown = T, gene_locations = gene_annotations) + xlim(0,2e8)
 ```
 
 

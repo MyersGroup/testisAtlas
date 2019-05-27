@@ -422,7 +422,7 @@ head(sort(SDAresults$scores[,4]))
 
 c4scores <- qplot(1:length(SDAresults$scores[,4]),sort(SDAresults$scores[,4],T), geom="point") + labs(x="Sorted Cell Index", y="Component 4 Cell Loading")
 
-v4_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][4,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = rna_locations, ) +
+v4_loadings_plot <- genome_loadings(SDAresults$loadings[[1]][4,], label_both = FALSE, max.items = 10, label.size = 3, hide_unknown = T, gene_locations = gene_annotations, ) +
   ylab("Gene Loading (Component 4)")
 
 cor1 <- qplot(data["ATCCTCACCAAN.Mlh3_1190",], c(SDAresults$scores["ATCCTCACCAAN.Mlh3_1190",4,drop=F] %*% SDAresults$loadings[[1]][4,]), alpha=I(0.3), stroke=0) + 
