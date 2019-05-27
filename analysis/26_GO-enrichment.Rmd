@@ -48,13 +48,13 @@ for(i in names(GO_data)){
   GO_data[[i]]$Component <- i
 }
 
-GO_data_dt <- data.table(do.call("rbind", GO_data))
+GO_enrich <- data.table(do.call("rbind", GO_data))
 
-saveRDS(GO_data_dt, "../data/go/GO_enrichment_dt.rds")
+saveRDS(GO_enrich, "../data/cache/GO_enrich.rds")
 
 # plot example result
 
-go_volcano_plot(GO_data_dt, component = "V30P")
+go_volcano_plot(GO_enrich, component = "V30P")
 head(GO_data[["V30P"]][c(2,7,8,10)], 20)
 
 

@@ -23,12 +23,12 @@ Low library size cells were removed prior to construction of the principal curve
 principal_curves <- testisAtlas::princurve_bootstrap(as.matrix(cell_data[somatic4==FALSE & V38<3, .(Tsne1_QC1, Tsne2_QC1)]))
 principal_curves[["df_8_unbootstrapped"]] <- princurve::principal.curve(as.matrix(cell_data[somatic4==FALSE & V38<3, .(Tsne1_QC1, Tsne2_QC1)]), df=8)
 
-saveRDS(principal_curves, "../data/principal_curves.rds")
+saveRDS(principal_curves, "../data/cache/principal_curves.rds")
 ```
 
 
 ```{r, fig.width=6}
-principal_curves <- readRDS("../data/principal_curves.rds")
+principal_curves <- readRDS("../data/cache/principal_curves.rds")
 
 # plot Principal curve on Tsne plot
 
