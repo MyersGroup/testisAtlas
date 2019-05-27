@@ -1,0 +1,93 @@
+---
+title: "Define Somatic Cells"
+output: html_notebook
+---
+
+
+## Define Somatic Cells via Hard Clustering
+
+```{r, fig.width=10}
+d <- dist(SDAresults$scores[,-c(22,6,25,29,12,28,41,1,46,4,8,14,9,43)], method = "euclidean")
+hc1 <- hclust(d, method = "ward.D2" )
+
+groups <- cutree(hc1, k=25) # cut tree into 25 clusters
+cell_data[,hclust_group := groups[cell_data$cell]]
+
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group))) +
+  geom_point(data = transform(cell_data, hclust_group = NULL), colour = "grey85", size=0.1) +
+  geom_point(size=0.25) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") + 
+  facet_wrap(~hclust_group)
+
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=as.factor(hclust_group) %in% c(21,22,20,19,16,11,6,17,23,25))) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+cell_data[, somatic3 := FALSE]
+cell_data[hclust_group %in% c(21,22,20,19,16,11,6,17,23,25), somatic3 := TRUE]
+
+ggplot(cell_data[somatic3 == FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+```
+
+## Define Somatic Cells via Cell Scores
+
+```{r}
+
+cell_data <- merge(cell_data, expression_dt("mt-Rnr2"))
+
+cell_data[,somatic4 := FALSE]
+cell_data[abs(V26)>2 | abs(V11)>2 | abs(V3)>2 | abs(V32)>1 | abs(V37)>1.5 | abs(V45)>2 | abs(V24)>2 |abs(V40)>1 | `mt-Rnr2`>3, somatic4 := TRUE]
+
+ggplot(expression_dt("mt-Rnr2")[cell_data], aes(Tsne1_QC1, Tsne2_QC1, colour=`mt-Rnr2`)) + geom_point(stroke=0, size=1) + scale_color_viridis(direction = -1)
+
+somatic_cells <- ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=somatic4)) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  scale_color_brewer(palette = "Set1")
+
+ggplot(cell_data[somatic4==FALSE], aes(Tsne1_QC1, Tsne2_QC1)) +
+  geom_point(size=0.1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+# cell_data[,somatic2 := FALSE]
+# cell_data[V32<(-5) | V49>(1)|V21>(1) | V16<(-1) | V10>(5) | V45>(3) | V19>(1) | V40>(2) | V11>(5) | V3>(5)|V24<(-1)|V37>(2) , somatic2 := TRUE]
+
+# ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=((Tsne1_QC1-5)^2+(Tsne2_QC1-10)^2)<5)) +
+#   geom_point(size=0.25) +
+#   theme(legend.position = "bottom") +
+#   ggtitle("t-SNE - experiment")
+
+# ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=somatic2)) +
+#   geom_point(size=0.25) +
+#   theme(legend.position = "bottom") +
+#   ggtitle("t-SNE - experiment")
+```
+
+## Define Somatic based on single component assignments
+
+Assign cell a single component based on max abs score
+
+```{r, fig.width=6}
+
+max_component <- data.table(max_component = sapply(1:nrow(SDAresults$scores), function(x) which.max(abs(SDAresults$scores[x,]))),
+                            cell = rownames(SDAresults$scores))
+
+cell_data <- max_component[cell_data, on="cell"]
+```
+
+
+```{r, fig.width=6}
+cell_data[, somatic5 := F]
+cell_data[max_component %in% c(3,10,11,16,19,21,24,26,32,37,40,45,49) | `mt-Rnr2`>3.5 , somatic5 := T]
+
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic4)) + geom_point(stroke=0) + theme(legend.position = "bottom")
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, colour=somatic5)) + geom_point(stroke=0) + theme(legend.position = "bottom")
+
+```

@@ -1,7 +1,91 @@
 ---
-title: "Tsne Stability + Umap"
+title: "Tsne & Umap"
 output: html_notebook
 ---
+
+# tSNE on SDA subset
+We can get rid of some of the batch effects by running tSNE on the SDA scores rather than counts directly
+
+```{r, fig.width=6}
+
+set.seed(1234) # s42? 28 - AV2?
+tsne_data3 <- Rtsne::Rtsne(SDAresults$scores[,-QC_fail_components], verbose=TRUE, pca=FALSE, perplexity = 50, max_iter=1000)
+
+# PCA_onSDA <- prcomp(SDAresults$scores)
+# 
+# ggplot(data.table(PCA_onSDA$x[,1:4]), aes(PC1,PC2)) +geom_point()
+
+# add tsne to cell_data
+tsne_data_dt <- data.table(tsne_data3$Y)
+setnames(tsne_data_dt, c("Tsne1_QC1", "Tsne2_QC1"))
+tsne_data_dt$cell <- rownames(SDAresults$scores)
+setkey(tsne_data_dt, cell)
+cell_data[,Tsne1_QC1 := NULL]
+cell_data[,Tsne2_QC1 := NULL]
+setkey(cell_data, cell)
+cell_data <- merge(cell_data, tsne_data_dt)
+
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=log(library_size))) +
+  geom_point(size=0.25) +
+  scale_color_viridis(direction=-1) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - library size")
+
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=experiment)) +
+  geom_point(size=0.5) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment") +
+  scale_color_manual(values = c(rep(brewer.pal(12,"Paired"),2),"black","grey"))
+#scale_colour_brewer(palette="Paired")
+
+ggplot(cell_data, aes(Tsne1_QC1, Tsne2_QC1, color=group)) +
+  geom_point(size=0.5) +
+  scale_color_manual(values = brewer.pal(11,"Paired")) +
+  theme(legend.position = "bottom") +
+  ggtitle("t-SNE - experiment")
+
+```
+
+
+## Components
+
+```{r, fig.width=10}
+
+component_tsne <- plot_grid(plotlist = create_grob_list(fn = print_tsne, input = c(11,32,40,26,37,45,31,33,2,5,38,13,42,39,20,30,35,15,17,18,34)), nrow=3)
+component_tsne
+
+pdf("../results/component_tsne.pdf", width=24, height=13.5)
+component_tsne
+dev.off()
+
+
+component_tsne <- plot_grid(plotlist = create_grob_list(fn = function(x) print_tsne(x, point_size = 0.5), input = component_order_dt[!grep("Single",name)][order(-pseudotime_average, na.last = F)]$component_number), nrow=6)
+
+pdf("../results/component_tsne_all.pdf", width=25, height=20)
+component_tsne
+dev.off()
+
+```
+
+Odd components:
+
+```{r, fig.width=6}
+
+grid.arrange(grobs=create_grob_list(fn = print_tsne, input = QC_fail_components), nrow=3, heights = c(1,1,1))
+
+```
+
+## Marker Genes
+```{r, fig.height=6}
+
+marker_genes <- c("Csf1r", "Dcn","Cyp11a1","Aard","Trim7","Gfra1","Nanos1","Esx1","Ctcfl","Prdm9","Ccnb3","Rhox2d","Piwil1","Ccna1","Ssxb1","Acrv1","Lrrd1","Fam71b","Tnp2","Prm2")
+
+marker_tsne <- plot_grid(plotlist = create_grob_list(fn = function(x){print_tsne(x,point_size = 0.25, predict = T) + scale_color_gradient2(mid="lightgrey", high="midnightblue", low=muted("red"))}, input = marker_genes), ncol = 5)
+
+pdf("../results/markers.pdf", width=9, height=6)
+marker_tsne
+dev.off()
+```			
 
 Check Tsne is stable over different seeds
 
@@ -44,17 +128,17 @@ rotations <- c(-165, -50,  45) #95,
 
 Compared to t-SNE it preserves as much of the local, and more of the global data structure, with a shorter runtime.
 
+
 ```{r, fig.width=10}
 # devtools::install_github("jlmelville/uwot")
 library(uwot)
 
 set.seed(116189)
-# nb need  to set threads to 1 for repoduciability to work
+# nb need to set threads to 1 for repoduciability to work
 sda_umap <- umap(SDAresults$scores[,-QC_fail_components], n_neighbors = 100, n_threads = 1)
 colnames(sda_umap) <- c("Umap1","Umap2")
 
-saveRDS(sda_umap, file = "../data/umap.rds")
-sda_umap <- readRDS("../data/umap.rds")
+saveRDS(sda_umap, file = "../data/tmp_cache/umap.rds")
 
 str(sda_umap)
 
@@ -62,9 +146,10 @@ cell_data$Umap1 <- NULL
 cell_data$Umap2 <- NULL
 
 cell_data <- merge(cell_data,
-      cbind(data.table(sda_umap), cell=rownames(SDAresults$scores))
+                   cbind(data.table(sda_umap),
+                         cell=rownames(SDAresults$scores))
 )
-
+saveRDS(cell_data, file = "../data/cache/cell_data.rds")
 
 print_tsne("PseudoTime",dim="Umap1",dim2="Umap2")
 
@@ -111,3 +196,55 @@ plot_grid(plotlist = tsne_repo_plots, labels = "AUTO")
 dev.off()
 ```
 
+
+# Clustering Components
+by transposing cell scores matrix
+
+## Clustering Components with tSNE
+
+```{r, fig.width=9}
+
+set.seed(123)
+tsne_scores <- Rtsne::Rtsne(abs(t(SDAresults$scores)), verbose=TRUE, pca=FALSE, perplexity=2, max_iter=5000)
+
+set.seed(12345)
+comp_clusters <- data.table(tsne_scores$Y,
+           Component = paste0("C",sort(component_labels)," ", names(sort(component_labels))),
+           cluster = kmeans(tsne_scores$Y, 7, nstart = 3)$cluster)
+comp_clusters <- comp_clusters[data.table(cluster=c(1,2,3,4,5,6,7), Cluster=c("Spermatogonia","Leptotene/Zygotene","Somatic","Somatic (Sertoli)","Pachytene","Spermiogenesis","Round Spermatid (Acrosomal)")), on="cluster"]
+
+pdf("../results/tSNE_Components.pdf", width = 20, height=11)
+ggplot(comp_clusters, aes(V1, V2)) +
+  geom_mark_ellipse(aes(fill = Cluster, label=Cluster),label.buffer = unit(25, 'mm'), label.fontsize=17) +
+  geom_point() +
+  geom_label_repel(aes(label=Component)) +
+  scale_fill_brewer(palette = "Set1", guide=F) +
+  labs(x="tSNE1", y="tSNE2") +
+  expand_limits(y=-110)
+dev.off()
+
+```
+
+## Clustering Components with UMAP
+
+```{r, fig.width=10}
+library(uwot)
+
+set.seed(116189)
+# nb need  to set threads to 1 for repoduciability to work
+sda_umap <- umap(abs(t(SDAresults$scores)), n_neighbors = 2, n_threads = 1)
+colnames(sda_umap) <- c("Umap1","Umap2")
+
+comp_clusters <- data.table(sda_umap,
+           Component = paste0("C",sort(component_labels)," ", names(sort(component_labels))),
+           cluster = kmeans(sda_umap, 9, nstart = 3)$cluster)
+
+
+ggplot(comp_clusters, aes(Umap1, Umap2)) +
+  geom_point(aes(colour=factor(cluster))) +
+  geom_label_repel(aes(label=Component)) +
+  scale_fill_brewer(palette = "Set1", guide=F) +
+  labs(x="tSNE1", y="tSNE2")
+
+
+```
