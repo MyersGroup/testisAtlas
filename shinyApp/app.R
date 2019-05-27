@@ -29,12 +29,12 @@ if(low_memory_mode){
   load_component_orderings()
 }
 
-results$loadings_ranks <- t(sapply(rownames(results$loadings[[1]]), function(i) rank(abs(results$loadings[[1]][i,]))))
+SDAresults$loadings_ranks <- t(sapply(rownames(SDAresults$loadings[[1]]), function(i) rank(abs(SDAresults$loadings[[1]][i,]))))
 
 gene_symbols <- readRDS("Ensembl_92_gene_symbols.rds")
 
 # clip outlying cell
-datat[msci_ratio>0.15,msci_ratio := 0.12]
+cell_data[msci_ratio>0.15,msci_ratio := 0.12]
 
 gene_or_component <- function(tmp, allways_component=F){
   gene <<- NULL
@@ -48,19 +48,19 @@ gene_or_component <- function(tmp, allways_component=F){
   }else{
     tmp <- strsplit(tmp, " ")[[1]]
     
-    if(!tmp %in% colnames(datat)){
+    if(!tmp %in% colnames(cell_data)){
       tmp <- paste0(toupper(substring(tmp, 1, 1)), substring(tmp, 2))
     }
     
-    if(length(which(!tmp %in% c(gene_symbols$external_gene_name,colnames(datat))))!=0){
+    if(length(which(!tmp %in% c(gene_symbols$external_gene_name,colnames(cell_data))))!=0){
       stop(paste("Gene Symbol not recognised:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
-    }else if(length(which(!tmp %in% c(colnames(data),colnames(datat))))!=0){
+    }else if(length(which(!tmp %in% c(colnames(data),colnames(cell_data))))!=0){
       stop(paste("Gene not detected:", paste(tmp[which(!tmp %in% colnames(data))], collapse = "",sep = "")))
     }
     
     if(allways_component){
       gene <<- tmp
-      tmp <- which.max(results$loadings_ranks[,gene])
+      tmp <- which.max(SDAresults$loadings_ranks[,gene])
     }
     
   }
@@ -126,9 +126,9 @@ server <- function(input, output, session) {
                          47, 48, 49, 50)
     # weight component choice by mean cell score of component
     c <- sample(good_components, size = 1,
-                prob = results$component_statistics[good_components]$mean_score /
-                  sum(results$component_statistics[good_components]$mean_score))
-    new_gene <- names(sort(abs(results$loadings[[1]][c,]), T)[sample(1:200,1)])
+                prob = SDAresults$component_statistics[good_components]$mean_score /
+                  sum(SDAresults$component_statistics[good_components]$mean_score))
+    new_gene <- names(sort(abs(SDAresults$loadings[[1]][c,]), T)[sample(1:200,1)])
 
     updateTextInput(session, inputId="genes", value = new_gene)
   })
@@ -143,7 +143,7 @@ server <- function(input, output, session) {
       title <- paste("Component",tmp,"(",component_order_dt[component_number==tmp]$name,")")
     }
     
-	genome_loadings(results$loadings[[1]][tmp,], label_both = TRUE, max.items = input$n_genes, label.size = 4, gene_locations=rna_locations, highlight_genes = gene, label_genes = gene) +
+	genome_loadings(SDAresults$loadings[[1]][tmp,], label_both = TRUE, max.items = input$n_genes, label.size = 4, gene_locations=rna_locations, highlight_genes = gene, label_genes = gene) +
 	ylab(paste("Gene Loading (Component",tmp,")")) + theme_minimal() + theme(legend.position = "none") + ggtitle(title)
     
   })
@@ -171,7 +171,7 @@ server <- function(input, output, session) {
       }
     }
     
-    highest_components(results, tmp)
+    highest_components(SDAresults, tmp)
     
   })
 
