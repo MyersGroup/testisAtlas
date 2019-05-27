@@ -218,6 +218,8 @@ tomtom_summary[Iteration>9*6, region:="Centered"]
 
 tomtom_summary[,IC_perbase := IC_values/nchar(Query_consensus)]
 
+saveRDS(tomtom_summary, "../data/motifs/tomtom_summary.rds")
+
 # for each denovo motif, use best tomtom match
 tomtom_summary_byquery <- tomtom_summary[,.SD[which.min(E.value)],by=Query_ID]
 
@@ -1033,7 +1035,7 @@ saveRDS(results_novel, "../data/motifs/MF_results_novel_B.rds")
 
 
 ```{r, fig.width=10}
-results_custom <- readRDS("../data/motifs/MF_results_custom_V3.rds")
+results_custom <- readRDS("../data/motifs/MF_results_custom_V3b.rds")
 tmp <- names(results_custom)
 results_custom <- sapply(1:length(results_custom), function(x) results_custom[[x]]$regprob)
 colnames(results_custom) <- tmp
