@@ -108,3 +108,46 @@ C11_MQ_plot <- plot_grid(v11_loadings_plot, plot_cell_scores("V11", point_size =
 
 saveRDS(C11_MQ_plot, "../data/plots/C11_MQ_plot.rds")
 ```
+
+
+# Max enriched GO term for each component (q<0.01)
+```{r}
+GO_data_dt[qvalue<0.01][order(-Description)][, .SD[which.max(Enrichment)], by = Component][,..summarycols]
+```
+
+# Which components have amyloid enrichments q<0.01
+A: 24N, 49N, 32N, 3N, 21N, 26N, 40P, 11P, 16N
+
+aka 9 out of the 13 somatic components
+
+The exceptions being 10, 19, 37, 45
+```{r}
+GO_data_dt <- readRDS("../data/go/GO_enrichment_dt.rds")
+summarycols <- c("Component","Description","qvalue","geneID","Enrichment","ID")
+
+GO_data_dt[grep("amyloid", Description)][qvalue<0.01][,..summarycols][order(qvalue)]
+
+#GO_data_dt[grep("amyloid", Description)][, .SD[which.min(qvalue)],by=Component][order(qvalue)][,..summarycols][1:20]
+```
+
+# Three components have amyloid as most enriched (for q<0.01)
+26N, 49N, and 16N
+```{r}
+
+GO_data_dt[qvalue<0.01][order(-Description)][, .SD[which.max(Enrichment)], by = Component][grep("amyloid", Description)][,..summarycols]
+```
+
+# 2 components have amyloid as 2nd highest enrichment
+V24N and 21N
+```{r}
+
+GO_data_dt[qvalue<0.01][Component=="V24N"][order(-Enrichment)][,..summarycols][1:5]
+GO_data_dt[qvalue<0.01][Component=="V21N"][order(-Enrichment)][,..summarycols][1:5]
+```
+
+# One component has amyloid as the most significant
+Although mostly due to lack of anything else
+```{r}
+
+GO_data_dt[qvalue<0.01][order(-Description)][, .SD[which.min(qvalue)], by = Component][grep("amyloid", Description)][,..summarycols]
+```
