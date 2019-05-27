@@ -19,7 +19,7 @@ motifEnrichment_wLogo <- readRDS("../data/motifs/TFenrichment_V2.rds")
 GO_data <- readRDS("../data/GO_enrichment.rds")
 
 library(testisAtlas)
-load("../data/tmp_cache/SDA_objects.rds")
+load2("../data/cache")
 load_component_orderings()
 ```
 

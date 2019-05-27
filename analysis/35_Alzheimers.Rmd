@@ -19,7 +19,7 @@ Full Literature: http://www.citeulike.org/user/danielwells/tag/alzheimers
 
 ```{r, fig.width=6}
 library(testisAtlas)
-load("../data/tmp_cache/cached_objects.rds")
+load2("../data/cache")
 load_component_orderings()
 ```
 

@@ -15,7 +15,7 @@ library(data.table)
 library(ggplot2)
 
 library(testisAtlas)
-load("../data/tmp_cache/SDA_objects.rds")
+load2("../data/cache")
 load_component_orderings()
 
 matched_cells_CNP <- match_cells2(test_group = "CNP")

@@ -26,7 +26,7 @@ library(viridis)
 
 devtools::load_all() # aka library(testisAtlas)
 
-load("data/tmp_cache/SDA_objects.rds")
+load2("../data/cache")
 
 tmp <- merge(cell_data[somatic4==FALSE,
                    c("cell","PseudoTime","PseudoTime1","PseudoTime2","Tsne1_QC1", "Tsne2_QC1","group"),

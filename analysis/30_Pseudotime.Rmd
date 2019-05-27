@@ -9,7 +9,7 @@ Using the position-developmental time relationship on the t-SNE plot we can defi
 
 ```{r}
 library(testisAtlas)
-load("../data/tmp_cache/cached_objects.rds")
+load2("../data/cache")
 load_component_orderings()
 ```
 

@@ -32,7 +32,7 @@ library(NMF) # devtools::install_github("renozao/NMF", "devel")
 nmf.options(grid.patch=TRUE) # stop blank pages appearing
 
 library(testisAtlas)
-load("../data/tmp_cache/cached_objects.rds")
+load2("../data/cache")
 load_component_orderings()
 ```
 

@@ -7,7 +7,7 @@ output: html_notebook
 library(SDAtools)
 library(testisAtlas)
 
-#load("../data/tmp_cache/cached_objects.rds")
+#load2("../data/cache")
 
 SDAresults <- load_results(results_folder = "../data/SDA/conradV3_sda_1/", data_path = "../data/count_matrices/")
 rownames(SDAresults$loadings[[1]]) <- paste0("V",1:50)

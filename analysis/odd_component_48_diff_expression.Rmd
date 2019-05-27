@@ -12,7 +12,7 @@ library(data.table)
 #library(ggforce)
 library(ggrepel)
 
-load("../data/tmp_cache/cached_objects.rds")
+load2("../data/cache")
 
 ```
 

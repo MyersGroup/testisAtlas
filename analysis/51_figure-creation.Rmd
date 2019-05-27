@@ -35,7 +35,7 @@ library(RColorBrewer)
 library(ggnewscale)
 
 
-load("../data/tmp_cache/cached_objects.rds")
+load2("../data/cache")
 
 load_component_orderings()
 
