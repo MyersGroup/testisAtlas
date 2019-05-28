@@ -1,6 +1,11 @@
-load("cached_objects.rds", envir = .GlobalEnv)
+library(data.table)
 library(bigmemory)
 options(bigmemory.allow.dimnames=TRUE)
+library(testisAtlas)
+
+load2("cache")
+load_component_orderings()
+
 data <- as.matrix(data)
 data <- as.big.matrix(data, backingfile = "data.big")
 data <- attach.big.matrix("data.big.desc")
@@ -11,9 +16,5 @@ cell_data <- cell_data[,c("cell","Tsne1_QC1","Tsne2_QC1","PseudoTime","msci_rati
 
 principal_curves <- principal_curves["df_9"]
 str(principal_curves[["df_9"]])
-
-library(data.table)
-library(testisAtlas)
-load_component_orderings()
 
 save(cell_data, principal_curves, SDAresults, gene_annotations, component_order_dt, file = "cached_objects_small.rds")

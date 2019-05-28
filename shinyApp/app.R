@@ -4,7 +4,7 @@
 # In low memory mode, the data will be stored on disk and read when requested by the end user
 # To use low memory mode, the script setup_low_memory_mode.R must be run
 
-low_memory_mode = TRUE
+low_memory_mode = FALSE
 
 ##
 
@@ -25,7 +25,7 @@ if(low_memory_mode){
   #data <- attach.big.matrix("data.big.desc")
 
 }else{
-  load("cached_objects.rds", envir = .GlobalEnv)
+  load2("cache")
   load_component_orderings()
 }
 
