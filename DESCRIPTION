@@ -1,8 +1,8 @@
 Package: testisAtlas
 Type: Package
 Title: testisAtlas: R functions and analysis scripts used in the analysis of testis single cell RNAseq
-Version: 1.0.1
-Date: 2018-06-20
+Version: 1.1.0
+Date: 2019-05-28
 Authors@R: c(
 	person("Daniel", "Wells", email = "wells@stats.ox.ac.uk", role = c("aut", "cre")))
 Description: This is an R package R functions and analysis scripts used in the analysis of testis single cell RNAseq
