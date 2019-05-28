@@ -4,7 +4,7 @@ This is an interactive Shiny app which allows users to explore gene expression i
 
 You can see the app running at http://www.stats.ox.ac.uk/~wells/testisAtlas.html
 
-This repository serves as a back up for when this url dies.
+This repository enables you to run this Shiny App on your own computer/server when this url dies.
 
 ![](Screenshot1.png)
 ![](Screenshot2.png)
@@ -12,15 +12,33 @@ This repository serves as a back up for when this url dies.
 The following is a guide on how to run this app either on your personal computer or on a webserver.
 
 
-# Running the app on your laptop/desktop
-
-To run the app locally navigate to the parent directory of this folder and execute the following commands in R:
+# Quick Start on Local Machine
 
 ```{r}
+# download shiny app code
+git clone --depth=1 https://github.com/MyersGroup/testisAtlas.git
+cd testisAtlas
+
+# start R
+R
+
+# install dependencies
+install.packages(c('shiny', 'ggplot2', 'data.table', 'viridis', 'remotes', 'bigmemory','shinycssloaders'), repos='http://cran.rstudio.com/')
+remotes::install_github(c('myersgroup/testisAtlas'))
+remotes::install_github('eliocamp/ggnewscale', ref='e3fee0106c')
+
+# download data
+download.file("https://zenodo.org/record/3233870/files/SDA_objects.zip", "SDA_objects.zip")
+unzip("SDA_objects.zip", exdir="shinyApp/cache")
+
+# run the shiny app
 shiny::runApp("shinyApp")
 ```
 
-# Low Memory Mode (default: Off)
+
+# Running the app on a web-server
+
+## Low Memory Mode (default: Off)
 
 
 For running this app on a memory constrained machine (e.g. a free-tier 1GB RAM t2.micro AWS server) set the option to TRUE at the top of the file `app.R`.
@@ -38,7 +56,6 @@ Rscript setup_low_memory_mode.R
 
 Note that this step must itself be done on a *high* memory machine, so if setting up an AWS instance, choose t2.large so you have 8GB RAM. Then you can stop the instance and change the type back to t2.micro.
 
-# Running the app on a web-server
 
 ## Possible Hosting Companies
 
@@ -115,12 +132,24 @@ sudo su - -c "R -e \"remotes::install_github(c('myersgroup/testisAtlas'))\""
 sudo su - -c "R -e \"remotes::install_github('eliocamp/ggnewscale', ref='e3fee0106c')\""
 ```
 
-## Upload the shiny app files
+## Download the shiny app files
 
 ```{bash}
-sudo chmod 777 /srv/shiny-server
 
-scp -v -i "your_private_key_here.pem" -r <PATH TO SHINY APP FOLDER HERE>/testisAtlas/shinyApp ubuntu@ec2-<YOUR PUBLIC DNS ADDRESS HERE>.eu-west-1.compute.amazonaws.com:/srv/shiny-server/
+sudo chmod 777 /srv/shiny-server
+cd /srv/shiny-server/
+
+git clone --depth=1 https://github.com/MyersGroup/testisAtlas.git
+cd testisAtlas
+
+wget https://zenodo.org/record/3233870/files/SDA_objects.zip
+unzip SDA_objects.zip -d shinyApp/cache
+```
+
+```{bash}
+sed -i 's/low_memory_mode = FALSE/low_memory_mode = TRUE/g' shinyApp/app.R
+cd shinyApp
+Rscript setup_low_memory_mode.R
 ```
 
 # Point shiny-server to the app
@@ -129,7 +158,7 @@ scp -v -i "your_private_key_here.pem" -r <PATH TO SHINY APP FOLDER HERE>/testisA
 sudo systemctl stop shiny-server
 sudo nano /etc/shiny-server/shiny-server.conf
 
-# add /testisAtlas to site_dir
+# add /testisAtlas/shinyApp to site_dir
 sudo systemctl start shiny-server
 ```
 
