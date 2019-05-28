@@ -217,6 +217,13 @@ structure
 dev.off()
 ```
 
+```{r}
+png("../results/striking_image_4B.png",height = 900*5, width = 1800*5)
+structure + theme_void() + theme(legend.position = "none")
+dev.off()
+```
+
+
 Non-normalised Structure plot
 
 ```{r, fig.width=6}
