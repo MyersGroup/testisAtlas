@@ -309,7 +309,7 @@ print_tsne <- function(i, factorisation=SDAresults, cell_metadata=cell_data, jit
   if(dim1=="Tsne1_QC1"){
     p <- p + labs(x="t-SNE 1", y="t-SNE 2")
   }else{
-    p <- p + labs(x="Umap 1", y="Umap 2")
+    p <- p + labs(x=dim1, y=dim2)
   }
   
   return(p)
