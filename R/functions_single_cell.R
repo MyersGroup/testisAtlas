@@ -699,33 +699,34 @@ print_loadings_scores <- function(i, factorisation=SDAresults, gene_locations=ge
 #' @param factorisation SDA factorisation object, output of SDAtools::load_results()
 #' @param i integer or string; number or name of component in 'SDAresults' object
 #' @param n integer; number of genes to include in the list, default=100
-#' @param fantom data.table with columns Gene.Name and fold_difference from FANTOM dataset
-#' @param gtex data.table with column Gene.Name, Human_Orthologue, and fold_difference_gtex
-#' @param infertility; charachter vector of gene symbols of known infertility genes
+#' @param annotations data.table with columns gene_symbol, fold_enrichment_fantom, fold_enrichment_gtex,
+#'  Human_Orthologue, Inferitility_Gene, chromosome_name and start_position, created in 24_Gene-annotations.Rmd
+#' @param order; order of ouput list by loading, "absolute", "decreasing" or "increasing"
 #' 
+#' @details See also get_top_genes() for a simpler function
 #'
 #' @return print of data.table
 #'
 #' @export
 #' 
 #' @import data.table
-print_gene_list <- function(i, n=100, factorisation=SDAresults, infertility=infertility_genes, fantom=fantom_subset_summary, gtex=gtex_summary) {
-  tmp <- data.table(as.matrix(factorisation$loadings[[1]][i,]), keep.rownames = TRUE)[order(-abs(V1))][1:n]
-  setnames(tmp, c("Gene.Name","Loading"))
-  setkey(tmp, Gene.Name)
+gene_list <- function(i, n=100, factorisation=SDAresults, annotations=gene_annotations, order="absolute") {
+  tmp <- data.table(as.matrix(factorisation$loadings[[1]][i,]), keep.rownames = TRUE)
+  setnames(tmp, c("gene_symbol","Loading"))
+  setkey(tmp, gene_symbol)
   
-  # Add is testis enriched annotations
-  tmp <- merge(tmp, fantom_summary_subset, all.x = TRUE)
-  tmp <- merge(tmp, gtex_summary[,.(Gene.Name, Human_Orthologue, fold_difference_gtex = signif(fold_difference,3))], all.x = TRUE)
-  tmp$Testis_Enriched <- gsub("FALSE","",tmp$fold_difference_gtex > 2 | tmp$fold_difference > 2)
+  tmp <- merge(tmp, annotations, all.x = TRUE)
+  tmp$Testis_Enriched <- tmp$fold_enrichment_gtex > 2 | tmp$fold_enrichment_fantom > 2
   
-  # Add infertility gene annotations
-  tmp$Infertility_Gene <- gsub("FALSE","",tmp$Gene.Name %in% infertility)
+  setcolorder(tmp, c("gene_symbol","Human_Orthologue", "Loading", "Infertility_Gene", "Testis_Enriched", "fold_enrichment_gtex",  "fold_enrichment_fantom"))
   
-  setcolorder(tmp, c("Gene.Name","Human_Orthologue", "Loading", "Infertility_Gene", "Testis_Enriched", "fold_difference_gtex",  "fold_difference"))
-  
-  # Display Result
-  print(tmp[order(-abs(Loading))])
+  if(order=="absolute"){
+    return(tmp[order(-abs(Loading))][1:n])
+  }else if(order=="decreasing"){
+    return(tmp[order(-Loading)][1:n])
+  }else{
+    return(tmp[order(Loading)][1:n])
+  }
 }
 
 
