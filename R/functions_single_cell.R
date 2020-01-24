@@ -952,6 +952,7 @@ match_cells2 <- function(test_groups=NULL, cell_subset=NULL, cell_metadata=cell_
 #'
 #' @details 
 #' Calculate p value of enrichemnt (fishers test) in a component, given a set of genes
+#' see component_enrichment for a function to run on all components
 #' 
 #' @return
 #' 
@@ -1013,7 +1014,9 @@ single_component_enrichment <- function(gene_vector=SDAresults$loadings[[1]][1,]
 #' @details 
 #' for each component (P&N seperately), calculate p value enrichemnt (fishers test) for a set of genes
 #' This is a multi-component wrapper to AZ_pvalue
-#' requires the SDAresults object from SDA to be loaded as well as the component_order_all object from 'R/functions_ordering.R'
+#' requires component_order_all object and component_order_dt to be loaded into the environment using load_component_orderings()
+#' 
+#' see single_component_enrichment for a function to run on a single gene vector/component
 #' 
 #' @return A data.table with a row for each component (+ve & -ve seperately) with columns giving the p.value of enrichment,
 #' Odds Ratio, Component number and name, component type (Somatic or Meiotic), and component order
@@ -1022,7 +1025,7 @@ single_component_enrichment <- function(gene_vector=SDAresults$loadings[[1]][1,]
 #' 
 #' @import data.table
 
-component_enrichment <- function(genes, threshold=500, loadings_matrix=SDAresults$loadings[[1]], orderSDA=T ,bg_genes=NULL, test="fisher"){
+component_enrichment <- function(genes, threshold=500, loadings_matrix=SDAresults$loadings[[1]], orderSDA=T, bg_genes=NULL, test="fisher"){
   
   stopifnot(nrow(loadings_matrix) < ncol(loadings_matrix))
   

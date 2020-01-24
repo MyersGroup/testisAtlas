@@ -31,4 +31,5 @@ Calculate enrichment for a set of genes in a single component
 }
 \details{
 Calculate p value of enrichemnt (fishers test) in a component, given a set of genes
+see component_enrichment for a function to run on all components
 }

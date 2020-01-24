@@ -29,5 +29,7 @@ Calculate enrichment for a set of genes for each component
 \details{
 for each component (P&N seperately), calculate p value enrichemnt (fishers test) for a set of genes
 This is a multi-component wrapper to AZ_pvalue
-requires the SDAresults object from SDA to be loaded as well as the component_order_all object from 'R/functions_ordering.R'
+requires component_order_all object and component_order_dt to be loaded into the environment using load_component_orderings()
+
+see single_component_enrichment for a function to run on a single gene vector/component
 }
