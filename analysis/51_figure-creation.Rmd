@@ -31,6 +31,7 @@ library(data.table)
 library(cowplot)
 library(gridExtra)
 library(ggforce)
+library(ggrepel)
 library(RColorBrewer)
 library(ggnewscale)
 
@@ -111,6 +112,8 @@ gwas_genes_rr_enrich <- component_enrichment(gwas_genes, threshold = 300)
 c5_enrich_plot <- manhatten_plot(gwas_genes_rr_enrich[!component %in% gsub("V","",half_exclusion_comps)], legend_position = c(0.20,0.7))
 head(gwas_genes_rr_enrich[!component %in% gsub("V","",half_exclusion_comps)][order(p.value)])
 
+tmp <- single_component_enrichment(SDAresults$loadings[[1]][5,], pos=F, genes=gwas_genes)$ranks
+ggplot(data.table(rank=tmp, gene=names(tmp)), aes(rank, 1:24, label=gene))+ geom_vline(xintercept = 0, col="red") + geom_point() + xlim(-4000,19264) + geom_label_repel(force = 10, nudge_x = -1000) + xlab("Rank in Component 5") + ylab("")
 ```
 
 ## Enrichment rug plot
@@ -201,6 +204,18 @@ dev.off()
 ```
 
 
+```{r}
+leg <- ggplot(data.table(x=1,y=1,z="Recombination GWAS Hit (Halldorsson et al 2019)"), aes(x,y, colour=z)) + geom_point() + scale_colour_manual(values='red', name="") + theme_minimal()
+
+pdf("../results/C5_loadings.pdf", width = 8.3, height = 5)
+plot_grid(v5_loadings_plot, get_legend(leg), ncol=1, rel_heights = c(1,0.1))
+dev.off()
+
+
+v5_loadings_plot + get_legend(leg)
+
+scale_colour_manual(name="", values=c(myline1="red", myline2="blue", myline3="purple"))
+```
 
 
 # Sparsity by component
@@ -243,6 +258,24 @@ pdf(height=5, width=5*1.7, file="../results/Rhox2h.pdf")
 Hormad1_gxe
 dev.off()
 
+tmp <- gene_expression_pseudotime(c("A830018L16Rik","Rhox2h"))
+tmp[group=="Hormad1", Hormad1_KO := TRUE]
+tmp[group!="Hormad1", Hormad1_KO := FALSE]
+
+Hormad1_gxe2 <- ggplot(tmp[PseudoTime>14500], aes(-PseudoTime, value, colour=Hormad1_KO)) +
+  geom_point(size=0.5) + 
+  theme_minimal() + 
+  ylab("Gene Expression") +
+  xlab("Pseudotime") +
+  theme(legend.position = c(0.8,0.3),
+        legend.background = element_rect(colour="black"),
+        strip.text.x = element_text(size = 12)) + 
+  scale_color_brewer(palette = "Set1",name="Hormad1 KO?") +
+  facet_wrap(~Gene, ncol=1)
+
+pdf(height=5, width=6*1.7, file="../results/Hormad1_two.pdf")
+plot_grid(v38_loadings_plot, Hormad1_gxe2)
+dev.off()
 ```
 
 ## 9C Cul4a Scores & Loadings
@@ -366,6 +399,11 @@ ggplot(tmp, aes(V22, colour=MiSeq)) +
   theme_minimal() +
   theme(axis.title.y=element_blank() ) +
   xlab(paste0("Component ","V22","\n Cell Score"))
+
+
+rpsl_genes <- grep("Rps|Rpl", names(SDAresults$loadings[[1]][22,]), value=T)
+rpsl_genes <- rpsl_genes[!grepl("-ps",rpsl_genes)]
+manhatten_plot(component_enrichment(rpsl_genes, threshold = 300), topn = 5)
 ```
 
 
@@ -785,10 +823,10 @@ dev.off()
 
 
 ```{r}
-component_tsne <- plot_grid(plotlist = create_grob_list(fn = print_tsne, input = c(11,32,40,45,38,31,5,13,42,20,30,35,15,17,18)), nrow=3)
+component_tsne <- plot_grid(plotlist = create_grob_list(fn = function(x) print_tsne(x) + theme(plot.title = element_text(size=24)), input = c(11,32,40,45,38,31,5,13,42,20,30,35,15,17,18)), nrow=3)
 
-pdf("../results/component_tsne_sel.pdf", width=24,height=13.5)
-component_tsne
+pdf("../results/component_tsne_sel.pdf", width=24, height=13.5)
+component_tsne 
 dev.off()
 ```
 
