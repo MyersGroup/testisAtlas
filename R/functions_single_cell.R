@@ -4,14 +4,14 @@
 #' @param tsne object; output of Rtsne::Rtsne()
 #' @param angle numeric; degrees to rotate the tSNE embedding by
 #'
+#' @details deprecated, used rotate_matrix(tsne$Y) instead
+#'
 #' @return The Y matrix from Rtsne output, rotated by angle
 #'
 #' @export
 
 rotate_tsne <- function(tsne, angle){
-  angle <- (-angle * pi) / (-180)
-  rotm <- matrix(c(cos(angle), -sin(angle), sin(angle), cos(angle)), ncol=2)
-  tsne$Y %*% rotm
+  rotate_matrix(tsne$Y)
 }
 
 #' Generate rotation matrix / rotate a matrix
@@ -37,16 +37,14 @@ rotate_matrix <- function(object, angle, rotation=FALSE){
 #' @param cell_metadata data.table with columns Tsne1, Tsne2, and PCs
 #' @param expression_matrix cell by gene expressionn matrix
 #'
+#' @details DEPRECATED, use print_tsne() with dim1="Tsne1", dim2="Tsne2" instead
+#'
 #' @return ggplot2 object
 #'
 #' @export
 #' @import ggplot2
 print_raw_tsne <- function(gene, expression_matrix=data, cell_metadata=cell_data){
-  ggplot(merge(cell_metadata, expression_dt(gene, expression_matrix)), aes(Tsne1, Tsne2, color=get(gene))) +
-    geom_point(size=0.2) +
-    scale_color_viridis(direction=-1) +
-    theme(legend.position = "bottom") +
-    ggtitle(paste0(gene," - t-SNE")) + simplify
+  return(print_tsne(gene, dim1="Tsne1", dim2="Tsne2"))
 }
 
 
@@ -57,16 +55,14 @@ print_raw_tsne <- function(gene, expression_matrix=data, cell_metadata=cell_data
 #' @param cell_metadata data.table with columns Tsne1, Tsne2, and PCs
 #' @param pc string; name of principal compopnent (column of cell_data), of which cell score values will be used to colour points (cells)
 #'
+#' @details DEPRECATED, use print_tsne() with dim1="Tsne1", dim2="Tsne2" instead
+#'
 #' @return ggplot2 object
 #'
 #' @export
 #' @import ggplot2
 print_pca <- function(cell_metadata=cell_data, pc){
-  ggplot(cell_metadata, aes(Tsne1, Tsne2, color=get(pc))) +
-    geom_point(size=0.2) +
-    scale_colour_distiller(palette="YlOrRd", direction=1) +
-    theme(legend.position = "bottom") +
-    ggtitle(paste0(pc," - t-SNE")) + simplify
+  print_tsne(pc, dim1="Tsne1", dim2="Tsne2")
 }
 
 
@@ -532,17 +528,14 @@ create_grob_list <- function(fn=print_marker2, input=hist_subset){
 #' @return A data.table with variables cell (the cell barcode), PseudoTime, Tsne coordinates,
 #' value (containing imputed expression values), and Gene (a string indicator for which gene each value is for)
 #' 
+#' @details DEPRECATED, use melt_genes() instead
+#' 
 #' @export
 #' 
 #' @import data.table
 
 gene_expression_pseudotime <- function(genes, factorisation=SDAresults, cell_metadata=cell_data){
-  tmp <- merge(cell_metadata[somatic4==FALSE, c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), with=FALSE],
-               sda_predict(genes, factorisation, name_extension = ""))
-  tmp <- melt(tmp, id.vars = c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), variable.name = "Gene")
-  tmp$Gene = factor(tmp$Gene, levels=genes)
-  #tmp$variable = factor(tmp$variable, levels = sort(as.character(unique(tmp$variable))))
-  return(tmp)
+  return(melt_genes(genes, factorisation, cell_metadata[somatic4==FALSE, c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), with=FALSE]))
 }
 
 
@@ -567,10 +560,10 @@ gene_expression_pseudotime <- function(genes, factorisation=SDAresults, cell_met
 plot_pseudotime_expression_panel <- function(genes, factorisation=SDAresults, cell_metadata=cell_data, ncol=7, title="Histone Genes", gam_k=5, point_size=0.2, highlight_reigon=NULL){
   
   if(mode(genes)=="character"){
-    data <- gene_expression_pseudotime(genes, factorisation, cell_metadata)
+    data <- melt_genes(genes, factorisation, cell_metadata[somatic4==FALSE, c("cell","PseudoTime","Tsne1_QC1", "Tsne2_QC1","group"), with=FALSE])
   }
   
-  p <-  ggplot(data, aes(-PseudoTime, value, colour=Gene)) +
+  p <-  ggplot(data, aes(-PseudoTime, Expression, colour=Gene)) +
       geom_point(alpha=0.2, size=point_size) +
       geom_smooth(method = "gam", formula = y ~ s(x, k = 50), se=FALSE, colour="black") +
       ylab("Predicted Gene Expression") + xlab("Pseudotime") +
@@ -608,15 +601,15 @@ plot_pseudotime_expression_panel <- function(genes, factorisation=SDAresults, ce
 #' @export
 #' @import data.table
 #' 
-melt_genes <- function(genes, cell_metadata=cell_data, expression_matrix=data, predict=FALSE, factorisation=SDAresults){
+melt_genes <- function(genes, cell_metadata=cell_data[,c("cell", "PseudoTime", "Tsne1_QC1", "Tsne2_QC1", "group"), with=F], expression_matrix=data, predict=FALSE, factorisation=SDAresults){
   # generate melted version of cell_data on the fly for subset of genes
   # rather than keeping two 7Gb data.tables in memory
   #saveRDS(merge_sda3_melt2, "PseudoTime_Shiny/data_V3.rds")
   
-  genes <- genes[genes %in% colnames(expression_matrix)]
+  genes <- genes[genes %in% c(colnames(expression_matrix), colnames(factorisation$loadings[[1]]))]
   
-  if(!all(genes %in% colnames(expression_matrix))){
-    return("Gene not found")
+  if(!all(genes %in% c(colnames(expression_matrix), colnames(factorisation$loadings[[1]])))){
+    return("Gene(s) not found")
   }
   
   if(predict){
@@ -624,10 +617,8 @@ melt_genes <- function(genes, cell_metadata=cell_data, expression_matrix=data, p
   }else{
     tmp <- merge(cell_metadata, expression_dt(genes, expression_matrix))
   }
-
-  id_colums <- c("cell", "PseudoTime", "Tsne1_QC1", "Tsne2_QC1")
   
-  merge_sda3_melt2 <- melt(tmp[,c(id_colums, genes), with=FALSE], id.vars = id_colums, value.name="Expression", variable.name="Gene")
+  merge_sda3_melt2 <- melt(tmp, id.vars = colnames(cell_metadata), value.name="Expression", variable.name="Gene")
   merge_sda3_melt2[,cell:=as.factor(cell)]
   return(merge_sda3_melt2)
 }
@@ -744,8 +735,8 @@ gene_list <- function(i, n=100, factorisation=SDAresults, annotations=gene_annot
 #'
 #' @export
 #' 
-#' @import ggplot2 data.table
-go_volcano_plot <- function(data=GO_data, component="V5N", top_n=30, label_size=3, OR_threshold=1){
+#' @import ggplot2 data.table ggrepel
+go_volcano_plot <- function(component="V5N", data=GO_enrich, top_n=30, label_size=3, OR_threshold=1){
   
   if(class(data)[1]=="data.table"){
     tmp <- data[Component==component]
@@ -766,9 +757,6 @@ go_volcano_plot <- function(data=GO_data, component="V5N", top_n=30, label_size=
       scale_x_log10(limits=c(1,NA), breaks=c(1,2,5,10,15,20))
   )
 }
-
-
-
 
 
 #' Plot gene expression through pseudotime (Raw & Imputed)
