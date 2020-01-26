@@ -1,0 +1,106 @@
+---
+title: "testisAtlas: Vignette (Tutorial)"
+author: "Daniel Wells"
+date: "`r Sys.Date()`"
+output: github_document
+vignette: >
+  %\VignetteIndexEntry{testisAtlas: Vignette (Tutorial)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This tutorial guides you through how to use the testisAtlas package to explore the single cell RNAseq data from mice testis from our publication. If you just want the QC counts data to explore with your own functions you can find it [on Zenodo](https://zenodo.org/record/3233870).
+
+```{r, include=FALSE}
+# rmarkdown::render("vignettes/vignette.Rmd")
+library(testisAtlas)
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=10)
+```
+
+Download the data (250MB)
+```{r}
+download.file("https://zenodo.org/record/3233870/files/SDA_objects.zip", "SDA_objects.zip")
+unzip("SDA_objects.zip", exdir="SDA_Objects")
+```
+
+Install (if not allready) & load
+```{r}
+# remotes::install_github("myersgroup/testisAtlas")
+library(testisAtlas)
+pkgload::load_all()
+load2("SDA_Objects") # convenience function to load all rds objects in a folder
+load_component_orderings()
+```
+
+Inspect the top genes for a given component (with metadata):
+```{r}
+gene_list(5, n=5)
+```
+
+Plot gene expression or cell scores in tSNE space:
+```{r, tsne}
+print_tsne("Prdm9")
+print_tsne(5) # component 5 cell scores
+```
+
+Use the predict argument to use SDA imputed expression values.
+Internally calls the sda_predict() function.
+```{r, imputed}
+print_tsne("Prdm9", predict = T)
+```
+
+By default the axes are tSNE coordinates, but you can use any column in cell_data using the 
+dim1/2 arguments, for example to use UMAP projection or to plot components by e.g. pseudotime:
+```{r, umap}
+print_tsne("Prdm9", dim1 = "Umap1", dim2 = "Umap2")
+print_tsne("Zfy2", dim1 = "msci_ratio", dim2 = "V38", predict = T)
+print_tsne("Ssxb1", dim1 = "PseudoTime", dim2 = "V42", predict = T) + scale_y_reverse() + scale_x_reverse() 
+```
+
+To plot multiple gene expressions on a single tSNE there's a seperate function:
+```{r, tricolour}
+tricolour_tsne(c("Prdm9","Esx1","Piwil1"))
+```
+
+To get imputed expression with pseudotime/Tsne/experiment information use the melt_genes() function:
+```{r, pseudotime}
+tmp <- melt_genes(c("Prdm9","Ssxb1"), predict = T)
+
+ggplot(tmp, aes(-PseudoTime, Expression)) +
+  geom_point(stroke=0, size=1, alpha=0.3) +
+  facet_wrap(~Gene) +
+  theme_minimal()
+```
+
+Visualise gene loadings in a manhatten style plot:
+```{r, manhatten}
+genome_loadings(SDAresults$loadings[[1]][5,], gene_locations = gene_annotations)
+```
+
+Which components have the highest loading for gene X:
+```{r, highest}
+highest_components(SDAresults, "Prdm9")
+```
+
+Plot component scores by experimental group:
+```{r, cell_scores}
+plot_cell_scores("V38", point_size = 2)
+```
+
+Check (precomputed) Gene Ontology enrichments for a component:
+```{r, GO}
+head(GO_enrich[Component=="V30P"])
+go_volcano_plot("V30P", top_n = 10)
+```
+
+Test all components for enrichment of a custom gene list:
+```{r, enrichment}
+gene_list <- c("Prdm9","Zcwpw1","Meiob","Dmc1","Esx1")
+tmp <- component_enrichment(gene_list)
+tmp[order(p.value)][1:5]
+
+manhatten_plot(tmp)
+```
