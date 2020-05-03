@@ -1,4 +1,5 @@
 [![Travis-CI Build Status](https://travis-ci.org/MyersGroup/testisAtlas.svg?branch=master)](https://travis-ci.org/MyersGroup/testisAtlas)
+[![DOI](https://img.shields.io/badge/DOI-10.7554%2FeLife.43966-brightgreen)](https://doi.org/10.7554/eLife.43966)
 [![DOI](https://zenodo.org/badge/140632831.svg)](https://zenodo.org/badge/latestdoi/140632831)
 
 # Single Cell RNAseq Testis Atlas
