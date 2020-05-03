@@ -22,7 +22,8 @@ Imports:
 	stringr,
 	viridis,
 	vegan,
-	ComplexHeatmap
+	ComplexHeatmap,
+	ggrepel
 Remotes:
 	marchinilab/SDAtools,
 	myersgroup/MotifFinder,
