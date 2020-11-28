@@ -25,7 +25,7 @@ if(low_memory_mode){
   #data <- attach.big.matrix("data.big.desc")
 
 }else{
-  load2("cache")
+  load2("../data/cache")
   load_component_orderings()
 }
 
@@ -205,7 +205,10 @@ ui <- fluidPage(
       tags$head(tags$style("#whichComp{height:85vh !important;}")),
       tags$hr(),
       tags$div(class="header", checked=NA, tags$h4("About:")),
-      tags$div(p(HTML(paste0('For more information see our ',a(target="_blank", href = 'https://doi.org/10.1101/393769', 'paper')))))
+      tags$div(p(HTML(paste0('For more information see our ',a(target="_blank", href = 'https://doi.org/10.7554/eLife.43966', 'paper'), 
+				' or explore the ', a(target="_blank", href = 'https://doi.org/10.5281/zenodo.3233870', 'data'), ' yourself e.g. using our ',
+				a(target="_blank", href='https://github.com/myersgroup/testisAtlas', 'R package'))
+		)))
     ),
     mainPanel(
       tabsetPanel(type = "tabs",
