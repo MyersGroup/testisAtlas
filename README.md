@@ -15,4 +15,4 @@ remotes::install_github("myersgroup/testisAtlas")
 
 The repository is structured as an R package. Generic functions that are used multiple times are in the R/ directory, other analysis scripts are in the analysis/ directory. Data used in the study is kept in the data/ directory but is not uploaded to github due to the large size. However R objects required to run the functions (e.g. "cell_data" a data.table containing cellwise metadata, and "SDAresults" a list object containing the results of the SDA composition) can be downloaded from: [10.5281/zenodo.3233870](https://doi.org/10.5281/zenodo.3233870). The raw data is avaliable at [GEO: GSE113293](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE113293).
 
-The shinyApp folder contains code for the web application for interactively exploring gene expression and components: http://www.testisatlas.ml
+The shinyApp folder contains code for the web application for interactively exploring gene expression and components: http://www.stats.ox.ac.uk/~wells/testisAtlas.html
